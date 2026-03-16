@@ -51,15 +51,14 @@ class PatchState(Enum):
 class PatchCategory(Enum):
     EMISSIONS   = "Emissions"
     PERFORMANCE = "Performance"
+    IGNITION    = "Ignition"
+    FUELLING    = "Fuelling"
     IMMOBILISER = "Immobiliser"
     COMFORT     = "Comfort"
     DIAGNOSTICS = "Diagnostics"
-    # Aliases used in older code
-    IMMO        = "Immobiliser"
+    # Legacy aliases kept for backward compat with test code
     BOOST       = "Performance"
     SPEED       = "Performance"
-    FUELLING    = "Performance"
-    IGNITION    = "Performance"
 
 
 # ── Result ─────────────────────────────────────────────────────────────────────
@@ -456,6 +455,85 @@ ALL_PATCHES: list[PatchDef] = [
         confidence  = "UNCONFIRMED",
     ),
 
+    # ── Dual-bank rear O2 (2.7T biturbo, V6) ─────────────────────────────────
+
+    PatchDef(
+        name        = "Rear O2 Sensor Delete — Bank 2",
+        description = ("Disables the Bank 2 post-cat oxygen sensor diagnostic. "
+                       "Required in addition to the Bank 1 patch on V6 biturbo "
+                       "engines (AGB/ARE/AZZ 2.7T) which have two separate "
+                       "catalyst monitors.  Suppresses P0161/P0160."),
+        category    = PatchCategory.EMISSIONS,
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF3, 0xF4, XX, XX,   # MOVBZ r4, LSUKATS_B2 (bank 2 rear O2)
+                       0x49, 0xF4,           # CMPB  rl4, r4
+                       0x8D, XX,             # JMPR  cc_Z, ok_b2
+                       0xE6, 0xF4, XX, XX],  # MOV   r4, #fault_flag_b2
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM,
+                       MM, XX,
+                       MM, MM, XX, XX],
+        offset      = 10,
+        stock_bytes = bytes([0x8D]),
+        patch_bytes = bytes([0x0D]),
+        confidence  = "UNCONFIRMED",
+        warning     = "Disables OBD-II Bank 2 rear O2 monitoring (P0160/P0161).",
+        applies_to  = {"dual_bank"},   # only shown for V6/V8 multi-bank profiles
+    ),
+
+    # ── EVAP ──────────────────────────────────────────────────────────────────
+
+    PatchDef(
+        name        = "EVAP Purge Delete",
+        description = ("Disables EVAP (evaporative emissions) purge valve "
+                       "monitoring.  Suppresses P0441/P0442 when the charcoal "
+                       "canister or purge valve is removed.  Common on race builds "
+                       "running a vented catch tank instead of the OEM system."),
+        category    = PatchCategory.EMISSIONS,
+        # TEV (Tankreinigungsventil) enable check — bit in configuration codeword
+        needle      = [0x9A, XX, XX, XX,     # JNB   CWKONFZ.TEV_bit, skip_evap
+                       0xE6, 0xF0, XX, XX,   # MOV   r0, #TEV_state
+                       0x46, 0xF0, XX, XX],  # CMP   r0, #tev_active_mask
+        mask        = [MM, XX, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX],
+        offset      = 0,
+        stock_bytes = bytes([0x9A]),   # JNB — enters EVAP monitor if bit set
+        patch_bytes = bytes([0x0D]),   # JMP — always skip EVAP monitor
+        confidence  = "UNCONFIRMED",
+        warning     = "Disables OBD-II EVAP monitoring (P0441/P0442).",
+    ),
+
+    # ── Knock protection ──────────────────────────────────────────────────────
+
+    PatchDef(
+        name        = "Knock Retard Disable",
+        description = ("Disables the ignition retard response to knock sensor "
+                       "events.  Timing will NOT pull back under knock.  "
+                       "USE WITH EXTREME CAUTION — only for engine-out dyno "
+                       "calibration on a fresh build where knock must be "
+                       "diagnosed separately.  Catastrophic if used on the road."),
+        category    = PatchCategory.IGNITION,
+        # The knock retard accumulator is clamped to zero — ERKSP target set to 0
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF2, 0xF4, XX, XX,   # MOV   r4, ERKSP (knock retard accumulator)
+                       0x46, 0xF4, XX, XX,   # CMP   r4, #max_retard
+                       0x9D, XX],            # JMPR  cc_NE, do_retard
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, XX],
+        offset      = 8,
+        stock_bytes = bytes([0x46, 0xF4]),   # CMP — check if retard needed
+        patch_bytes = bytes([0x42, 0xF4]),   # CMP r4, #0 — always zero compare
+        confidence  = "UNCONFIRMED",
+        warning     = "⚠ DYNO/BENCH USE ONLY. Engine damage will result from "
+                      "detonation without protection. Never use on the road.",
+        notes       = "Placeholder needle — real ERKSP sequence to be confirmed "
+                      "against a real ROM. Do not enable until confirmed.",
+    ),
+
 ]  # end ALL_PATCHES
 
 
@@ -509,6 +587,94 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         min_val     = 600.0,
         max_val     = 1200.0,
         confidence  = "UNCONFIRMED",
+    ),
+
+    ScalarPatchDef(
+        name        = "Knock Threshold",
+        description = ("Minimum knock sensor signal level before the ECU "
+                       "considers it a knock event and begins timing retard. "
+                       "Stock value is conservative to protect marginal fuel "
+                       "quality.  Raising slightly on premium fuel / E85 can "
+                       "allow the ignition map to hold timing longer.  "
+                       "Lower = more sensitive (more retard, safer).  "
+                       "Higher = less sensitive (more timing, more risk)."),
+        category    = PatchCategory.IGNITION,
+        # KLOPF — knock threshold stored as 16-bit value near knock window setup
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF2, 0xF4, XX, XX,   # MOV   r4, KLOPF (knock threshold)
+                       0x46, 0xF4, XX, XX,   # CMP   r4, knock_window
+                       0xDB, 0x00],          # RETS
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM],
+        offset      = 6,
+        size        = 2,
+        big_endian  = False,
+        scale       = 1.0,
+        unit        = "counts",
+        min_val     = 100.0,
+        max_val     = 800.0,
+        confidence  = "UNCONFIRMED",
+        notes       = "Raw count units. Confirm scaling on real ROM before adjusting.",
+        warning     = "Raising threshold reduces knock protection. Premium fuel required.",
+    ),
+
+    ScalarPatchDef(
+        name        = "Injector Dead Time (Battery 14V)",
+        description = ("Injector opening dead time at 14V battery voltage. "
+                       "Affects fuel delivery accuracy at all loads. "
+                       "Must be calibrated to match your injectors — "
+                       "wrong value causes lean/rich conditions especially at idle. "
+                       "Stock AWP injectors: ~0.75ms at 14V.  "
+                       "Larger aftermarket injectors typically need 0.6-0.9ms."),
+        category    = PatchCategory.FUELLING,
+        # TINHVL (Einspritzventil Haltezeit) — dead time table indexed by voltage
+        # The 14V entry is typically in the middle of a ~6-entry table
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF2, 0xF4, XX, XX,   # MOV   r4, TINHVL+4  (14V entry)
+                       0xF6, 0xF4, XX, XX,   # MOV   word_XXXX, r4
+                       0xDB, 0x00],          # RETS
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM],
+        offset      = 6,
+        size        = 2,
+        big_endian  = False,
+        scale       = 0.004,    # approx: raw * 0.004 = ms (confirm on real ROM)
+        unit        = "ms",
+        min_val     = 0.3,
+        max_val     = 2.0,
+        confidence  = "UNCONFIRMED",
+        notes       = "Scale approx 0.004ms/count — confirm against known good injector "
+                      "spec before use. See TINHVL table in maps for full voltage curve.",
+        warning     = "Wrong dead time causes fuelling errors across the entire RPM range.",
+    ),
+
+    ScalarPatchDef(
+        name        = "Soft Rev Limiter Entry",
+        description = ("RPM at which the soft rev limiter begins reducing torque "
+                       "demand ahead of the hard fuel-cut. Stock AWP: ~6520 RPM. "
+                       "Should be set ~200-300 RPM below the hard cut."),
+        category    = PatchCategory.PERFORMANCE,
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF2, 0xF4, XX, XX,   # MOV   r4, NMXSB (soft limiter entry)
+                       0x42, 0xF4, XX, XX,   # CMP   r4, word_XXXX
+                       0x8D, XX],            # JMPR  cc_C, below_soft_limit
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, XX],
+        offset      = 6,
+        size        = 2,
+        big_endian  = False,
+        scale       = 0.75,
+        unit        = "RPM",
+        min_val     = 4000.0,
+        max_val     = 8000.0,
+        confidence  = "UNCONFIRMED",
+        notes       = "Scale 0.75 RPM/count. Set 200-300 RPM below hard cut.",
     ),
 
 ]  # end ALL_SCALAR_PATCHES

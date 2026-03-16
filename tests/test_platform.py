@@ -254,6 +254,7 @@ class TestCataloguePatches:
             "mpi", "fsi", "tfsi",
             "me7.5", "me7.1", "me7",
             "bosch_hfm5", "hitachi",
+            "dual_bank",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
@@ -321,11 +322,14 @@ class TestDetectAllWithProfile:
         assert result.state == PatchState.NOT_APPLICABLE
 
     def test_detect_all_awp_profile_no_na(self):
-        """AWP is turbo NB MPI — no patch in the catalogue should be
-        NOT_APPLICABLE for AWP unless it explicitly requires something else."""
+        """AWP is turbo NB MPI single-bank — the only NOT_APPLICABLE results
+        should be for patches that explicitly require 'dual_bank'."""
+        from meseventool.patches import ALL_PATCHES
         rom     = make_rom()
         results = detect_all(rom, profile=PROFILE_AWP)
-        # All results should be MISSING or STOCK/PATCHED/UNKNOWN, not NA
         for r in results:
-            assert r.state != PatchState.NOT_APPLICABLE, \
-                f"Patch '{r.patch.name}' returned NOT_APPLICABLE for AWP profile"
+            if r.state == PatchState.NOT_APPLICABLE:
+                # Only dual_bank patches should be NA on a single-bank profile
+                assert "dual_bank" in r.patch.applies_to, \
+                    (f"Patch '{r.patch.name}' returned NOT_APPLICABLE for AWP "
+                     f"with applies_to={r.patch.applies_to}")
