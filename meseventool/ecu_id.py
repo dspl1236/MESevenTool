@@ -16,13 +16,25 @@ from .rom import ROMImage
 
 # Known VAG engine codes (3-letter, all uppercase)
 _ENGINE_CODES = [
-    "AWP", "AUM", "AUQ", "BAM", "AVC", "AZG", "AGN",
+    # ME7.5 1.8T (C167) — 06A906032xx
+    "AWW", "AWD",                          # 150hp (DL/CL/CM variants)
+    "AWP", "AUQ", "BAM", "AVC",           # 180hp / 190hp / 225hp
+    "AUM", "APH", "AWV", "AJQ", "ARY", "APP",  # other 1.8T
+    "AGU", "AEB", "ANB", "AQY",           # early 1.8T (AGU/AEB/ANB)
+    # ME7.1 2.7T biturbo
+    "AGB", "AZR", "BES", "BCZ",
+    # ME7.1 2.8 30v
+    "ACK", "APR", "AQD", "ATQ",
+    # ME7 1.8T others
     "AMU", "APX", "BFV", "BKG", "BFB",
-    "AGU", "AEB", "ANB", "AQY",
     "AWM", "AUG", "AWT", "AVJ", "AZM",
     "BAM", "BEV", "BGP", "BGQ", "BKF",
+    "AZG", "AGN",
 ]
-# Sorted longest-first and by length to avoid partial matches
+# Deduplicate preserving order
+_seen = set()
+_ENGINE_CODES = [x for x in _ENGINE_CODES if not (x in _seen or _seen.add(x))]
+
 _ENGINE_CODE_RE = re.compile(
     r'\b(' + '|'.join(_ENGINE_CODES) + r')\b'
 )
@@ -99,6 +111,7 @@ def identify(rom: ROMImage) -> ECUIdentity:
     - VAG part number pattern (06A906032XX)
     - Bosch number pattern (0261XXXXXX)
     - Engine code (AWP, AUM, BAM, etc.) from printable strings
+    - Engine code inferred from PN suffix when not found in ROM strings
     """
     ident = ECUIdentity(source="rom", rom_size_kb=rom.size_kb)
     raw   = bytes(rom.data)
@@ -123,8 +136,13 @@ def identify(rom: ROMImage) -> ECUIdentity:
         if not ident.ssecuhn:
             ident.ssecuhn = ident.bosch_number
 
-    # ── Engine code from printable runs ───────────────────────────────────────
-    # Collect contiguous printable runs ≥8 bytes then search for engine code
+    # ── EROTAN / engine code from printable runs ──────────────────────────────
+    # Two capture strategies:
+    #   A) Run contains a known engine code → set both engine_code and erotan
+    #   B) Run contains the VAG PN + displacement text (e.g. "06A906032DL 1.8L")
+    #      → set erotan even if no engine code is in that string
+    #      (ME7.5 DL/CL/CM variants omit engine code from the embedded descriptor)
+    _pn_prefix = ident.vmecuhn[:9] if ident.vmecuhn else None
     i = 0
     while i < len(raw) - 4:
         if 32 <= raw[i] < 127:
@@ -133,15 +151,43 @@ def identify(rom: ROMImage) -> ECUIdentity:
                 j += 1
             if j - i >= 8:
                 text = _clean_string(raw[i:j])
+                # Strategy A: engine code present
                 m = _ENGINE_CODE_RE.search(text)
                 if m:
                     ident.engine_code = m.group(1)
                     if not ident.erotan:
                         ident.erotan = text.strip()[:60]
                     break
+                # Strategy B: PN + displacement (e.g. "06A906032DL 1.8L R4/5VT")
+                if (_pn_prefix and _pn_prefix in text and
+                        any(x in text for x in
+                            ['1.', '2.', '3.', 'R4', 'R5', 'V6', 'V8'])):
+                    if not ident.erotan:
+                        ident.erotan = text.strip()[:60]
+                    # Don't break — continue scanning for an engine code in later runs
             i = j
         else:
             i += 1
+
+    # ── Engine code from PN suffix (fallback) ─────────────────────────────────
+    # ME7.5 1.8T: the embedded strings don't always spell out the 3-letter code.
+    # Map known PN suffixes to engine codes.
+    if not ident.engine_code and ident.vmecuhn:
+        suffix = ident.vmecuhn[-2:] if len(ident.vmecuhn) >= 2 else ""
+        suffix_map = {
+            # 06A906032xx — 1.8T ME7.5
+            "DL": "AWW",  "CL": "AWD",  "CM": "AWD",
+            "BN": "AWP",  "AX": "AWP",  "GE": "AWP",
+            "DN": "AUM",  "GF": "AUM",
+            "GD": "AUQ",  "GL": "AUQ",
+            "HM": "BAM",
+            # 06B906018xx — 1.8T ME7.1 (AGU/AEB)
+            "AA": "AGU",  "AC": "AGU",
+            "AB": "AEB",  "AD": "AEB",
+        }
+        code = suffix_map.get(suffix)
+        if code:
+            ident.engine_code = code
 
     return ident
 

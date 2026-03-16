@@ -21,7 +21,7 @@ from __future__ import annotations
 import struct
 import zlib
 from dataclasses import dataclass, field
-from typing import List
+from typing import Optional, List
 
 from .rom import ROMImage
 from .needle import Searcher, NEEDLE_CRC32, MASK_CRC32
@@ -188,9 +188,9 @@ class ChecksumManager:
     def _check_main(self, result: ChecksumResult, fix: bool) -> None:
         rom     = self.rom
         cal_off = rom.cal_page_offset
-        storage = cal_off + CAL_CKSUM_OFFSET
+        storage = self._find_checksum_storage(cal_off)
 
-        if storage + 8 > rom.size:
+        if storage is None or storage + 8 > rom.size:
             return
 
         # Sum covers cal page from start up to (but not including) storage
@@ -219,6 +219,47 @@ class ChecksumManager:
             mr.stored_c = comp
             mr.main_ok  = True
             mr.comp_ok  = True
+
+    def _find_checksum_storage(self, cal_off: int) -> "Optional[int]":
+        """
+        Locate the [sum:u32LE][~sum:u32LE] checksum pair in the cal page.
+
+        Strategy:
+          1. Try the standard offset (CAL_CKSUM_OFFSET from cal page start).
+             If the stored value is non-trivial (not 0x00000000 / 0xFFFFFFFF)
+             AND its complement matches the adjacent word, use it.
+          2. Otherwise scan the last 4KB of the file for a valid pair.
+             This handles 1MB ROMs where the checksum is at 0x0FFFE0 rather
+             than at cal_page_offset + 0xFFF8.
+        """
+        data = bytes(self.rom.data)
+        size = self.rom.size
+
+        def is_valid_pair(addr: int) -> bool:
+            if addr + 8 > size:
+                return False
+            v = _le32(data, addr)
+            c = _le32(data, addr + 4)
+            if v in (0x00000000, 0xFFFFFFFF):
+                return False
+            return (~v & 0xFFFFFFFF) == c
+
+        # 1. Standard location — always use if in bounds, regardless of validity.
+        #    This allows fix() to locate and correct a corrupted checksum.
+        std = cal_off + CAL_CKSUM_OFFSET
+        if std + 8 <= size:
+            return std
+
+        # 2. Scan last 4KB for a valid (non-trivial) pair.
+        #    Used for 1MB ROMs where the checksum sits at a non-standard offset
+        #    (e.g. the real 06A906032DL has its checksum at 0x0FFFE0 rather than
+        #    cal_page_offset+0xFFF8=0x0FFFF8, i.e. 0x18 bytes earlier).
+        scan_start = max(0, size - 0x1000)
+        for addr in range(scan_start, size - 8, 4):
+            if is_valid_pair(addr):
+                return addr
+
+        return None
 
     def _word_sum(self, start: int, end: int) -> int:
         return calc_sum_block(self.rom, start, end)
