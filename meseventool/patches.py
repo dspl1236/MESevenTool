@@ -23,9 +23,9 @@ UNCONFIRMED patches need real-ROM validation before use.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional, Sequence, List, TYPE_CHECKING
+from typing import Optional, Sequence, List, Set, TYPE_CHECKING
 
 from .rom import ROMImage
 from .needle import Searcher
@@ -80,27 +80,29 @@ class PatchDef:
     A toggleable byte-level ECU patch.
 
     needle/mask locate the patch site; stock_bytes and patch_bytes define the
-    toggle.  offset is the byte offset from the needle hit start to the bytes
-    that are modified (stock_bytes/patch_bytes start at needle_hit + offset).
+    toggle.  offset is the byte offset from needle hit start to modifiable bytes.
 
-    Platform requirements — leave empty (default) to apply to all profiles:
-      requires_induction  e.g. ["turbo","biturbo"]  — NA profiles get NOT_APPLICABLE
-      requires_lambda     e.g. ["narrowband"]        — wideband profiles get NOT_APPLICABLE
-      requires_fuel       e.g. ["MPI"]               — FSI profiles get NOT_APPLICABLE
-      requires_family     e.g. ["ME7"]               — MED17 profiles get NOT_APPLICABLE
+    Platform filtering — leave applies_to empty (default) to apply to all:
+      applies_to: set of platform tags that must ALL be present in the profile.
+      Tags: "turbo" "na" "narrowband" "wideband" "mpi" "fsi" "me7.5" "me7.1"
+            "1.8t" "2.0t" "2.7t" "v6"
+
+    Legacy fields (still accepted, auto-translated to applies_to):
+      requires_induction / requires_lambda / requires_fuel / requires_family
     """
     name:        str
     description: str
     category:    PatchCategory | str
     needle:      Sequence[int]
     mask:        Sequence[int]
-    offset:      int           # byte offset from needle hit to modifiable bytes
+    offset:      int
     stock_bytes: bytes
     patch_bytes: bytes
-    warning:     str = ""
-    confidence:  str = "UNCONFIRMED"
-    notes:       str = ""
-    # Platform gating — empty list means "applies to all"
+    warning:     str       = ""
+    confidence:  str       = "UNCONFIRMED"
+    notes:       str       = ""
+    applies_to:  Set[str]  = field(default_factory=set)
+    # Legacy requirement lists — translated to applies_to in __post_init__
     requires_induction: List[str] = None   # type: ignore
     requires_lambda:    List[str] = None
     requires_fuel:      List[str] = None
@@ -111,37 +113,39 @@ class PatchDef:
             f"Patch '{self.name}': needle/mask length mismatch"
         assert len(self.stock_bytes) == len(self.patch_bytes), \
             f"Patch '{self.name}': stock/patch bytes length mismatch"
-        # Normalise None → [] so callers never have to check
         if self.requires_induction is None: self.requires_induction = []
         if self.requires_lambda    is None: self.requires_lambda    = []
         if self.requires_fuel      is None: self.requires_fuel      = []
         if self.requires_family    is None: self.requires_family    = []
+        # Migrate legacy lists into applies_to tag set
+        _tag_map = {
+            "turbo": "turbo", "na": "na", "biturbo": "turbo",
+            "narrowband": "narrowband", "nb": "narrowband",
+            "wideband": "wideband",     "wb": "wideband",
+            "mpi": "mpi", "fsi": "fsi", "tfsi": "tfsi",
+            "me7": "me7.5", "me7.5": "me7.5", "me7.1": "me7.1",
+        }
+        merged = set(self.applies_to)
+        for lst in (self.requires_induction, self.requires_lambda,
+                    self.requires_fuel, self.requires_family):
+            for r in lst:
+                merged.add(_tag_map.get(r.lower(), r.lower()))
+        self.applies_to = merged
 
-    def check_applicable(self, profile: "ROMProfile") -> bool:
-        """
-        Return True if this patch can apply to the given profile.
-        An empty requirement list means the patch applies to all profiles.
-        """
-        return profile.patch_applies(
-            self.requires_induction,
-            self.requires_lambda,
-            self.requires_fuel,
-            self.requires_family,
-        )
+    def check_applicable(self, profile) -> bool:
+        return profile.patch_applies(self)
 
     def detect(self, rom: ROMImage,
                searcher: Optional[Searcher] = None,
-               profile: Optional["ROMProfile"] = None) -> PatchResult:
+               profile=None) -> PatchResult:
         """
         Locate patch site and return current state.
-
-        If a profile is supplied and the patch requirements don't match,
-        returns PatchState.NOT_APPLICABLE immediately without searching.
+        NOT_APPLICABLE returned immediately when profile supplied and tags mismatch.
         """
         if profile is not None and not self.check_applicable(profile):
             return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
-                               f"Not applicable to {profile.induction} "
-                               f"/ {profile.lambda_type} / {profile.fuel_system}")
+                               f"N/A: {profile.induction}/"
+                               f"{profile.o2_system}/{profile.fuel_system}")
 
         s   = searcher or Searcher(rom)
         hit = s.search_one(list(self.needle), list(self.mask))
@@ -206,7 +210,7 @@ class ScalarPatchDef:
     warning:    str   = ""
     confidence: str   = "UNCONFIRMED"
     notes:      str   = ""
-    # Platform gating
+    applies_to:         Set[str]  = field(default_factory=set)
     requires_induction: List[str] = None   # type: ignore
     requires_lambda:    List[str] = None
     requires_fuel:      List[str] = None
@@ -217,14 +221,21 @@ class ScalarPatchDef:
         if self.requires_lambda    is None: self.requires_lambda    = []
         if self.requires_fuel      is None: self.requires_fuel      = []
         if self.requires_family    is None: self.requires_family    = []
+        _tag_map = {
+            "turbo": "turbo", "na": "na",
+            "narrowband": "narrowband", "wideband": "wideband",
+            "mpi": "mpi", "fsi": "fsi", "tfsi": "tfsi",
+            "me7": "me7.5", "me7.5": "me7.5", "me7.1": "me7.1",
+        }
+        merged = set(self.applies_to)
+        for lst in (self.requires_induction, self.requires_lambda,
+                    self.requires_fuel, self.requires_family):
+            for r in lst:
+                merged.add(_tag_map.get(r.lower(), r.lower()))
+        self.applies_to = merged
 
-    def check_applicable(self, profile: "ROMProfile") -> bool:
-        return profile.patch_applies(
-            self.requires_induction,
-            self.requires_lambda,
-            self.requires_fuel,
-            self.requires_family,
-        )
+    def check_applicable(self, profile) -> bool:
+        return profile.patch_applies(self)
 
     def _find_addr(self, rom: ROMImage,
                    searcher: Optional[Searcher] = None) -> int:

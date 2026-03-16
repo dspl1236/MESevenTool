@@ -94,19 +94,50 @@ class ROMProfile:
                     break
         self.platforms = self.platforms | auto
 
-    def patch_applies(self, patch) -> bool:
+    def patch_applies(self, patch_or_induction=None,
+                      lambda_req=None, fuel_req=None, family_req=None) -> bool:
         """
-        Return True if the given PatchDef/ScalarPatchDef should be
-        offered for this profile.
+        Return True if a patch should be offered for this profile.
 
-        A patch with an empty applies_to set is universal.
-        A patch with a non-empty applies_to must have ALL its tags present
-        in this profile's platforms set.
+        Two calling conventions are supported:
+
+        New (preferred) — pass the patch object:
+            profile.patch_applies(patch)
+            Uses patch.applies_to (a set of platform tags).
+            Empty set → applies to all.
+
+        Legacy — pass 4 requirement lists:
+            profile.patch_applies(ind_list, lambda_list, fuel_list, family_list)
+            Translates to tag checks against self.platforms.
         """
-        applies_to = getattr(patch, 'applies_to', set())
-        if not applies_to:
-            return True
-        return applies_to.issubset(self.platforms)
+        # New-style: patch object with applies_to set
+        if hasattr(patch_or_induction, 'applies_to'):
+            applies_to = patch_or_induction.applies_to or set()
+            return not applies_to or applies_to.issubset(self.platforms)
+
+        # Legacy-style: 4 separate requirement lists
+        # Map old field names to platform tags
+        def _ok(req_list, mapping):
+            if not req_list:
+                return True
+            for r in req_list:
+                tag = mapping.get(r.lower(), r.lower())
+                if tag in self.platforms:
+                    return True
+            return False
+
+        ind_map  = {"turbo": "turbo", "na": "na", "biturbo": "turbo"}
+        lam_map  = {"narrowband": "narrowband", "nb": "narrowband",
+                    "wideband": "wideband",    "wb": "wideband"}
+        fuel_map = {"mpi": "mpi", "fsi": "fsi", "tfsi": "tfsi"}
+        fam_map  = {"me7": "me7.5", "me7.5": "me7.5", "me7.1": "me7.1"}
+
+        return (
+            _ok(patch_or_induction or [], ind_map) and
+            _ok(lambda_req         or [], lam_map) and
+            _ok(fuel_req           or [], fuel_map) and
+            _ok(family_req         or [], fam_map)
+        )
 
     def matches(self, ecu_id: ECUIdentity, dpp: DPPValues) -> bool:
         """Return True if this profile matches by part number prefix."""
@@ -141,8 +172,9 @@ PROFILE_AWP = ROMProfile(
     part_prefixes = ["06A906032"],
     rom_size      = 0x80000,
     ecu_hw        = "ME7.5",
-    variants      = ["AWP 180hp", "AUM 150hp", "AUQ 180hp", "BAM 190hp",
-                     "AVC 150hp", "AZG 150hp", "AGN 125hp"],
+    variants      = ["AWP 1.8T 180hp", "AUM 1.8T 150hp", "AUQ 1.8T 180hp",
+                     "BAM 1.8T 190hp", "AVC 1.8T 150hp", "AZG 1.8T 150hp",
+                     "AGN 1.8T 125hp"],
     dpp1_min      = 0x01F0,
     dpp1_max      = 0x0210,
     induction     = "turbo",

@@ -301,8 +301,8 @@ class PatchesWidget(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
-        # Run detection
-        results = detect_all(rom, searcher)
+        # Run detection — pass profile for NOT_APPLICABLE filtering
+        results = detect_all(rom, searcher, profile)
         result_map = {r.patch.name: r for r in results}
 
         # Group PatchDef by category
@@ -429,19 +429,21 @@ class PatchesWidget(QWidget):
     @staticmethod
     def _state_text(state: PatchState) -> str:
         return {
-            PatchState.STOCK:   "stock",
-            PatchState.PATCHED: "✓ patched",
-            PatchState.UNKNOWN: "modified",
-            PatchState.MISSING: "not found",
+            PatchState.STOCK:          "stock",
+            PatchState.PATCHED:        "✓ patched",
+            PatchState.UNKNOWN:        "modified",
+            PatchState.MISSING:        "not found",
+            PatchState.NOT_APPLICABLE: "N/A",
         }.get(state, "?")
 
     @staticmethod
     def _state_colour(state: PatchState) -> str:
         return {
-            PatchState.STOCK:   C_DIM,
-            PatchState.PATCHED: C_GREEN,
-            PatchState.UNKNOWN: C_AMBER,
-            PatchState.MISSING: C_DIM,
+            PatchState.STOCK:          C_DIM,
+            PatchState.PATCHED:        C_GREEN,
+            PatchState.UNKNOWN:        C_AMBER,
+            PatchState.MISSING:        C_DIM,
+            PatchState.NOT_APPLICABLE: C_DIM,
         }.get(state, C_DIM)
 
     @staticmethod
