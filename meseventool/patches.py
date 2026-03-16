@@ -948,7 +948,46 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.1", "2.7t", "dual_bank"},
     ),
 
+    # ── MSLUB — Secondary Air Injection minimum airflow zeroing ───────────────
+    # Zeroing MSLUB (Minimum SAP airflow vs battery voltage) tells the ECU that
+    # zero airflow from the SAP is acceptable at any battery voltage.  This
+    # prevents P0410 / P1411 (SAI incorrect flow) from being set when the pump
+    # is absent, not working, or relay removed.  Does not affect the SAP relay
+    # output state or the J299 circuit diagnosis (handled separately via ESKONF).
+    #
+    # MSLUB is a 7-entry word table (11 voltage steps share axis with TVUB).
+    # The stock values (in some unknown unit proportional to g/s) are:
+    #   0x000B, 0x0026, 0x003D, 0x004C, 0x0054, 0x0057, 0x0057
+    # Setting all to 0x0000 makes the ECU always see "flow is adequate".
+    #
+    # Anchor: the first 10 bytes of the MSLUB word table are unique in the ROM.
+    # anchor_offset = 0 covers the start of the table; stock_bytes = all 14 bytes.
 
+    OffsetPatchDef(
+        name          = "SAP MSLUB Airflow Table Zero (2.7T)",
+        description   = ("Zeros the MSLUB (minimum secondary air injection airflow "
+                         "vs battery voltage) table. When zeroed, the ECU accepts "
+                         "zero measured SAP flow as normal at any voltage — "
+                         "preventing P0410/P1411 codes when the SAP pump relay or "
+                         "hoses are removed. Works alongside ESKONF SLV/SLP bits "
+                         "which disable the relay and heater circuit diagnosis. "
+                         "Does not affect NWS/EGR or any other system."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0x00, 0x0B, 0x00, 0x26, 0x00, 0x3D,
+                               0x00, 0x4C, 0x00, 0x54]),
+        anchor_offset = 0,
+        stock_bytes   = bytes([0x00, 0x0B, 0x00, 0x26, 0x00, 0x3D,
+                               0x00, 0x4C, 0x00, 0x54, 0x00, 0x57,
+                               0x00, 0x57]),
+        patch_bytes   = bytes(14),   # all zeros
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed on 15/18 8D0907551 files. "
+                         "4 early files (A-0002, A-0003, D-0001, D-0002) use "
+                         "a different table encoding and are not covered. "
+                         "Stock values: 0x0B, 0x26, 0x3D, 0x4C, 0x54, 0x57, 0x57 "
+                         "(units unknown, likely 0.01 kg/h)."),
+        applies_to    = {"me7.1", "2.7t"},
+    ),
 
 ]  # end ALL_PATCHES
 
