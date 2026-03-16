@@ -470,3 +470,192 @@ class TestRealROMPatches:
         degrees = [v * scale for v in decoded]
         assert all(-5 <= d <= 40 for d in degrees), \
             f"KFZW row 0 has implausible values: {degrees}"
+
+
+
+# ── ESKONF patch tests ────────────────────────────────────────────────────────
+
+import tempfile, os as _os
+
+def _rom_file(block7: bytes, offset: int = 0x10C75) -> str:
+    """Write a 1MB ROM with a 7-byte ESKONF block at offset; return temp path."""
+    data = bytearray(1048576)
+    data[offset:offset + 7] = block7[:7]
+    f = tempfile.NamedTemporaryFile(delete=False, suffix='.bin')
+    f.write(data); f.close()
+    return f.name
+
+
+class TestESKONFNewer:
+    """Newer-format ESKONF block: 0f 01 05 0d fe 08 19."""
+
+    @pytest.fixture(autouse=True)
+    def _patch(self):
+        from meseventool.patches import ALL_PATCHES, MultiOffsetPatchDef
+        patches = [p for p in ALL_PATCHES
+                   if isinstance(p, MultiOffsetPatchDef) and 'newer' in p.name.lower()]
+        assert patches, "No newer ESKONF patch found"
+        self.patch = patches[0]
+
+    def _load(self, block7):
+        from meseventool.rom import ROMImage
+        tmp = _rom_file(block7)
+        try:
+            return ROMImage.load(tmp), tmp
+        except Exception:
+            _os.unlink(tmp); raise
+
+    def test_stock_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0x0D, 0xFE, 0x08, 0x19]))
+        try:
+            assert self.patch.detect(rom).state == PatchState.STOCK
+        finally:
+            _os.unlink(tmp)
+
+    def test_patched_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0xCD, 0xFE, 0xC8, 0xD9]))
+        try:
+            assert self.patch.detect(rom).state == PatchState.PATCHED
+        finally:
+            _os.unlink(tmp)
+
+    def test_missing_on_blank_rom(self):
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        tmp = _rom_file(bytes(7))
+        try:
+            rom = ROMImage.load(tmp)
+            assert self.patch.detect(rom).state == PatchState.MISSING
+        finally:
+            _os.unlink(tmp)
+
+    def test_mixed_sites_is_unknown(self):
+        from meseventool.patches import PatchState
+        # b3 patched, b5 still stock → UNKNOWN
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0xCD, 0xFE, 0x08, 0x19]))
+        try:
+            assert self.patch.detect(rom).state == PatchState.UNKNOWN
+        finally:
+            _os.unlink(tmp)
+
+    def test_apply_then_detect_patched(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0x0D, 0xFE, 0x08, 0x19]))
+        try:
+            r = self.patch.detect(rom)
+            assert r.state == PatchState.STOCK
+            self.patch.apply(rom, r)
+            assert self.patch.detect(rom).state == PatchState.PATCHED
+        finally:
+            _os.unlink(tmp)
+
+    def test_revert_restores_stock(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0xCD, 0xFE, 0xC8, 0xD9]))
+        try:
+            r = self.patch.detect(rom)
+            assert r.state == PatchState.PATCHED
+            self.patch.revert(rom, r)
+            assert self.patch.detect(rom).state == PatchState.STOCK
+        finally:
+            _os.unlink(tmp)
+
+    def test_length_preserved_after_apply(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(bytes([0x0F, 0x01, 0x05, 0x0D, 0xFE, 0x08, 0x19]))
+        try:
+            orig_len = len(rom.data)
+            r = self.patch.detect(rom)
+            self.patch.apply(rom, r)
+            assert len(rom.data) == orig_len
+        finally:
+            _os.unlink(tmp)
+
+
+class TestESKONFOlder:
+    """Older-format ESKONF: 06 02 a8 0d fe 28 28 with pre-block anchor bytes."""
+
+    @pytest.fixture(autouse=True)
+    def _patches(self):
+        from meseventool.patches import ALL_PATCHES, MultiOffsetPatchDef
+        self.p06 = next(p for p in ALL_PATCHES
+                        if isinstance(p, MultiOffsetPatchDef) and 'older-06' in p.name)
+        self.p05 = next(p for p in ALL_PATCHES
+                        if isinstance(p, MultiOffsetPatchDef) and 'older-05' in p.name)
+
+    def _rom_with_older(self, prefix_byte: int, b3: int, b5: int, b6: int,
+                        offset: int = 0x10C6D) -> str:
+        """ROM with pre-anchor (ee 24) + ESKONF block at offset."""
+        data = bytearray(1048576)
+        # Pre-anchor: 2 bytes before block
+        data[offset - 2] = 0xEE
+        data[offset - 1] = 0x24
+        # ESKONF block: [prefix, 02, a8, b3, fe, b5, b6]
+        data[offset:offset + 7] = bytes([prefix_byte, 0x02, 0xA8, b3, 0xFE, b5, b6])
+        f = tempfile.NamedTemporaryFile(delete=False, suffix='.bin')
+        f.write(data); f.close()
+        return f.name
+
+    def _load(self, *args, **kwargs):
+        from meseventool.rom import ROMImage
+        tmp = self._rom_with_older(*args, **kwargs)
+        try:
+            return ROMImage.load(tmp), tmp
+        except Exception:
+            _os.unlink(tmp); raise
+
+    def test_06_stock_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(0x06, 0x0D, 0x28, 0x28)
+        try:
+            assert self.p06.detect(rom).state == PatchState.STOCK
+        finally:
+            _os.unlink(tmp)
+
+    def test_06_patched_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(0x06, 0xCD, 0xE8, 0xE8)
+        try:
+            assert self.p06.detect(rom).state == PatchState.PATCHED
+        finally:
+            _os.unlink(tmp)
+
+    def test_05_stock_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(0x05, 0x0D, 0x28, 0x28)
+        try:
+            assert self.p05.detect(rom).state == PatchState.STOCK
+        finally:
+            _os.unlink(tmp)
+
+    def test_05_patched_detected(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(0x05, 0xCD, 0xE8, 0xE8)
+        try:
+            assert self.p05.detect(rom).state == PatchState.PATCHED
+        finally:
+            _os.unlink(tmp)
+
+    def test_missing_when_no_pre_anchor(self):
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        # ROM with ESKONF block but no ee 24 pre-bytes
+        tmp = _rom_file(bytes([0x06, 0x02, 0xA8, 0x0D, 0xFE, 0x28, 0x28]))
+        try:
+            rom = ROMImage.load(tmp)
+            assert self.p06.detect(rom).state == PatchState.MISSING
+        finally:
+            _os.unlink(tmp)
+
+    def test_06_apply_and_verify(self):
+        from meseventool.patches import PatchState
+        rom, tmp = self._load(0x06, 0x0D, 0x28, 0x28)
+        try:
+            r = self.p06.detect(rom)
+            assert r.state == PatchState.STOCK
+            self.p06.apply(rom, r)
+            assert self.p06.detect(rom).state == PatchState.PATCHED
+        finally:
+            _os.unlink(tmp)

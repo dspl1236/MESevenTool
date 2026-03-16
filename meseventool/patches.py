@@ -815,6 +815,78 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── Confirmed ESKONF patches — 2.7T/V8 corpus validated ─────────────────
+    #
+    # ESKONF (Endstufen Konfig) tells the ECU which physical outputs are wired.
+    # Clearing LSHHK/HSH2/HSH bits disables post-cat O2 heater circuit diagnosis
+    # so removing rear sensors does not trigger P0141/P0161.
+    #
+    # Three format variants across the 57-ROM corpus (all anchors exclude patch targets):
+    #   newer:    block "0f 01 05 0d fe 08 19"  — anchor b'\x0f\x01\x05' (57/57 1MB ROMs)
+    #   older-06: block "06 02 a8 0d fe 28 28"  — anchor b'\xee\x24\x06\x02\xa8' (20 ROMs)
+    #   older-05: block "05 02 a8 0d fe 28 28"  — anchor b'\xee\x24\x05\x02\xa8' (16 ROMs)
+    # Files often carry both a newer and an older block simultaneously.
+    # Applying both newer + matching older patch is safe (idempotent on overlapping bytes).
+
+    MultiOffsetPatchDef(
+        name          = "ESKONF Rear O2 Heater Disable (newer — 0F 01 05)",
+        description   = ("Clears LSHHK (rear O2 heater), HSH2 and HSH bit-pairs in the "
+                         "newer-format ESKONF block '0f 01 05 0d fe 08 19'.  Required "
+                         "when removing rear O2 sensors to prevent heater circuit DTCs.  "
+                         "Covers all 57 standard 1MB ROMs in the s4wiki corpus."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0x0F, 0x01, 0x05]),   # bytes 0-2 of block — never patch targets
+        sites         = [
+            (+3, 0x0D, 0xCD),   # b3 LSHHK: 0x0D → 0xCD  (bits 7:6 → 11 = NOT INSTALLED)
+            (+5, 0x08, 0xC8),   # b5 HSH2:  0x08 → 0xC8
+            (+6, 0x19, 0xD9),   # b6 HSH:   0x19 → 0xD9
+        ],
+        confidence    = "CONFIRMED",
+        notes         = ("All 57 standard 1MB ROMs: STOCK correctly detected. "
+                         "Stock block: 0f 01 05 0d fe 08 19.  "
+                         "Anchor b'\x0f\x01\x05' appears exactly once per file and "
+                         "never contains any patch-target byte."),
+        applies_to    = {"me7.1", "2.7t", "dual_bank"},
+    ),
+
+    MultiOffsetPatchDef(
+        name          = "ESKONF Rear O2 Heater Disable (older-06 — 06 02 A8)",
+        description   = ("Same logical function as the newer-format patch, for ECUs "
+                         "with the older '06 02 a8 0d fe 28 28' ESKONF block.  "
+                         "Applies to 8D0907551M/G/N/Q/T and 4B0907551AA/R."),
+        category      = PatchCategory.EMISSIONS,
+        # 2 bytes before block (ee 24) + block bytes 0-2 (06 02 a8) — none are patch targets
+        anchor_bytes  = bytes([0xEE, 0x24, 0x06, 0x02, 0xA8]),
+        sites         = [
+            (+5, 0x0D, 0xCD),   # b3 LSHHK
+            (+7, 0x28, 0xE8),   # b5 HSH2
+            (+8, 0x28, 0xE8),   # b6 HSH
+        ],
+        confidence    = "CONFIRMED",
+        notes         = ("20 ROMs with '06 02 a8 0d' block; 10 others show UNKNOWN "
+                         "from a false-positive '06 02 a8 FE' sequence at the same "
+                         "anchor position — those files are fully covered by the newer patch."),
+        applies_to    = {"me7.1", "2.7t", "dual_bank"},
+    ),
+
+    MultiOffsetPatchDef(
+        name          = "ESKONF Rear O2 Heater Disable (older-05 — 05 02 A8)",
+        description   = ("Older ESKONF format with '05 02 a8 0d fe 28 28' block prefix.  "
+                         "Applies to 8D0907551H/J/K/L, early 4Z7907551K/M, 4B0907551S/T."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0xEE, 0x24, 0x05, 0x02, 0xA8]),
+        sites         = [
+            (+5, 0x0D, 0xCD),
+            (+7, 0x28, 0xE8),
+            (+8, 0x28, 0xE8),
+        ],
+        confidence    = "CONFIRMED",
+        notes         = ("16 ROMs with '05 02 a8 0d' block verified STOCK."),
+        applies_to    = {"me7.1", "2.7t", "dual_bank"},
+    ),
+
+
+
 ]  # end ALL_PATCHES
 
 
