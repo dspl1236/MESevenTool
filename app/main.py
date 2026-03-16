@@ -24,9 +24,10 @@ try:
         QLabel, QPushButton, QFileDialog, QTabWidget, QScrollArea,
         QGroupBox, QCheckBox, QDoubleSpinBox, QFrame,
         QTableWidget, QTableWidgetItem, QHeaderView, QStatusBar,
-        QTextEdit, QGridLayout, QMessageBox,
+        QTextEdit, QGridLayout, QMessageBox, QAction, QSplitter,
+        QDialogButtonBox, QDialog,
     )
-    from PyQt5.QtCore import Qt, pyqtSignal
+    from PyQt5.QtCore import Qt, pyqtSignal, QTimer
     from PyQt5.QtGui import QColor
     _HAS_QT = True
 except ImportError:
@@ -671,11 +672,192 @@ class MESevenWindow(QMainWindow):
         self.resize(1100, 760)
         self.setStyleSheet(_BASE_STYLE)
 
+        # ── KWPBridge live overlay (optional) ─────────────────────────────────
+        from meseventool.kwp import (KWPMonitor, LiveValues,
+                                     kwpbridge_available, kwpbridge_running,
+                                     status_label as kwp_status_label,
+                                     live_summary as kwp_live_summary)
+        self._KWPMonitor        = KWPMonitor
+        self._kwpbridge_avail   = kwpbridge_available
+        self._kwpbridge_running = kwpbridge_running
+        self._kwp_status_label  = kwp_status_label
+        self._kwp_live_summary  = kwp_live_summary
+        self._kwp_monitor       = KWPMonitor(self)
+        self._kwp_matched       = False
+        self._kwp_monitor.connected.connect(self._on_kwp_connected)
+        self._kwp_monitor.disconnected.connect(self._on_kwp_disconnected)
+        self._kwp_monitor.live_data.connect(self._on_kwp_live_data)
+        self._kwp_monitor.mismatch.connect(self._on_kwp_mismatch)
+
         self._setup_ui()
+        self._build_menu()
         self._connect_signals()
 
         if rom_path and os.path.exists(rom_path):
             self._load_rom(rom_path)
+
+        if rom_path and os.path.exists(rom_path):
+            self._load_rom(rom_path)
+
+    def _build_menu(self):
+        mb = self.menuBar()
+        mb.setStyleSheet(
+            f"QMenuBar {{ background:{C_BG2}; color:{C_FG}; }}"
+            f"QMenuBar::item:selected {{ background:{C_BG3}; }}"
+            f"QMenu {{ background:{C_BG2}; color:{C_FG}; border:1px solid {C_BORDER}; }}"
+            f"QMenu::item:selected {{ background:{C_BG3}; }}")
+
+        # ── File ─────────────────────────────────────────────────────────────
+        fm = mb.addMenu("File")
+        for label, shortcut, slot in [
+            ("Open ROM…",   "Ctrl+O",       self._on_open),
+            ("Save ROM",    "Ctrl+S",       self._on_save),
+            ("Save As…",    "Ctrl+Shift+S", self._on_save_as),
+        ]:
+            a = QAction(label, self)
+            a.setShortcut(shortcut)
+            a.triggered.connect(slot)
+            fm.addAction(a)
+        fm.addSeparator()
+        a = QAction("Fix Checksums", self)
+        a.setShortcut("Ctrl+F")
+        a.triggered.connect(self._on_fix_checksums)
+        fm.addAction(a)
+        fm.addSeparator()
+        fm.addAction("Quit", self.close)
+
+        # ── Tools ─────────────────────────────────────────────────────────────
+        tm = mb.addMenu("Tools")
+
+        self._act_kwp_status = QAction("KWPBridge: not running", self)
+        self._act_kwp_status.setEnabled(False)
+        tm.addAction(self._act_kwp_status)
+
+        tm.addSeparator()
+
+        a = QAction("Live Data Connection…", self)
+        a.setShortcut("Ctrl+K")
+        a.triggered.connect(self._show_kwp_dialog)
+        tm.addAction(a)
+
+        self._kwp_menu_timer = QTimer(self)
+        self._kwp_menu_timer.timeout.connect(self._refresh_kwp_menu_label)
+        self._kwp_menu_timer.start(2000)
+
+        # ── Help ─────────────────────────────────────────────────────────────
+        hm = mb.addMenu("Help")
+        hm.addAction("About MESevenTool", self._on_about)
+
+    def _on_about(self):
+        from PyQt5.QtWidgets import QMessageBox
+        QMessageBox.about(self, "MESevenTool",
+                          f"<b>MESevenTool</b>  v{__version__}<br><br>"
+                          "Bosch ME7.x ROM editor for VAG 1.8T / 2.0T engines.<br>"
+                          "06A-906-032 (AWP/AUM/AUQ/BAM) and related families.<br><br>"
+                          "Needle-based map discovery — works across all ME7.x variants.")
+
+    def _refresh_kwp_menu_label(self):
+        if not hasattr(self, '_act_kwp_status'):
+            return
+        if not self._kwpbridge_avail():
+            self._act_kwp_status.setText("KWPBridge: not installed")
+        elif self._kwpbridge_running():
+            pn = self._kwp_monitor.current_pn()
+            if pn:
+                self._act_kwp_status.setText(f"KWPBridge: connected  ·  {pn}")
+            else:
+                self._act_kwp_status.setText("KWPBridge: running — no ECU")
+        else:
+            self._act_kwp_status.setText("KWPBridge: not running")
+
+    def _show_kwp_dialog(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Live Data — KWPBridge Connection")
+        dlg.setMinimumWidth(440)
+        dlg.setStyleSheet(f"background:{C_BG2}; color:{C_FG};")
+        lay = QVBoxLayout(dlg)
+        lay.setSpacing(12)
+
+        if not self._kwpbridge_avail():
+            dot, body = "⚫", (
+                "<b>KWPBridge is not installed.</b><br><br>"
+                "MESevenTool works fully standalone without it.<br><br>"
+                "KWPBridge adds optional live ECU data overlay:<br>"
+                "• Real-time RPM, load, coolant on map tabs<br>"
+                "• Lambda and ignition timing overlaid on cells<br>"
+                "• Part-number safety gate before writes<br><br>"
+                "Run KWPBridge alongside MESevenTool and connect<br>"
+                "a KL-line interface.")
+        elif self._kwpbridge_running():
+            pn = self._kwp_monitor.current_pn()
+            rom_pn = ""
+            if self._rom:
+                from meseventool.ecu_id import identify
+                ident = identify(self._rom)
+                rom_pn = ident.vmecuhn or ""
+            if pn:
+                dot  = "🟢" if self._kwp_matched else "🟡"
+                if self._kwp_matched:
+                    body = (f"<b>KWPBridge connected.</b><br><br>"
+                            f"ECU: <b>{pn}</b><br>"
+                            "ECU matches loaded ROM — live overlay active.")
+                else:
+                    body = (f"<b>KWPBridge connected.</b><br><br>"
+                            f"ECU: <b>{pn}</b><br>"
+                            f"ROM: <b>{rom_pn or '(none loaded)'}</b><br>"
+                            "Load the matching ROM to enable overlay.")
+            else:
+                dot  = "🟡"
+                body = ("<b>KWPBridge running — no ECU detected.</b><br><br>"
+                        "Connect KL-line interface and turn ignition on.")
+        else:
+            dot  = "🔴"
+            body = ("<b>KWPBridge is installed but not running.</b><br><br>"
+                    "MESevenTool is fully operational without it.<br><br>"
+                    "Start KWPBridge to enable live data overlay.<br>"
+                    "Auto-detected within 2 seconds of starting.")
+
+        icon = QLabel(dot)
+        icon.setStyleSheet("font-size: 28px;")
+        msg = QLabel(body)
+        msg.setWordWrap(True)
+        row = QHBoxLayout()
+        row.addWidget(icon)
+        row.addWidget(msg, 1)
+        w = QWidget()
+        w.setLayout(row)
+        lay.addWidget(w)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok)
+        bb.accepted.connect(dlg.accept)
+        lay.addWidget(bb)
+        dlg.exec_()
+
+    # ── KWPBridge live data handlers ──────────────────────────────────────────
+
+    def _on_kwp_connected(self, ecu_pn: str):
+        self._kwp_matched = self._kwp_monitor.is_matched()
+        self._refresh_kwp_menu_label()
+        if self._kwp_matched:
+            self._set_status(
+                f"KWPBridge connected  ·  {ecu_pn}  ·  ECU matches ROM  ·  live overlay active")
+        else:
+            self._set_status(
+                f"KWPBridge connected  ·  {ecu_pn}  ·  load matching ROM to enable overlay")
+
+    def _on_kwp_disconnected(self):
+        self._kwp_matched = False
+        self._refresh_kwp_menu_label()
+        self._set_status("KWPBridge disconnected")
+
+    def _on_kwp_mismatch(self, ecu_pn: str, rom_pn: str):
+        self._kwp_matched = False
+        self._refresh_kwp_menu_label()
+
+    def _on_kwp_live_data(self, lv):
+        summary = self._kwp_live_summary(lv)
+        if summary and self._kwp_matched:
+            self._set_status(f"🟢  {self._kwp_monitor.current_pn()}  ·  {summary}")
+        self._refresh_kwp_menu_label()
 
     def _setup_ui(self):
         central = QWidget()
@@ -804,6 +986,13 @@ class MESevenWindow(QMainWindow):
         self._w_info.update(rom, ident, self._dpp, cs_result, profile)
         self._w_patches.load_rom(rom, self._searcher, profile)
         self._w_maps.load_rom(rom, self._searcher, maps)
+
+        # Tell KWP monitor which part numbers are valid for this ROM
+        pns = [ident.vmecuhn] if ident.vmecuhn else []
+        if ident.ssecuhn and ident.ssecuhn not in pns:
+            pns.append(ident.ssecuhn)
+        self._kwp_monitor.set_rom_part_numbers(pns)
+        self._refresh_kwp_menu_label()
 
         # Toolbar state
         self.btn_save.setEnabled(True)

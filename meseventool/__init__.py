@@ -52,5 +52,8 @@ __all__ = [
     "ECUIdentity", "identify", "identify_from_filename", "_clean_string",
     # XDF
     "XDFLoader", "XDFTable", "XDFAxis",
+    # KWP
+    "KWPMonitor", "LiveValues", "kwpbridge_available", "kwpbridge_running",
 ]
 from .xdf import XDFLoader, XDFTable, XDFAxis
+from .kwp import KWPMonitor, LiveValues, kwpbridge_available, kwpbridge_running
