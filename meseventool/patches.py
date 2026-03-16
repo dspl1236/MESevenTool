@@ -25,19 +25,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Sequence
+from typing import Optional, Sequence, List, TYPE_CHECKING
 
 from .rom import ROMImage
 from .needle import Searcher
+
+if TYPE_CHECKING:
+    from .profiles import ROMProfile
+
+# Platform trait wildcard — import lazily to avoid circular dependency
+_ANY = "*"
 
 
 # ── Enums ──────────────────────────────────────────────────────────────────────
 
 class PatchState(Enum):
-    STOCK   = auto()   # ROM contains stock bytes
-    PATCHED = auto()   # ROM contains patch bytes
-    UNKNOWN = auto()   # neither pattern matched
-    MISSING = auto()   # needle not found in this ROM
+    STOCK          = auto()   # ROM contains stock bytes
+    PATCHED        = auto()   # ROM contains patch bytes
+    UNKNOWN        = auto()   # neither stock nor patch pattern matched
+    MISSING        = auto()   # needle not found in this ROM variant
+    NOT_APPLICABLE = auto()   # patch cannot apply to this ECU platform
+                               # e.g. a boost patch on an NA profile
 
 
 class PatchCategory(Enum):
@@ -74,6 +82,12 @@ class PatchDef:
     needle/mask locate the patch site; stock_bytes and patch_bytes define the
     toggle.  offset is the byte offset from the needle hit start to the bytes
     that are modified (stock_bytes/patch_bytes start at needle_hit + offset).
+
+    Platform requirements — leave empty (default) to apply to all profiles:
+      requires_induction  e.g. ["turbo","biturbo"]  — NA profiles get NOT_APPLICABLE
+      requires_lambda     e.g. ["narrowband"]        — wideband profiles get NOT_APPLICABLE
+      requires_fuel       e.g. ["MPI"]               — FSI profiles get NOT_APPLICABLE
+      requires_family     e.g. ["ME7"]               — MED17 profiles get NOT_APPLICABLE
     """
     name:        str
     description: str
@@ -86,16 +100,49 @@ class PatchDef:
     warning:     str = ""
     confidence:  str = "UNCONFIRMED"
     notes:       str = ""
+    # Platform gating — empty list means "applies to all"
+    requires_induction: List[str] = None   # type: ignore
+    requires_lambda:    List[str] = None
+    requires_fuel:      List[str] = None
+    requires_family:    List[str] = None
 
     def __post_init__(self):
         assert len(self.needle) == len(self.mask), \
             f"Patch '{self.name}': needle/mask length mismatch"
         assert len(self.stock_bytes) == len(self.patch_bytes), \
             f"Patch '{self.name}': stock/patch bytes length mismatch"
+        # Normalise None → [] so callers never have to check
+        if self.requires_induction is None: self.requires_induction = []
+        if self.requires_lambda    is None: self.requires_lambda    = []
+        if self.requires_fuel      is None: self.requires_fuel      = []
+        if self.requires_family    is None: self.requires_family    = []
+
+    def check_applicable(self, profile: "ROMProfile") -> bool:
+        """
+        Return True if this patch can apply to the given profile.
+        An empty requirement list means the patch applies to all profiles.
+        """
+        return profile.patch_applies(
+            self.requires_induction,
+            self.requires_lambda,
+            self.requires_fuel,
+            self.requires_family,
+        )
 
     def detect(self, rom: ROMImage,
-               searcher: Optional[Searcher] = None) -> PatchResult:
-        """Locate patch site and return current state."""
+               searcher: Optional[Searcher] = None,
+               profile: Optional["ROMProfile"] = None) -> PatchResult:
+        """
+        Locate patch site and return current state.
+
+        If a profile is supplied and the patch requirements don't match,
+        returns PatchState.NOT_APPLICABLE immediately without searching.
+        """
+        if profile is not None and not self.check_applicable(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
+                               f"Not applicable to {profile.induction} "
+                               f"/ {profile.lambda_type} / {profile.fuel_system}")
+
         s   = searcher or Searcher(rom)
         hit = s.search_one(list(self.needle), list(self.mask))
         if hit is None:
@@ -118,14 +165,16 @@ class PatchDef:
 
     def apply(self, rom: ROMImage, result: PatchResult) -> bool:
         """Write patch_bytes at the discovered address. Returns True on success."""
-        if result.addr == 0 or result.state == PatchState.MISSING:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                  PatchState.NOT_APPLICABLE):
             return False
         rom.write(result.addr, self.patch_bytes)
         return True
 
     def revert(self, rom: ROMImage, result: PatchResult) -> bool:
         """Write stock_bytes at the discovered address."""
-        if result.addr == 0 or result.state == PatchState.MISSING:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                  PatchState.NOT_APPLICABLE):
             return False
         rom.write(result.addr, self.stock_bytes)
         return True
@@ -136,32 +185,49 @@ class PatchDef:
 @dataclass
 class ScalarPatchDef:
     """
-    A single numeric value that can be read and written at a needle-located site.
+    A single numeric value readable/writable at a needle-located site.
 
-    Used for things like RPM limits, injector pulse widths, boost targets —
-    values where you want to show the current number and let the user type a
-    new one, rather than a simple stock/patched toggle.
+    Used for RPM limits, boost targets, injector corrections.
+    Same platform requirement fields as PatchDef.
     """
     name:       str
     description:str
     category:   PatchCategory | str
     needle:     Sequence[int]
     mask:       Sequence[int]
-    offset:     int          # byte offset from needle hit to the value
-    size:       int          # value size in bytes (1, 2, or 4)
+    offset:     int
+    size:       int
     big_endian: bool  = True
-    scale:      float = 1.0  # physical = raw * scale
-    offset_val: float = 0.0  # physical = raw * scale + offset_val
+    scale:      float = 1.0
+    offset_val: float = 0.0
     unit:       str   = ""
     min_val:    float = 0.0
     max_val:    float = 65535.0
     warning:    str   = ""
     confidence: str   = "UNCONFIRMED"
     notes:      str   = ""
+    # Platform gating
+    requires_induction: List[str] = None   # type: ignore
+    requires_lambda:    List[str] = None
+    requires_fuel:      List[str] = None
+    requires_family:    List[str] = None
+
+    def __post_init__(self):
+        if self.requires_induction is None: self.requires_induction = []
+        if self.requires_lambda    is None: self.requires_lambda    = []
+        if self.requires_fuel      is None: self.requires_fuel      = []
+        if self.requires_family    is None: self.requires_family    = []
+
+    def check_applicable(self, profile: "ROMProfile") -> bool:
+        return profile.patch_applies(
+            self.requires_induction,
+            self.requires_lambda,
+            self.requires_fuel,
+            self.requires_family,
+        )
 
     def _find_addr(self, rom: ROMImage,
                    searcher: Optional[Searcher] = None) -> int:
-        """Return file offset of the value, 0 if needle not found."""
         s   = searcher or Searcher(rom)
         hit = s.search_one(list(self.needle), list(self.mask))
         if hit is None:
@@ -180,10 +246,7 @@ class ScalarPatchDef:
 
     def write(self, rom: ROMImage, value: float,
               searcher: Optional[Searcher] = None) -> bool:
-        """
-        Write a physical value. Returns True on success.
-        Rejects values outside [min_val, max_val].
-        """
+        """Write a physical value. Rejects out-of-range values."""
         if value < self.min_val or value > self.max_val:
             return False
         addr = self._find_addr(rom, searcher)
@@ -271,7 +334,9 @@ ALL_PATCHES: list[PatchDef] = [
         stock_bytes = bytes([0x8D]),    # conditional jump (fault if not OK)
         patch_bytes = bytes([0x0D]),    # unconditional jump (always OK)
         confidence  = "PROVISIONAL",
-        warning     = "Disables OBD-II rear O2 monitoring (P0140/P0141).",
+        warning          = "Disables OBD-II rear O2 monitoring (P0140/P0141).",
+        requires_lambda  = ["narrowband"],
+        requires_fuel    = ["MPI"],
     ),
 
     PatchDef(
@@ -289,7 +354,8 @@ ALL_PATCHES: list[PatchDef] = [
         stock_bytes = bytes([0x9A]),    # JNB — conditional
         patch_bytes = bytes([0x0D]),    # JMPR cc_UC — always skip
         confidence  = "UNCONFIRMED",
-        warning     = "Disables P0410/P0411.",
+        warning      = "Disables P0410/P0411.",
+        requires_fuel = ["MPI"],
     ),
 
     PatchDef(
@@ -309,7 +375,8 @@ ALL_PATCHES: list[PatchDef] = [
         stock_bytes = bytes([0x8D]),
         patch_bytes = bytes([0x0D]),
         confidence  = "UNCONFIRMED",
-        warning     = "Disables P0400/P0401.",
+        warning      = "Disables P0400/P0401.",
+        requires_fuel = ["MPI"],
     ),
 
     PatchDef(
@@ -447,7 +514,13 @@ def get_patches_by_category() -> dict[PatchCategory, list[PatchDef]]:
 
 
 def detect_all(rom: ROMImage,
-               searcher: Optional[Searcher] = None) -> list[PatchResult]:
-    """Run detection for every PatchDef and return results."""
+               searcher: Optional[Searcher] = None,
+               profile: Optional["ROMProfile"] = None) -> list[PatchResult]:
+    """
+    Run detection for every PatchDef and return results.
+
+    If a profile is supplied, patches that don't apply to that platform
+    are returned as NOT_APPLICABLE without running the needle search.
+    """
     s = searcher or Searcher(rom)
-    return [p.detect(rom, s) for p in ALL_PATCHES]
+    return [p.detect(rom, s, profile) for p in ALL_PATCHES]

@@ -22,13 +22,12 @@ try:
     from PyQt5.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QLabel, QPushButton, QFileDialog, QTabWidget, QScrollArea,
-        QGroupBox, QCheckBox, QDoubleSpinBox, QSpinBox, QFrame,
+        QGroupBox, QCheckBox, QDoubleSpinBox, QFrame,
         QTableWidget, QTableWidgetItem, QHeaderView, QStatusBar,
-        QSplitter, QTextEdit, QGridLayout, QSizePolicy, QMessageBox,
-        QProgressBar,
+        QTextEdit, QGridLayout, QMessageBox,
     )
-    from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
-    from PyQt5.QtGui import QFont, QColor, QPalette, QIcon
+    from PyQt5.QtCore import Qt, pyqtSignal
+    from PyQt5.QtGui import QColor
     _HAS_QT = True
 except ImportError:
     _HAS_QT = False
@@ -42,8 +41,7 @@ from meseventool.patches import (
     ALL_PATCHES, ALL_SCALAR_PATCHES, detect_all,
     PatchDef, ScalarPatchDef, PatchState, PatchCategory,
 )
-from meseventool.profiles import detect_profile, PROFILE_UNKNOWN
-from meseventool.maps import make_awp_maps
+from meseventool.profiles import detect_profile
 from meseventool import __version__
 
 
@@ -258,6 +256,7 @@ class PatchesWidget(QWidget):
         super().__init__(parent)
         self._rom: ROMImage | None = None
         self._searcher: Searcher | None = None
+        self._profile = None
         self._checks: dict[str, QCheckBox] = {}
         self._spinners: dict[str, QDoubleSpinBox] = {}
         self._status_labels: dict[str, QLabel] = {}
@@ -288,9 +287,10 @@ class PatchesWidget(QWidget):
         self._content_lay.addWidget(self._placeholder)
         self._content_lay.addStretch()
 
-    def load_rom(self, rom: ROMImage, searcher: Searcher):
+    def load_rom(self, rom: ROMImage, searcher: Searcher, profile=None):
         self._rom      = rom
         self._searcher = searcher
+        self._profile  = profile
         self._checks.clear()
         self._spinners.clear()
         self._status_labels.clear()
@@ -327,6 +327,14 @@ class PatchesWidget(QWidget):
                 row_lay.setSpacing(8)
 
                 if kind == 'toggle':
+                    # Check platform applicability
+                    if self._profile and not self._profile.patch_applies(patch):
+                        # Grey-out row with NOT_APPLICABLE label
+                        lbl_na = QLabel(f"{patch.name}  — not applicable for this ECU")
+                        lbl_na.setStyleSheet(f"color:{C_DIM}; font-size:11px; padding:2px 6px;")
+                        box_lay.addWidget(lbl_na)
+                        continue
+
                     result = result_map.get(patch.name)
                     state  = result.state if result else PatchState.MISSING
 
@@ -357,6 +365,11 @@ class PatchesWidget(QWidget):
                     row_lay.addWidget(state_lbl)
 
                 else:  # scalar
+                    if self._profile and not self._profile.patch_applies(patch):
+                        lbl_na = QLabel(f"{patch.name}  — not applicable for this ECU")
+                        lbl_na.setStyleSheet(f"color:{C_DIM}; font-size:11px; padding:2px 6px;")
+                        box_lay.addWidget(lbl_na)
+                        continue
                     lbl = QLabel(f"{patch.name}:")
                     lbl.setFixedWidth(180)
                     lbl.setToolTip(
@@ -786,7 +799,7 @@ class MESevenWindow(QMainWindow):
 
         # Update UI panels
         self._w_info.update(rom, ident, self._dpp, cs_result, profile)
-        self._w_patches.load_rom(rom, self._searcher)
+        self._w_patches.load_rom(rom, self._searcher, profile)
         self._w_maps.load_rom(rom, self._searcher, maps)
 
         # Toolbar state
