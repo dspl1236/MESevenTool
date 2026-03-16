@@ -10,11 +10,9 @@ Also provides filename-based identification as a fallback.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from .rom import ROMImage
-from .needle import Searcher, XXXX, MASK
 
 # Known VAG engine codes (3-letter, all uppercase)
 _ENGINE_CODES = [

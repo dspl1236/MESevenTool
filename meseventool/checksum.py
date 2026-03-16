@@ -21,7 +21,7 @@ from __future__ import annotations
 import struct
 import zlib
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import List
 
 from .rom import ROMImage
 from .needle import Searcher, NEEDLE_CRC32, MASK_CRC32

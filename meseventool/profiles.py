@@ -15,7 +15,7 @@ Detection order: part_number prefix → DPP1 range → UNKNOWN fallback.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 from .maps import MapDef, make_awp_maps
 from .ecu_id import ECUIdentity

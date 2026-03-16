@@ -443,70 +443,88 @@ class PatchesWidget(QWidget):
 # ── Maps panel ────────────────────────────────────────────────────────────────
 
 class MapsWidget(QWidget):
-    """Calibration map viewer — shows discovered maps as editable tables."""
+    """Calibration map viewer/editor — editable tables for each map."""
+
+    map_written = pyqtSignal(str)   # emits map name when cells written to ROM
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._rom: ROMImage | None = None
-        self._maps: list = []
+        self._rom:     ROMImage | None = None
+        self._maps:    list = []
+        self._cur_idx: int  = -1
         self._build_ui()
 
     def _build_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
 
-        # Map selector bar
+        # ── Map selector bar ──────────────────────────────────────────────────
         bar = QWidget()
         bar.setStyleSheet(f"background:{C_BG2}; border-bottom:1px solid {C_BORDER};")
         bar.setFixedHeight(40)
         bar_lay = QHBoxLayout(bar)
         bar_lay.setContentsMargins(12, 0, 12, 0)
         bar_lay.setSpacing(6)
-
         bar_lay.addWidget(QLabel("Map:"))
-        self._map_buttons: list[QPushButton] = []
-        self._btn_group_w = QWidget()
+        self._btn_group_w   = QWidget()
         self._btn_group_lay = QHBoxLayout(self._btn_group_w)
         self._btn_group_lay.setContentsMargins(0, 0, 0, 0)
         self._btn_group_lay.setSpacing(4)
         bar_lay.addWidget(self._btn_group_w)
         bar_lay.addStretch()
-
+        self._btn_write = QPushButton("Write to ROM")
+        self._btn_write.setStyleSheet(btn_style(C_AMBER))
+        self._btn_write.setEnabled(False)
+        self._btn_write.setToolTip(
+            "Encode edited cell values and write them into the ROM buffer.\n"
+            "Fix Checksums and Save to make the change permanent.")
+        self._btn_write.clicked.connect(self._on_write_map)
+        bar_lay.addWidget(self._btn_write)
         root.addWidget(bar)
 
-        # Map table
+        # ── Table ─────────────────────────────────────────────────────────────
         self._table = QTableWidget(0, 0)
-        self._table.setEditTriggers(QTableWidget.DoubleClicked)
+        self._table.setEditTriggers(QTableWidget.DoubleClicked |
+                                    QTableWidget.SelectedClicked)
         self._table.setSelectionBehavior(QTableWidget.SelectItems)
+        self._table.itemChanged.connect(self._on_cell_changed)
         root.addWidget(self._table, 1)
 
-        # Status / info bar
+        # ── Info bar ──────────────────────────────────────────────────────────
         info_bar = QWidget()
-        info_bar.setStyleSheet(f"background:{C_BG3}; border-top:1px solid {C_BORDER};")
+        info_bar.setStyleSheet(
+            f"background:{C_BG3}; border-top:1px solid {C_BORDER};")
         info_bar.setFixedHeight(28)
         ib_lay = QHBoxLayout(info_bar)
         ib_lay.setContentsMargins(12, 0, 12, 0)
         self._lbl_map_info = QLabel("Load a ROM to view calibration maps")
         self._lbl_map_info.setStyleSheet(f"color:{C_DIM}; font-size:10px;")
         ib_lay.addWidget(self._lbl_map_info)
+        self._lbl_dirty = QLabel("")
+        self._lbl_dirty.setStyleSheet(f"color:{C_AMBER}; font-size:10px;")
+        ib_lay.addWidget(self._lbl_dirty)
         root.addWidget(info_bar)
 
-    def load_rom(self, rom: ROMImage, searcher: Searcher, maps: list):
-        self._rom  = rom
-        self._maps = maps
+        self._map_buttons: list[QPushButton] = []
+        self._pending_edits: dict[tuple, float] = {}  # (row,col) → new value
 
-        # Clear old buttons
+    def load_rom(self, rom: ROMImage, searcher: Searcher, maps: list):
+        self._rom      = rom
+        self._maps     = maps
+        self._cur_idx  = -1
+        self._pending_edits.clear()
+
         while self._btn_group_lay.count():
             item = self._btn_group_lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-
         self._map_buttons.clear()
+
         for i, m in enumerate(maps):
             btn = QPushButton(m.name)
             btn.setCheckable(True)
             btn.setStyleSheet(btn_style(C_BLUE))
-            btn.setToolTip(m.description)
+            btn.setToolTip(f"{m.description}\n\nConfidence: {m.confidence}")
             btn.clicked.connect(lambda _, idx=i: self._show_map(idx))
             self._map_buttons.append(btn)
             self._btn_group_lay.addWidget(btn)
@@ -518,7 +536,11 @@ class MapsWidget(QWidget):
         if not self._maps or idx >= len(self._maps):
             return
 
-        # Deselect all, select current
+        self._cur_idx = idx
+        self._pending_edits.clear()
+        self._lbl_dirty.setText("")
+        self._btn_write.setEnabled(False)
+
         for i, btn in enumerate(self._map_buttons):
             btn.setChecked(i == idx)
 
@@ -526,24 +548,32 @@ class MapsWidget(QWidget):
         rom = self._rom
 
         if m.data_addr == 0:
+            self._table.blockSignals(True)
             self._table.setRowCount(1)
             self._table.setColumnCount(1)
-            self._table.setItem(0, 0, QTableWidgetItem(
-                f"Address not yet discovered for {m.name}\n"
-                "Drop a real ROM — needle search will locate it automatically"))
+            item = QTableWidgetItem(
+                f"Address not yet located for {m.name}\n\n"
+                "Drop a real ROM — needle search will resolve the offset.")
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self._table.setItem(0, 0, item)
+            self._table.blockSignals(False)
             self._lbl_map_info.setText(
-                f"{m.name}  —  {m.description}  —  addr: not found")
+                f"{m.name}  ·  {m.description}  ·  addr: pending ROM")
             return
 
         data = m.read(rom)
         if not data:
+            self._table.blockSignals(True)
             self._table.setRowCount(1)
             self._table.setColumnCount(1)
             self._table.setItem(0, 0, QTableWidgetItem("No data"))
+            self._table.blockSignals(False)
             return
 
         rows = len(data)
         cols = len(data[0]) if data else 0
+
+        self._table.blockSignals(True)
         self._table.setRowCount(rows)
         self._table.setColumnCount(cols)
 
@@ -554,9 +584,60 @@ class MapsWidget(QWidget):
                 self._table.setItem(r, c, item)
 
         self._table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self._table.blockSignals(False)
+
+        conf_colour = {"CONFIRMED": C_GREEN, "PROVISIONAL": C_AMBER}.get(
+            m.confidence, C_RED)
         self._lbl_map_info.setText(
-            f"{m.name}  —  {m.description}  —  "
-            f"addr: 0x{m.data_addr:06X}  —  {m.confidence}")
+            f"{m.name}  ·  {m.description}  ·  "
+            f"addr: <span style='color:{C_BLUE}'>0x{m.data_addr:06X}</span>  ·  "
+            f"<span style='color:{conf_colour}'>{m.confidence}</span>")
+
+    def _on_cell_changed(self, item: QTableWidgetItem):
+        """Track edited cells — don't write until user clicks Write to ROM."""
+        try:
+            val = float(item.text())
+        except ValueError:
+            return
+        self._pending_edits[(item.row(), item.column())] = val
+        item.setForeground(QColor(C_AMBER))
+        self._lbl_dirty.setText(f"  {len(self._pending_edits)} cell(s) edited")
+        self._btn_write.setEnabled(True)
+
+    def _on_write_map(self):
+        """Encode all pending edits and write them into the ROM buffer."""
+        if not self._rom or self._cur_idx < 0 or not self._pending_edits:
+            return
+
+        m = self._maps[self._cur_idx]
+        if m.data_addr == 0:
+            return
+
+        # Re-read current map data, apply pending edits, write back
+        data = m.read(self._rom)
+        if not data:
+            return
+
+        for (r, c), val in self._pending_edits.items():
+            if r < len(data) and c < len(data[r]):
+                data[r][c] = val
+
+        m.write(self._rom, data)
+
+        # Clear pending state, recolour cells to default
+        self._pending_edits.clear()
+        self._lbl_dirty.setText("")
+        self._btn_write.setEnabled(False)
+
+        self._table.blockSignals(True)
+        for r in range(self._table.rowCount()):
+            for c in range(self._table.columnCount()):
+                item = self._table.item(r, c)
+                if item:
+                    item.setForeground(QColor(C_FG))
+        self._table.blockSignals(False)
+
+        self.map_written.emit(m.name)
 
 
 # ── Main window ───────────────────────────────────────────────────────────────
@@ -657,6 +738,13 @@ class MESevenWindow(QMainWindow):
         self.btn_fix_checksums.clicked.connect(self._on_fix_checksums)
         self._w_patches.patch_toggled.connect(self._on_patch_toggled)
         self._w_patches.scalar_changed.connect(self._on_scalar_changed)
+        self._w_maps.map_written.connect(self._on_map_written)
+
+    def _on_map_written(self, map_name: str):
+        self._dirty = True
+        self._set_status(
+            f"Map '{map_name}' written to buffer  —  "
+            "Fix Checksums then Save before flashing")
 
     # ── File I/O ──────────────────────────────────────────────────────────────
 
