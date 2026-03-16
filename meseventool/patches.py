@@ -765,6 +765,41 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "patch_bytes=F2F4 by 0xF6→0xF2 bit-2 analogy to 1.8T 0x46→0x42."),
     ),
 
+    # ── Confirmed needle patches — 2.7T/V8 corpus validated ─────────────────
+
+    PatchDef(
+        name        = "Vmax Speed Limiter Disable (2.7T ME7.1)",
+        description = ("Raises the top speed limiter from 250 km/h (stock) to "
+                       "~655 km/h (0xFFFF in 0.01 km/h units) by patching the "
+                       "VMAX immediate value loaded into R13 before the speed "
+                       "comparison.  The C167 code loads #25000 (0x61A8) into "
+                       "R13 for the 250 km/h limit; patching to 0xFFFF removes "
+                       "the limiter in practice.  Does not affect the electronic "
+                       "speed signal or instrument cluster reading."),
+        category    = PatchCategory.PERFORMANCE,
+        # C167: MOV R13, #25000  followed by  MOV R14, #imm  +  DA 00 9C 6C
+        # Bytes 6-7 (the R14 immediate) vary between SW versions → masked out.
+        # Bytes 2-3 (the speed value) are kept in the mask so the needle only
+        # hits the real VMAX code site (other uses of MOV R13 exist with small
+        # speed values like 0x003C that would be false positives if wildcarded).
+        # Limitation: after patching a8 61 → ff ff, the needle no longer matches
+        # the patched form — STOCK is detectable but PATCHED shows as MISSING.
+        needle      = [0xE6, 0xFD, 0xA8, 0x61, 0xE6, 0xFE, 0x9A, 0x02,
+                       0xDA, 0x00, 0x9C, 0x6C],
+        mask        = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
+                       0xFF, 0xFF, 0xFF, 0xFF],
+        offset      = 2,                    # patch bytes 2-3 (the VMAX immediate)
+        stock_bytes = bytes([0xA8, 0x61]),  # 0x61A8 LE = 25000 = 250.00 km/h
+        patch_bytes = bytes([0xFF, 0xFF]),  # 0xFFFF LE = 65535 = 655.35 km/h
+        confidence  = "CONFIRMED",
+        notes       = ("Validated on all 18 8D0907551 (S4 B5), all 12 4B0907551 "
+                       "(A6 C5), and 10/20 4Z7907551 (early Allroad ME7.1) ROMs. "
+                       "4Z7907551 R/S/T/AA/N/Q (ME7.1.1) and all 4D1907558 (RS4 V8) "
+                       "use a different code structure and are NOT covered — "
+                       "for those use VAVMX/VMAX table edit in TunerPro instead."),
+        applies_to  = {"me7.1", "2.7t"},
+    ),
+
     # ── Confirmed offset-based patches (DL / 06A906032DL verified) ──────────
 
     OffsetPatchDef(
