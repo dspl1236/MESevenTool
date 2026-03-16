@@ -329,7 +329,11 @@ class TestDetectAllWithProfile:
         results = detect_all(rom, profile=PROFILE_AWP)
         for r in results:
             if r.state == PatchState.NOT_APPLICABLE:
-                # Only dual_bank patches should be NA on a single-bank profile
-                assert "dual_bank" in r.patch.applies_to, \
+                # Patches are N/A on AWP when they require a platform tag not in AWP.
+                # Valid reasons: 'dual_bank', or any platform tag (e.g. '2.7t') that
+                # AWP doesn't carry.
+                awp_platforms = set(PROFILE_AWP.platforms)
+                patch_requires = set(r.patch.applies_to)
+                assert patch_requires and not patch_requires.issubset(awp_platforms), \
                     (f"Patch '{r.patch.name}' returned NOT_APPLICABLE for AWP "
-                     f"with applies_to={r.patch.applies_to}")
+                     f"but applies_to={r.patch.applies_to} should match AWP platforms {awp_platforms}")

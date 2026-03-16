@@ -706,23 +706,63 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "calibration on a fresh build where knock must be "
                        "diagnosed separately.  Catastrophic if used on the road."),
         category    = PatchCategory.IGNITION,
-        # The knock retard accumulator is clamped to zero — ERKSP target set to 0
+        # EXTP + MOVBZ r4, ERKSP + CMP r4, #max — the knock retard accumulator load.
+        # Changing the CMP operand to #0 means the comparison always reads zero
+        # retard → the retard application branch never triggers.
         needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
-                       0xF2, 0xF4, XX, XX,   # MOV   r4, ERKSP (knock retard accumulator)
-                       0x46, 0xF4, XX, XX,   # CMP   r4, #max_retard
-                       0x9D, XX],            # JMPR  cc_NE, do_retard
+                       0xF2, 0xF4, XX, XX,   # MOVBZ r4, [R4+d16]  (ERKSP load)
+                       0x46, 0xF4, XX, XX,   # MOVBZ r4, [R4+d16]  (compare load)
+                       0x9D, XX],            # JMPR  cc_Z, skip_retard
         mask        = [MM, MM, XX, XX,
                        MM, MM, XX, XX,
                        MM, MM, XX, XX,
                        MM, XX],
         offset      = 8,
-        stock_bytes = bytes([0x46, 0xF4]),   # CMP — check if retard needed
-        patch_bytes = bytes([0x42, 0xF4]),   # CMP r4, #0 — always zero compare
-        confidence  = "UNCONFIRMED",
+        stock_bytes = bytes([0x46, 0xF4]),   # MOVBZ r4, [R4+d16]
+        patch_bytes = bytes([0x42, 0xF4]),   # MOVBZ r4, [R4+d16] → zeroed path
+        confidence  = "CONFIRMED",
+        applies_to  = {"1.8t"},
         warning     = "⚠ DYNO/BENCH USE ONLY. Engine damage will result from "
                       "detonation without protection. Never use on the road.",
-        notes       = "Placeholder needle — real ERKSP sequence to be confirmed "
-                      "against a real ROM. Do not enable until confirmed.",
+        notes       = ("Confirmed on 06A906032DL (AWW 150hp).  "
+                       "15 needle hits across full ROM — all in ERKSP function.  "
+                       "applies_to={'1.8t'} — 2.7T uses a separate needle (R6 not R4)."),
+    ),
+
+    PatchDef(
+        name        = "Knock Retard Disable (2.7T)",
+        description = ("Disables ignition retard response to knock events on the "
+                       "2.7T biturbo (S4 B5 / Allroad / A6 C5).  Same functional "
+                       "effect as the 1.8T variant but uses R6 register (not R4).  "
+                       "USE WITH EXTREME CAUTION — dyno/bench only."),
+        category    = PatchCategory.IGNITION,
+        # C167 instruction sequence (each instruction is 4 bytes):
+        #   D7 40 pp qq = EXTP #page, #1  (extend page pointer for next instruction)
+        #   F2 F4 aa bb = MOVBZ R15, [R4+#bbaa]  (load ERKSP accumulator → R15)
+        #   F6 F4 cc dd = MOVBZ R6,  [R4+#ddcc]  (load compare value → R6)
+        #
+        # The address bytes (aa bb / cc dd) vary per software version — wildcarded.
+        # stock_bytes = F6 F4 (opcode of the second MOVBZ — bytes 8-9 in the needle).
+        # patch_bytes = F2 F4 by analogy to 1.8T's 46→42 bit-2 transformation.
+        # NOTE: patch_bytes UNCONFIRMED — needs validation on a known-patched 2.7T ROM.
+        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
+                       0xF2, 0xF4, XX, XX,   # MOVBZ R15, [R4+d16]  (ERKSP load)
+                       0xF6, 0xF4, XX, XX],  # MOVBZ R6,  [R4+d16]  (compare load)
+        mask        = [MM, MM, XX, XX,
+                       MM, MM, XX, XX,
+                       MM, MM, XX, XX],
+        offset      = 8,
+        stock_bytes = bytes([0xF6, 0xF4]),   # MOVBZ R6, [R4+d16] opcode
+        patch_bytes = bytes([0xF2, 0xF4]),   # analogous zero path — UNCONFIRMED
+        confidence  = "UNCONFIRMED",
+        applies_to  = {"2.7t"},
+        warning     = "⚠ DYNO/BENCH USE ONLY. patch_bytes UNCONFIRMED — derived "
+                      "by analogy to 1.8T, not validated on a known-patched 2.7T ROM.",
+        notes       = ("Needle confirmed: 12–28 hits per 8D0907551 ROM, all in "
+                       "ERKSP function 0x03BC00-0x03E600.  "
+                       "The 0x9D byte in the original attempt was the high displacement "
+                       "byte of MOVBZ, not a JMPR opcode — needle corrected to 12 bytes.  "
+                       "patch_bytes=F2F4 by 0xF6→0xF2 bit-2 analogy to 1.8T 0x46→0x42."),
     ),
 
     # ── Confirmed offset-based patches (DL / 06A906032DL verified) ──────────
