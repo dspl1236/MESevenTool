@@ -199,7 +199,7 @@ PROFILE_AWP = ROMProfile(
                     "CL and CM are transmission variants of AWD — same ROM layout.  "
                     "DL/DM/GH are AWW variants.  8N0/1C0 prefixes are TT/Beetle Turbo S.",
     part_prefixes = ["06A906032", "8N0906018", "1C0906032"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
     variants      = [
         # Golf/Jetta (transverse)
@@ -236,7 +236,7 @@ PROFILE_AMU = ROMProfile(
     description   = "High-power 225hp 1.8T.  Audi TT Quattro 225, S3 8L.  "
                     "Narrowband O2.  Port injection.  Higher base boost.",
     part_prefixes = ["06A906032", "8N0906018"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
     variants      = ["AMU 1.8T 225hp", "APX 1.8T 225hp", "BFV 1.8T 225hp"],
     dpp1_min      = 0x01F8,
@@ -250,7 +250,7 @@ PROFILE_AUQ = ROMProfile(
     name          = "ME7.5 — 1.8T 180hp Roadster (AUQ)",
     description   = "AUQ for TT Roadster 8N and some A4 B6.  NB O2.  MPI.",
     part_prefixes = ["06A906032", "8N0906032"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
     variants      = ["AUQ 1.8T 180hp"],
     dpp1_min      = 0x01F5,
@@ -283,7 +283,7 @@ PROFILE_06B = ROMProfile(
                     "different connectors for transverse vs longitudinal mounting.  "
                     "ATW (Passat 4B0) uses same ROM layout.  NB O2.",
     part_prefixes = ["06B906018", "4B0906018", "4B0997019", "4B0997020", "8E0909518"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
     variants      = [
         "AWM 1.8T 170hp",   # A6 C5, Passat B5.5 (06B)
@@ -310,7 +310,7 @@ PROFILE_BGU_FSI = ROMProfile(
                     "Completely different fuelling maps from MPI.  "
                     "PLACEHOLDER — no patches or maps implemented yet.",
     part_prefixes = ["06F906056"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
     variants      = ["BWT 2.0T 200hp", "BWA 2.0T 200hp", "AXX 2.0T 200hp", "BPY 2.0T 200hp"],
     dpp1_min      = 0x0200,
@@ -328,7 +328,7 @@ PROFILE_V6_2_7T = ROMProfile(
                     "Rear O2 delete requires two patches — Bank 1 and Bank 2.  "
                     "PLACEHOLDER — no patches or maps implemented yet.",
     part_prefixes = ["4B0906018", "078906018"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.1",
     variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp", "AZZ 2.7T 265hp"],
     dpp1_min      = 0x0180,
@@ -347,7 +347,7 @@ PROFILE_NA_V6 = ROMProfile(
                     "No boost maps.  Port injection.  Narrowband O2.  "
                     "PLACEHOLDER — no patches or maps implemented yet.",
     part_prefixes = ["078906018"],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     ecu_hw        = "ME7.1",
     variants      = ["ACK 2.8 193hp", "ALG 2.8 193hp", "AQD 2.8 193hp",
                      "AMX 2.8 193hp", "BBJ 2.8 193hp"],
@@ -364,7 +364,7 @@ PROFILE_UNKNOWN = ROMProfile(
     description   = "ROM not matched to any known profile.  "
                     "Checksum, DPP, and ECU ID extraction still available.",
     part_prefixes = [],
-    rom_size      = 0x80000,
+    rom_size      = 0x100000,
     notes         = "Drop a known ROM to improve detection.",
 )
 

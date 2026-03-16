@@ -145,3 +145,79 @@ class TestROMCopyAndFrom:
         assert rom.size == 0x80000
         assert rom.data[0] == 0xAA
         assert rom.path is None
+
+
+# ── 1MB ROM properties ────────────────────────────────────────────────────────
+
+class TestOneMBROM:
+    """1MB is the native ME7.5 format. No mirroring. Load as-is."""
+
+    def _make_1mb(self, fill: int = 0x55) -> bytes:
+        return bytes([fill] * 0x100000)
+
+    def test_1mb_loads_cleanly(self, tmp_path):
+        path = tmp_path / "me7.bin"
+        path.write_bytes(self._make_1mb())
+        rom = ROMImage.load(str(path))
+        assert rom.size == 0x100000
+        assert rom.size_kb == 1024
+
+    def test_1mb_is_1mb_property(self, tmp_path):
+        path = tmp_path / "me7.bin"
+        path.write_bytes(self._make_1mb())
+        rom = ROMImage.load(str(path))
+        assert rom.is_1mb is True
+        assert rom.is_512k is False
+        assert rom.is_256k is False
+
+    def test_1mb_cal_page_offset(self, tmp_path):
+        path = tmp_path / "me7.bin"
+        path.write_bytes(self._make_1mb())
+        rom = ROMImage.load(str(path))
+        # Cal page is last 64KB of the 1MB file
+        assert rom.cal_page_offset == 0xF0000
+
+    def test_1mb_cal_page_length(self, tmp_path):
+        path = tmp_path / "me7.bin"
+        path.write_bytes(self._make_1mb())
+        rom = ROMImage.load(str(path))
+        assert len(rom.cal_page) == 0x10000
+
+    def test_1mb_data_intact(self, tmp_path):
+        # Bytes at known XDF offset should be readable without normalisation
+        data = bytearray(0x100000)
+        data[0x0120DD] = 0xAB   # KFZW start byte
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert rom.read_u8(0x0120DD) == 0xAB
+
+    def test_1mb_save_roundtrip(self, tmp_path):
+        src  = tmp_path / "src.bin"
+        dst  = tmp_path / "dst.bin"
+        data = bytearray(self._make_1mb())
+        data[0x1000] = 0xDE
+        src.write_bytes(data)
+        rom = ROMImage.load(str(src))
+        rom.data[0x1000] = 0xFF   # modify
+        rom.save(str(dst))
+        result = bytearray(dst.read_bytes())
+        assert len(result) == 0x100000
+        assert result[0x1000] == 0xFF
+
+    def test_512k_extract_still_loads(self, tmp_path):
+        """ECUFlash-style 512KB cal region still accepted."""
+        path = tmp_path / "cal.bin"
+        path.write_bytes(bytes(0x80000))
+        rom = ROMImage.load(str(path))
+        assert rom.size == 0x80000
+        assert rom.is_512k is True
+        assert rom.is_1mb is False
+        assert rom.cal_page_offset == 0x70000
+
+    def test_invalid_size_rejected(self, tmp_path):
+        import pytest
+        path = tmp_path / "bad.bin"
+        path.write_bytes(bytes(0x90000))  # 576KB — not valid
+        with pytest.raises(ValueError, match="Unexpected ROM size"):
+            ROMImage.load(str(path))

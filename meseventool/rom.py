@@ -5,22 +5,29 @@ ROMImage — load, validate, and manage a ME7.x binary ROM image.
 
 ME7.x ROM characteristics
 --------------------------
-CPU:   Infineon C167 (16-bit, big-endian data, little-endian addresses)
-Flash: 512 KB standard (0x80000 bytes) for ME7.5 1.8T
-       256 KB for some ME7.1 variants
-       The physical flash lives at addresses 0x80000-0xFFFFF in the C167
-       address space, but is stored as a flat file from offset 0.
+CPU:   Infineon C167 (16-bit, little-endian)
+Flash: 1 MB (0x100000 bytes) for ME7.5 — Bosch uses a 1MB NOR flash chip
+       (Intel 28F800 or equivalent) on all ME7.5 ECUs.
+       256 KB for some ME7.1 variants (older, smaller flash).
 
-Memory layout (512 KB / 06A-906-032 family):
-  0x00000 – 0x0FFFF  Calibration page (last 64 KB in flash)  ← tuning data
-  0x10000 – 0x7FFFF  Code pages (448 KB)                     ← don't touch
+       Note: some community tools (ECUFlash, WinOLS) export only the
+       calibration window (typically the last 512KB or last 64KB of the
+       flash), producing smaller files. These are supported as a
+       convenience but the full 1MB file is the native format.
 
-Wait — that's the *file* layout. The file is stored reversed relative to
-the physical address:
-  file[0x00000] = physical 0x80000  (start of code)
-  file[0x7FFFF] = physical 0xFFFFF  (end of flash / top of cal page)
+Memory layout (1 MB / 06A-906-032 family):
+  file[0x000000] = C167 address 0x80000  (start of flash in C167 space)
+  file[0x0FFFFF] = C167 address 0xFFFFF  (end of flash / reset vectors)
 
-So calibration data is at the END of the file: file[0x70000:0x80000].
+  Calibration tables are scattered through the flash alongside code.
+  XDF offsets are flat file offsets (e.g. KFZW at 0x0120DD in the 1MB file).
+  There is NO address-line mirroring in ME7 — the full 1MB is live.
+  (Mirroring is a Digifant/Motronic 2.x EPROM phenomenon.)
+
+Older Motronic 5.x / Digifant:
+  Use 32KB or 64KB EPROMs (27C256/27C512). A15-mirroring occurs when a
+  27C512 is used in a 32KB socket (A15 not connected → 64KB chip behaves
+  as two identical 32KB halves).
 """
 
 from __future__ import annotations
@@ -32,15 +39,16 @@ from typing import Optional
 
 # Known valid ROM sizes
 VALID_SIZES = {
-    0x40000: "256 KB (ME7.1)",
-    0x80000: "512 KB (ME7.5)",
-    0x100000: "1 MB (ME7.5+ extended)",
+    0x040000: "256 KB (ME7.1)",
+    0x080000: "512 KB (ECUFlash/extracted cal region)",
+    0x100000: "1 MB (ME7.5 full flash)",
 }
 
-# Calibration page is always the last 64 KB of the file
-CAL_PAGE_SIZE = 0x10000
-CAL_PAGE_OFFSET_512K = 0x70000   # file offset where cal page starts (512 KB ROM)
-CAL_PAGE_OFFSET_256K = 0x30000   # file offset where cal page starts (256 KB ROM)
+# Calibration page constants (used for 512KB ECUFlash-style extracts)
+CAL_PAGE_SIZE        = 0x10000
+CAL_PAGE_OFFSET_512K = 0x70000   # last 64KB of a 512KB extract
+CAL_PAGE_OFFSET_256K = 0x30000   # last 64KB of a 256KB ROM
+CAL_PAGE_OFFSET_1MB  = 0xF0000   # last 64KB of the 1MB flash
 
 
 @dataclass
@@ -65,16 +73,25 @@ class ROMImage:
 
     @classmethod
     def load(cls, path: str) -> "ROMImage":
-        """Load a ROM from a .bin file. Validates size."""
+        """
+        Load a ROM from a .bin file. Validates size.
+
+        Accepted sizes:
+          1 MB  — full ME7.5 flash chip dump (native format)
+          512 KB — ECUFlash / WinOLS extracted calibration region
+          256 KB — ME7.1 variants
+        """
         with open(path, "rb") as f:
             raw = f.read()
-        rom = cls(data=bytearray(raw), path=path)
-        if rom.size not in VALID_SIZES:
+        size = len(raw)
+
+        if size not in VALID_SIZES:
             raise ValueError(
-                f"Unexpected ROM size: 0x{rom.size:X} bytes ({rom.size // 1024} KB). "
+                f"Unexpected ROM size: 0x{size:X} bytes ({size // 1024} KB). "
                 f"Expected one of: {', '.join(VALID_SIZES.values())}"
             )
-        return rom
+
+        return cls(data=bytearray(raw), path=path)
 
     @classmethod
     def from_bytes(cls, data: bytes | bytearray) -> "ROMImage":
@@ -98,7 +115,12 @@ class ROMImage:
         return self.size // 1024
 
     @property
+    def is_1mb(self) -> bool:
+        return self.size == 0x100000
+
+    @property
     def is_512k(self) -> bool:
+        """True for ECUFlash-style 512KB extracted cal regions."""
         return self.size == 0x80000
 
     @property
@@ -107,9 +129,11 @@ class ROMImage:
 
     @property
     def cal_page_offset(self) -> int:
-        """File offset where the calibration page begins."""
+        """File offset where the 64KB calibration page begins."""
+        if self.is_1mb:
+            return CAL_PAGE_OFFSET_1MB   # last 64KB of the 1MB flash
         if self.is_512k:
-            return CAL_PAGE_OFFSET_512K
+            return CAL_PAGE_OFFSET_512K  # last 64KB of a 512KB extract
         if self.is_256k:
             return CAL_PAGE_OFFSET_256K
         return self.size - CAL_PAGE_SIZE
