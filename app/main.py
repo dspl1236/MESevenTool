@@ -796,8 +796,9 @@ class MESevenWindow(QMainWindow):
         # Profile detection
         profile = detect_profile(ident, self._dpp)
 
-        # Maps
-        maps = profile.make_maps()
+        # Maps — use confirmed XDF offsets if we know the exact part number
+        xdf_pn = ident.vmecuhn or None
+        maps = profile.make_maps(xdf_pn=xdf_pn)
 
         # Update UI panels
         self._w_info.update(rom, ident, self._dpp, cs_result, profile)

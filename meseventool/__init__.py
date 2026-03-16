@@ -50,4 +50,7 @@ __all__ = [
     "ALL_PROFILES", "PROFILES", "detect_profile", "get_profile",
     # ECU ID
     "ECUIdentity", "identify", "identify_from_filename", "_clean_string",
+    # XDF
+    "XDFLoader", "XDFTable", "XDFAxis",
 ]
+from .xdf import XDFLoader, XDFTable, XDFAxis

@@ -50,7 +50,7 @@ This design means:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Set
+from typing import List, Optional, Set
 
 from .maps import MapDef, make_awp_maps
 from .ecu_id import ECUIdentity
@@ -162,8 +162,22 @@ class ROMProfile:
                 return True
         return False
 
-    def make_maps(self) -> List[MapDef]:
-        """Return MapDef list for this profile (addresses unresolved)."""
+    def make_maps(self, xdf_pn: Optional[str] = None) -> List[MapDef]:
+        """
+        Return MapDef list for this profile.
+
+        If xdf_pn is given (e.g. "06A906032DL"), loads confirmed offsets
+        from the XDF reference JSON for that specific part number.
+        Otherwise falls back to the generic provisional AWP map set.
+        """
+        if xdf_pn:
+            try:
+                from .xdf import XDFLoader
+                loader = XDFLoader()
+                if xdf_pn in loader.part_numbers():
+                    return loader.make_maps(xdf_pn)
+            except Exception:
+                pass
         return make_awp_maps()
 
     def summary(self) -> str:
