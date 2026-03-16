@@ -221,3 +221,88 @@ class TestOneMBROM:
         path.write_bytes(bytes(0x90000))  # 576KB — not valid
         with pytest.raises(ValueError, match="Unexpected ROM size"):
             ROMImage.load(str(path))
+# ── 1MB ROM normalisation ─────────────────────────────────────────────────────
+
+class TestOneMBROM:
+    """
+    ME7.5 ROMs are natively 1MB. No mirroring. Flat file offsets throughout.
+    XDF offsets (e.g. KFZW at 0x0120DD) are offsets into the 1MB file.
+    """
+
+    def _make_1mb(self, fill: int = 0x41) -> bytes:
+        """1MB ROM with a VAG PN string embedded at a realistic offset."""
+        rom = bytearray([fill] * 0x100000)
+        pn = b'06A906032DL'
+        rom[0x400:0x400 + len(pn)] = pn
+        return bytes(rom)
+
+    def test_1mb_loads_correctly(self, tmp_path):
+        data = self._make_1mb()
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert rom.size == 0x100000
+        assert rom.size_kb == 1024
+        assert rom.is_1mb
+
+    def test_1mb_not_is_512k(self, tmp_path):
+        data = self._make_1mb()
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert not rom.is_512k
+        assert not rom.is_256k
+
+    def test_1mb_cal_page_offset(self, tmp_path):
+        """Cal page for 1MB ROM is last 64KB = offset 0xF0000."""
+        data = self._make_1mb()
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert rom.cal_page_offset == 0xF0000
+
+    def test_1mb_data_intact(self, tmp_path):
+        """1MB data loaded without any truncation or transformation."""
+        data = self._make_1mb(fill=0x55)
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert bytes(rom.data) == data
+
+    def test_1mb_read_at_xdf_offset(self, tmp_path):
+        """XDF offset 0x0120DD is directly accessible in 1MB file."""
+        data = bytearray(self._make_1mb())
+        # Write a sentinel at the KFZW XDF offset
+        data[0x0120DD] = 0xAB
+        path = tmp_path / "me7.bin"
+        path.write_bytes(data)
+        rom = ROMImage.load(str(path))
+        assert rom.read_u8(0x0120DD) == 0xAB
+
+    def test_1mb_save_roundtrip(self, tmp_path):
+        data = self._make_1mb()
+        src  = tmp_path / "src.bin"
+        dst  = tmp_path / "dst.bin"
+        src.write_bytes(data)
+        rom = ROMImage.load(str(src))
+        rom.data[0x100] = (rom.data[0x100] + 1) & 0xFF
+        rom.save(str(dst))
+        written = dst.read_bytes()
+        assert len(written) == 0x100000
+        assert written[0x100] == rom.data[0x100]
+
+    def test_invalid_size_rejected(self, tmp_path):
+        import pytest
+        path = tmp_path / "bad.bin"
+        path.write_bytes(bytes(0x90000))  # 576 KB — not a valid ME7 size
+        with pytest.raises(ValueError, match="Unexpected ROM size"):
+            ROMImage.load(str(path))
+
+    def test_512kb_extract_still_accepted(self, tmp_path):
+        """512KB ECUFlash-style extract remains valid for compatibility."""
+        path = tmp_path / "extract.bin"
+        path.write_bytes(bytes(0x80000))
+        rom = ROMImage.load(str(path))
+        assert rom.size_kb == 512
+        assert rom.is_512k
+        assert rom.cal_page_offset == 0x70000

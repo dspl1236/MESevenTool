@@ -62,7 +62,7 @@ class ROMProfile:
     name:          str
     description:   str       = ""
     part_prefixes: List[str] = field(default_factory=list)
-    rom_size:      int       = 0x80000
+    rom_size:      int       = 0x100000
     ecu_hw:        str       = "ME7.5"
     variants:      List[str] = field(default_factory=list)
     dpp1_min:      int       = 0

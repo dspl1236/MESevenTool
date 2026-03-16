@@ -66,12 +66,21 @@ Or open a ROM from the toolbar after launching.
 
 ## ROM support
 
+**Flash format:** ME7.5 uses a 1 MB NOR flash chip (Intel 28F800 or equivalent).
+All XDF map offsets are flat file offsets into the 1 MB binary. There is no address-line
+mirroring in ME7 — the full 1 MB is the active image. 512 KB files (ECUFlash/WinOLS
+extracted cal regions) are also accepted for compatibility.
+
 | Part number | Engine | Power | Status |
 |---|---|---|---|
 | 06A906032xx | AWP 1.8T | 180hp | PROVISIONAL |
+| 06A906032xx | AWW 1.8T | 150hp | PROVISIONAL |
+| 06A906032xx | AWD 1.8T | 150hp | PROVISIONAL |
 | 06A906032xx | AUM 1.8T | 150hp | PROVISIONAL |
 | 06A906032xx | AUQ 1.8T | 180hp | PROVISIONAL |
 | 06A906032xx | BAM 1.8T | 190hp | PROVISIONAL |
+| 06A906032xx | APH/AWV 1.8T | 150hp | PROVISIONAL |
+| 06A906032xx | AJQ/ARY 1.8T | 180hp | PROVISIONAL |
 | 06B906018xx | AWM 1.8T | 170hp | PROVISIONAL |
 | 06A906018xx | AGU/AEB | 150hp | PROVISIONAL |
 
