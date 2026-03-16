@@ -328,8 +328,11 @@ ALL_PATCHES: list[PatchDef] = [
     PatchDef(
         name        = "Rear O2 Sensor Delete",
         description = ("Disables post-cat oxygen sensor diagnostic. Suppresses "
-                       "P0141/P0140 when rear O2 is removed or a decat fitted. "
-                       "Front O2 still controls closed-loop fuelling."),
+                       "P0141/P0140 when rear O2 (B1S2) is removed or a decat fitted. "
+                       "The front lambda sensor still controls closed-loop fuelling "
+                       "normally — this only affects the post-cat monitoring circuit. "
+                       "The rear sensor is always a conventional NB binary-switch type "
+                       "regardless of what front sensor the ECU uses."),
         category    = PatchCategory.EMISSIONS,
         needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
                        0xF3, 0xF4, XX, XX,   # MOVBZ r4, LSUKATS (rear O2 byte)
@@ -345,9 +348,10 @@ ALL_PATCHES: list[PatchDef] = [
         stock_bytes = bytes([0x8D]),    # conditional jump (fault if not OK)
         patch_bytes = bytes([0x0D]),    # unconditional jump (always OK)
         confidence  = "PROVISIONAL",
-        warning          = "Disables OBD-II rear O2 monitoring (P0140/P0141).",
-        requires_lambda  = ["narrowband"],
-        requires_fuel    = ["MPI"],
+        warning     = "Disables OBD-II rear O2 monitoring (P0140/P0141).  "
+                      "For 2.7T biturbo: also apply Rear O2 Delete Bank 2.",
+        # No applies_to restriction — rear post-cat O2 patch applies to all
+        # 1.8T and 06B profiles regardless of front sensor type.
     ),
 
     PatchDef(

@@ -226,12 +226,14 @@ class TestAppliestoMigration:
 # ── Existing patches in catalogue ────────────────────────────────────────────
 
 class TestCataloguePatches:
-    def test_rear_o2_requires_narrowband(self):
-        """Rear O2 delete should not apply to wideband ECUs."""
+    def test_rear_o2_applies_to_wideband_too(self):
+        """Rear O2 delete is post-cat only — applies regardless of front sensor type.
+        The post-cat sensor is always a conventional NB binary-switch sensor."""
         o2_patch = next(p for p in ALL_PATCHES if "Rear O2" in p.name)
         wb_profile = make_profile(induction="turbo", o2_system="wideband",
                                    fuel_system="mpi")
-        assert not wb_profile.patch_applies(o2_patch)
+        # Should apply — rear sensor is always NB regardless of front sensor
+        assert wb_profile.patch_applies(o2_patch)
 
     def test_rear_o2_applies_to_awp(self):
         """Rear O2 delete should apply to AWP (NB MPI)."""
@@ -251,12 +253,42 @@ class TestCataloguePatches:
             "turbo", "na", "narrowband", "wideband",
             "mpi", "fsi", "tfsi",
             "me7.5", "me7.1", "me7",
+            "bosch_hfm5", "hitachi",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
             for tag in p.applies_to:
                 assert tag in known_tags, \
                     f"Patch '{p.name}' has unknown tag '{tag}'"
+
+
+class TestProfileNewFields:
+    def test_dual_bank_false_by_default(self):
+        p = make_profile()
+        assert p.dual_bank is False
+
+    def test_dual_bank_true_on_v6_biturbo(self):
+        from meseventool.profiles import PROFILE_V6_2_7T
+        assert PROFILE_V6_2_7T.dual_bank is True
+        assert "dual_bank" in PROFILE_V6_2_7T.platforms
+
+    def test_maf_type_default_bosch(self):
+        p = make_profile()
+        assert p.maf_type == "bosch_hfm5"
+        assert "bosch_hfm5" in p.platforms
+
+    def test_maf_type_hitachi_tag(self):
+        p = make_profile(maf_type="hitachi")
+        assert "hitachi" in p.platforms
+        assert "bosch_hfm5" not in p.platforms
+
+    def test_awp_has_bosch_maf_tag(self):
+        from meseventool.profiles import PROFILE_AWP
+        assert "bosch_hfm5" in PROFILE_AWP.platforms
+
+    def test_na_v6_is_not_dual_bank(self):
+        from meseventool.profiles import PROFILE_NA_V6
+        assert PROFILE_NA_V6.dual_bank is False
 
 
 # ── detect_all() with profile ─────────────────────────────────────────────────

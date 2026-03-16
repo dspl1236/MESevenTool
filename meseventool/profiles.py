@@ -69,10 +69,20 @@ class ROMProfile:
     dpp1_max:      int       = 0xFFFF
     notes:         str       = ""
 
-    # ── New capability / hardware classification fields ─────────────────────
+    # ── Hardware classification fields ──────────────────────────────────────
     induction:     str       = "turbo"         # "turbo" | "na"
     o2_system:     str       = "narrowband"    # "narrowband" | "wideband"
+                                               # narrowband = binary NB front sensor (0-1V)
+                                               # wideband   = 5-wire pump-cell LSU front sensor
+                                               # NOTE: "wideband tuner" in community parlance
+                                               # is NOT the same as this field. AUM/AWP/AUQ
+                                               # all use NB front sensors despite community
+                                               # calling them "wideband ECUs". See docs/.
     fuel_system:   str       = "mpi"           # "mpi" | "fsi" | "tfsi"
+    maf_type:      str       = "bosch_hfm5"   # "bosch_hfm5" | "hitachi"
+                                               # MLHFM table characteristic is NOT interchangeable
+    dual_bank:     bool      = False           # True for V6/V8 with B1+B2 lambda systems
+                                               # (2.7T biturbo, 2.8 VR6, etc.)
     platforms:     Set[str]  = field(default_factory=set)
     # platforms is auto-populated from induction/o2_system/fuel_system/ecu_hw
     # in __post_init__ so profiles don't need to repeat themselves.
@@ -85,6 +95,9 @@ class ROMProfile:
         auto.add(self.o2_system)            # "narrowband" or "wideband"
         auto.add(self.fuel_system)          # "mpi", "fsi", "tfsi"
         auto.add(self.ecu_hw.lower())       # "me7.5", "me7.1", etc.
+        auto.add(self.maf_type)             # "bosch_hfm5" or "hitachi"
+        if self.dual_bank:
+            auto.add("dual_bank")
         # engine displacement tag from variants list
         for v in self.variants:
             v_lower = v.lower()
@@ -266,18 +279,21 @@ PROFILE_BGU_FSI = ROMProfile(
 PROFILE_V6_2_7T = ROMProfile(
     name          = "ME7.1 — 2.7T V6 Biturbo (AGB/ARE/APX/AZZ)",
     description   = "2.7T V6 biturbo: A4 B5/B6, A6 C5, Allroad.  "
-                    "Twin turbo, NB O2 per bank, different boost maps.  "
+                    "Twin turbo, NB O2 per bank (B1S1+B1S2 and B2S1+B2S2).  "
+                    "Rear O2 delete requires two patches — Bank 1 and Bank 2.  "
                     "PLACEHOLDER — no patches or maps implemented yet.",
     part_prefixes = ["4B0906018", "078906018"],
     rom_size      = 0x80000,
     ecu_hw        = "ME7.1",
-    variants      = ["AGB 250hp", "ARE 265hp", "AZZ 265hp"],
+    variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp", "AZZ 2.7T 265hp"],
     dpp1_min      = 0x0180,
     dpp1_max      = 0x01A0,
     induction     = "turbo",
     o2_system     = "narrowband",
     fuel_system   = "mpi",
-    notes         = "Twin turbo V6.  No patches or maps yet.",
+    dual_bank     = True,
+    notes         = "Twin turbo V6.  dual_bank=True — rear O2 patches need Bank1+Bank2.  "
+                    "No patches or maps yet.",
 )
 
 PROFILE_NA_V6 = ROMProfile(
@@ -288,8 +304,8 @@ PROFILE_NA_V6 = ROMProfile(
     part_prefixes = ["078906018"],
     rom_size      = 0x80000,
     ecu_hw        = "ME7.1",
-    variants      = ["ACK 193hp", "ALG 193hp", "AQD 193hp", "AMX 193hp",
-                     "BBJ 193hp"],
+    variants      = ["ACK 2.8 193hp", "ALG 2.8 193hp", "AQD 2.8 193hp",
+                     "AMX 2.8 193hp", "BBJ 2.8 193hp"],
     dpp1_min      = 0x0190,
     dpp1_max      = 0x01B0,
     induction     = "na",          # N/A — no boost patches apply
