@@ -192,22 +192,43 @@ class ROMProfile:
 # automatically by __post_init__.
 
 PROFILE_AWP = ROMProfile(
-    name          = "ME7.5 — 1.8T AWP/AUM/AUQ/BAM",
-    description   = "06A-906-032 family.  The most common ME7.5 platform: "
-                    "Golf IV, Jetta IV, TT 8N, A4 B5/B6.  Narrowband O2.  "
-                    "Port injection.  512 KB ROM.",
-    part_prefixes = ["06A906032"],
+    name          = "ME7.5 — 1.8T 06A family (AWP/AWW/AWD/AUM/AUQ/BAM/APH/AWV/AJQ)",
+    description   = "06A-906-032 transverse family — the most common ME7.5 platform.  "
+                    "Golf IV, Jetta IV, New Beetle, TT 8N, A3 8L, A4 B5.  "
+                    "Narrowband O2.  Port injection.  512 KB ROM.  "
+                    "CL and CM are transmission variants of AWD — same ROM layout.  "
+                    "DL/DM/GH are AWW variants.  8N0/1C0 prefixes are TT/Beetle Turbo S.",
+    part_prefixes = ["06A906032", "8N0906018", "1C0906032"],
     rom_size      = 0x80000,
     ecu_hw        = "ME7.5",
-    variants      = ["AWP 1.8T 180hp", "AUM 1.8T 150hp", "AUQ 1.8T 180hp",
-                     "BAM 1.8T 190hp", "AVC 1.8T 150hp", "AZG 1.8T 150hp",
-                     "AGN 1.8T 125hp"],
+    variants      = [
+        # Golf/Jetta (transverse)
+        "AWP 1.8T 180hp",   # 2002+ Golf/Jetta (primary US target)
+        "AWW 1.8T 150hp",   # 2001 Golf/Jetta (DL/DM/GH ECUs)
+        "AWD 1.8T 150hp",   # 2000 Golf/Jetta (CL/CM ECUs — CL=manual, CM=auto)
+        "AUM 1.8T 150hp",   # various markets
+        "AUQ 1.8T 180hp",   # various markets
+        "BAM 1.8T 190hp",   # TT Roadster / S3
+        "AVC 1.8T 150hp",
+        "AZG 1.8T 150hp",
+        "AGN 1.8T 125hp",
+        # New Beetle
+        "APH 1.8T 150hp",   # Beetle 1999-2000 (06A906032A/B/C/E/P/Q/R/S)
+        "AWV 1.8T 150hp",   # Beetle 2001+ (06A906032DP/FD/GB/KQ/PT etc.)
+        # Audi TT 8N
+        "AJQ 1.8T 180hp",   # TT Quattro (8L0/8N0906018J etc.)
+        "ARY 1.8T 180hp",   # TT — paired with AUQ, same ROM family
+        "APP 1.8T 150hp",   # TT single variant (8N0997018HX)
+    ],
     dpp1_min      = 0x01F0,
     dpp1_max      = 0x0210,
     induction     = "turbo",
     o2_system     = "narrowband",
     fuel_system   = "mpi",
-    notes         = "Primary target platform for MESevenTool.",
+    notes         = "Primary target platform for MESevenTool.  "
+                    "CL=AWD manual, CM=AWD auto — same map layout.  "
+                    "DL=AWW manual, DM/GH=AWW auto — DL is primary XDF reference.  "
+                    "PassatWorld ECU list 2000-2002 US market validated against this profile.",
 )
 
 PROFILE_AMU = ROMProfile(
@@ -243,7 +264,7 @@ PROFILE_AGU_ME71 = ROMProfile(
     name          = "ME7.1 — 1.8T 150hp (AGU/AEB/ANB)",
     description   = "Earlier ME7.1 platform: A3 8L, Golf IV, Passat B5.  "
                     "256 KB ROM — cal page at 0x30000.  NB O2.  MPI.",
-    part_prefixes = ["06A906018", "8D0906018"],
+    part_prefixes = ["06A906018", "8D0906018", "8D0907557", "8D0907559", "8D0997557", "8D0997559"],
     rom_size      = 0x40000,
     ecu_hw        = "ME7.1",
     variants      = ["AGU 1.8T 150hp", "AEB 1.8T 150hp", "ANB 1.8T 150hp", "AQY 1.8T 115hp"],
@@ -256,19 +277,29 @@ PROFILE_AGU_ME71 = ROMProfile(
 )
 
 PROFILE_06B = ROMProfile(
-    name          = "ME7.5 — 1.8T 06B platform (AWM/AUG/AWT)",
-    description   = "06B-906-018 family: A6 C5, Passat B5.5, A4 B5/B6.  "
-                    "Same ME7.5 codebase as 06A; different connector.  NB O2.",
-    part_prefixes = ["06B906018"],
+    name          = "ME7.5 — 1.8T 06B/4B0 platform (AWM/AUG/AWT/ATW/AMB)",
+    description   = "Longitudinal 1.8T family: A6 C5, Passat B5/B5.5, A4 B5/B6.  "
+                    "06B-906-018 and 4B0-906-018 prefixes — same ME7.5 codebase, "
+                    "different connectors for transverse vs longitudinal mounting.  "
+                    "ATW (Passat 4B0) uses same ROM layout.  NB O2.",
+    part_prefixes = ["06B906018", "4B0906018", "4B0997019", "4B0997020", "8E0909518"],
     rom_size      = 0x80000,
     ecu_hw        = "ME7.5",
-    variants      = ["AWM 1.8T 170hp", "AUG 1.8T 150hp", "AWT 1.8T 163hp", "AVJ 1.8T 130hp"],
+    variants      = [
+        "AWM 1.8T 170hp",   # A6 C5, Passat B5.5 (06B)
+        "AUG 1.8T 150hp",   # A6 C5 (06B)
+        "AWT 1.8T 163hp",   # A6 C5, Passat B5.5 (06B)
+        "AVJ 1.8T 130hp",   # A6 C5 (06B)
+        "ATW 1.8T 150hp",   # Passat B5 1999-2001 (4B0 prefix)
+        "AMB 1.8T 163hp",   # A4 B6 2002 (8E0909518 prefix)
+    ],
     dpp1_min      = 0x01F8,
     dpp1_max      = 0x0208,
     induction     = "turbo",
     o2_system     = "narrowband",
     fuel_system   = "mpi",
-    notes         = "Same ME7.5 codebase as 06A; different connector pinout.",
+    notes         = "Same ME7.5 codebase as 06A; different connector pinout.  "
+                    "ATW (4B0 Passat) and AMB (8E A4 B6) confirmed via PassatWorld ECU list.",
 )
 
 # ── Placeholder profiles — no patches or maps yet, structure ready ─────────────
