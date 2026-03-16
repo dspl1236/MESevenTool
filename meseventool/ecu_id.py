@@ -40,7 +40,14 @@ _ENGINE_CODE_RE = re.compile(
 )
 
 # VAG part number pattern
-_PN_RE = re.compile(rb'0[6-9][A-Z]\d{6}[A-Z]{0,4}')
+# VAG part number — covers:
+#   06A906032xx (1.8T), 06B906018xx (2.0T) — digit-digit-letter-6digits-suffix
+#   8D0907551xx (S4 B5), 4Z7907551xx (Allroad), 4B0907551xx (A6 C5)
+#   4D1907558xx (RS4/S8 V8) — digit-letter-7digits-suffix
+_PN_RE = re.compile(rb'(?:'
+    rb'[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'   # 8D0907551M, 4Z7907551AA, 4D1907558 (no suffix)
+    rb'|0[0-9][A-Z][0-9]{6}[A-Z]{0,4}'   # 06A906032DL, 06B906018, 06A906032
+    rb')')
 
 # Bosch number pattern: 0261 followed by 6 digits
 _BOSCH_RE = re.compile(rb'0261\d{6}')

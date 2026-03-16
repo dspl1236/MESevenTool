@@ -322,23 +322,43 @@ PROFILE_BGU_FSI = ROMProfile(
 )
 
 PROFILE_V6_2_7T = ROMProfile(
-    name          = "ME7.1 — 2.7T V6 Biturbo (AGB/ARE/APX/AZZ)",
-    description   = "2.7T V6 biturbo: A4 B5/B6, A6 C5, Allroad.  "
-                    "Twin turbo, NB O2 per bank (B1S1+B1S2 and B2S1+B2S2).  "
-                    "Rear O2 delete requires two patches — Bank 1 and Bank 2.  "
-                    "PLACEHOLDER — no patches or maps implemented yet.",
-    part_prefixes = ["4B0906018", "078906018"],
+    name          = "ME7.1 — 2.7T V6 Biturbo (AGB/ARE/APX/BES/BCY)",
+    description   = "2.7T V6 biturbo: S4 B5 (8D0907551), A6 C5 / Allroad (4Z7907551), "
+                    "A6 C5 tip (4B0907551).  Twin KKK K03/K04 turbos.  "
+                    "NB O2 per bank.  Rear O2 delete needs B1+B2 patches.  "
+                    "DPP1=0x0205 across all known software versions.",
+    part_prefixes = ["8D0907551", "4Z7907551", "4B0907551"],
     rom_size      = 0x100000,
     ecu_hw        = "ME7.1",
-    variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp", "AZZ 2.7T 265hp"],
-    dpp1_min      = 0x0180,
-    dpp1_max      = 0x01A0,
+    variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp",
+                     "BES 2.7T 250hp", "BCY 2.7T 265hp", "APX 2.7T 256hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
     induction     = "turbo",
     o2_system     = "narrowband",
     fuel_system   = "mpi",
     dual_bank     = True,
     notes         = "Twin turbo V6.  dual_bank=True — rear O2 patches need Bank1+Bank2.  "
-                    "No patches or maps yet.",
+                    "64 stock ROMs validated, DPP1=0x0205 consistent across all.",
+)
+
+PROFILE_V8_RS4 = ROMProfile(
+    name          = "ME7.1.1 — 4.2T V8 Biturbo (BCY/AKH/AQJ — 4D1907558 family)",
+    description   = "RS4 B5 / S8 D2 / A8 4.2l V8 biturbo.  "
+                    "ME7.1.1 (updated ME7.1 with K-box logging support).  "
+                    "DPP1=0x0205, C167 architecture identical to 2.7T.",
+    part_prefixes = ["4D1907558"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BCY 4.2T 380hp", "AKH 4.2T 340hp", "AQJ 4.2T 340hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "turbo",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,
+    notes         = "V8 biturbo RS4.  K-box logging patch at 0x35FD2/0x77DE4/0x78CB6 "
+                    "(s4wiki documented).  6 stock ROMs in corpus.",
 )
 
 PROFILE_NA_V6 = ROMProfile(
@@ -377,6 +397,7 @@ ALL_PROFILES: List[ROMProfile] = [
     PROFILE_06B,
     PROFILE_BGU_FSI,
     PROFILE_V6_2_7T,
+    PROFILE_V8_RS4,
     PROFILE_NA_V6,
 ]
 
