@@ -1,0 +1,1 @@
+"""MESevenTool Qt application."""

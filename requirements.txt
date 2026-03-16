@@ -1,0 +1,8 @@
+# MESevenTool runtime dependencies
+PyQt5>=5.15
+
+# Optional: XDF file parsing support
+# lxml>=4.9
+
+# Testing
+pytest>=7.0

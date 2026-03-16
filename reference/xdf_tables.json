@@ -1,0 +1,2427 @@
+[
+  {
+    "name": "MLHFM",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 83316,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 512,
+        "signed": false,
+        "math": "0.000000+X*0.100000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFMIOP",
+    "desc": "Optimal engine torque map",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 91856,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 76548,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 91502,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 16,
+        "signed": false,
+        "math": "0.001526 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "KFMLDMX",
+    "desc": "ML: threshold for B_maxflr diagnosis HFM/HLM",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 114330,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": ".024414*x",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 114346,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": ".250*x",
+        "units": "% DK"
+      },
+      "z": {
+        "addr": 114362,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "KFMIRL",
+    "desc": "Engine load desired (rlsol)",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 86166,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.001526 * X",
+        "units": "% rltsol"
+      },
+      "y": {
+        "addr": 86134,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 86198,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 16,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDRXN_1_A",
+    "desc": "Maximum specified load",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 125618,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 125650,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "KFDLULS",
+    "desc": "Delta pressure for overboost protection diagnosis",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 125833,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "10.000000 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 125825,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 125841,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "5.000000 * X",
+        "units": "hPa"
+      }
+    }
+  },
+  {
+    "name": "LDRXNZK",
+    "desc": "Maximum specified load during continuous knock",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 125618,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 125684,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LAMFA ROW",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 117054,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 15,
+        "signed": false,
+        "math": "0.000000+X*40.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LAMFA",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 117082,
+        "elemsize": 1,
+        "cols": 6,
+        "rows": 15,
+        "signed": false,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFZW",
+    "desc": "Ignition angle map",
+    "pn": "06A906032DL",
+    "axes": {
+      "x": {
+        "addr": 77938,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": ".250*x",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78020,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438*x",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 73949,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 12,
+        "signed": true,
+        "math": ".75*x",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "TVUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 87114,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 5,
+        "signed": false,
+        "math": "0.000000+X*0.002667",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SRL12ZUUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 65756,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 6,
+        "signed": false,
+        "math": "0.000000+X*1.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "VARDEF",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 113558,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 1,
+        "signed": false,
+        "math": "0.000000+X*1.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SNM16GKUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 103270,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000000+X*40.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "MLOFS",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 84342,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 1,
+        "signed": false,
+        "math": "0.000000+X*0.100000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "TVUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 87109,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 5,
+        "signed": false,
+        "math": "0.000000+X*0.070400",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SRL12GKUW",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 117440,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 12,
+        "signed": false,
+        "math": "0.000000+X*0.023438",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KRKTE",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 116784,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 1,
+        "signed": false,
+        "math": "0.000000+X*0.000167",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LAMFA COLUMN",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 117070,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 6,
+        "signed": false,
+        "math": "0.000000+X*0.003052",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFLBTS",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 103077,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 12,
+        "signed": false,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SRL12GKUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 99043,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 8,
+        "signed": false,
+        "math": "0.000000+X*0.750000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SNM16ZUUB",
+    "desc": "",
+    "pn": "06A906032DL",
+    "axes": {
+      "z": {
+        "addr": 77938,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000000+X*0.250000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "Engine load desired (KFMIRL)",
+    "desc": "Engine load desired (rlsol)",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 86406,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.001526 * X",
+        "units": "% rltsol"
+      },
+      "y": {
+        "addr": 86374,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 86438,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 16,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Lambda - driver desired (LAMFA)",
+    "desc": "Lambda - driver desired",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 119202,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 1,
+        "signed": false,
+        "math": "0.003052 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 119186,
+        "elemsize": 1,
+        "cols": 15,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 119214,
+        "elemsize": 1,
+        "cols": 6,
+        "rows": 15,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Delta ignition angle (overboost) (KFDZWOB)",
+    "desc": "Delta ignition angle (overboost)",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 169990,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 1,
+        "signed": false,
+        "math": "0.75* X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 169994,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 1,
+        "signed": false,
+        "math": "40* X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 169998,
+        "elemsize": 1,
+        "cols": 4,
+        "rows": 4,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Ignition angle map (variant 2) (KFZW2)",
+    "desc": "Ignition angle map (variant 2)",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 78216,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.75* X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78134,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.25* X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 74203,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Ignition angle map (KFZW)",
+    "desc": "Ignition angle map",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 78216,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.75* X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78134,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.25* X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 74011,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Map with permanent latest possible ignition angle (KFZWMS)",
+    "desc": "Map with permanent latest possible ignition angle",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 78216,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78134,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.25* X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 73817,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Minimum ignition angle (KFZWMN)",
+    "desc": "Minimum ignition angle",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 94786,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 94768,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 94796,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "degress CW"
+      }
+    }
+  },
+  {
+    "name": "Optimal ignition angle (KFZWOP)",
+    "desc": "Optimal ignition angle",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 92662,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78100,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 71216,
+        "elemsize": 1,
+        "cols": 11,
+        "rows": 16,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Optimal ignition angle (variant 2) (KFZWOP2)",
+    "desc": "Optimal ignition angle (variant 2)",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 92662,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78100,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 71040,
+        "elemsize": 1,
+        "cols": 11,
+        "rows": 16,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Optimal ignition angle under monitoring (KFZW_UM)",
+    "desc": "Map: optimal ignition angle under monitoring",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 82051,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 82060,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "z": {
+        "addr": 82141,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load (LDRXN)",
+    "desc": "Maximum specified load",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 128748,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 128780,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load during continuous knock (LDRXNZK)",
+    "desc": "Maximum specified load during continuous knock",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 128748,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 128780,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Correction  map for MAF (KFKHFM)",
+    "desc": "Correction map for MAF",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 68702,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 68688,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 68716,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 14,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Correction factor for fuel supply system (FKKVS)",
+    "desc": "Correction factor for fuel supply system",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 118088,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.002667 * X",
+        "units": "ms"
+      },
+      "y": {
+        "addr": 118072,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 118120,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000031 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit (KFLDIMX)",
+    "desc": "LDR I-Regulator limit",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 127356,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.039063 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 78030,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 126166,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Map for linearization of boost pressure (KFLDRL)",
+    "desc": "Map for linearization of boost pressure = f (TV)",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 127374,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 78030,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 126504,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit correction as a function of IAT (LDIATA)",
+    "desc": "LDR I-Regulator limit correction as a function of IAT",
+    "pn": "06A906032RN",
+    "axes": {
+      "x": {
+        "addr": 65797,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X+ -48.000000",
+        "units": "Grad C"
+      },
+      "z": {
+        "addr": 104900,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": true,
+        "math": "0.640000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Engine load desired (KFMIRL)",
+    "desc": "Engine load desired (rlsol)",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 72910,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.001526 * X",
+        "units": "% rltsol"
+      },
+      "y": {
+        "addr": 72878,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 72936,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 16,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Ignition angle map (KFZW)",
+    "desc": "Ignition angle map",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 82764,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.75* X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 82703,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40* X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 90563,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Map with permanent latest possible ignition angle (KFZWMS)",
+    "desc": "Map with permanent latest possible ignition angle",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 82764,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 82703,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 90369,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Minimum ignition angle (KFZWMN)",
+    "desc": "Minimum ignition angle",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 80256,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 80237,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 80270,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "degress CW"
+      }
+    }
+  },
+  {
+    "name": "Optimal ignition angle (KFZWOP)",
+    "desc": "Optimal ignition angle",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 79350,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 65728,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 88416,
+        "elemsize": 1,
+        "cols": 11,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "*Optimal ignition angle under monitoring (KFZW_UM)",
+    "desc": "Map: optimal ignition angle under monitoring",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 82046,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 82055,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "z": {
+        "addr": 82136,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Correction  map for MAF (KFKHFM)",
+    "desc": "Correction map for MAF",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 86448,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 86434,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 86463,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 14,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load during continuous knock (LDRXNZK)",
+    "desc": "Maximum specified load during continuous knock",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 120952,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 120984,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load (LDRXN)",
+    "desc": "Maximum specified load",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 120886,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 120918,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDR altitude limitation (maximum pressure ratio) (KFLDHBN)",
+    "desc": "LDR altitude limitation (maximum pressure ratio)",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 82642,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X+ -48.000000",
+        "units": "Grad C"
+      },
+      "y": {
+        "addr": 82777,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 103881,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.015625 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Delta desired lambda for component protection (DLBTS)",
+    "desc": "Delta desired lambda for component protection",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 114645,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.500000 * X",
+        "units": "%"
+      },
+      "z": {
+        "addr": 114653,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "ML: threshold for B_maxflr diagnosis HFM/HLM (KFMLDMX)",
+    "desc": "ML: threshold for B_maxflr diagnosis HFM/HLM",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 112794,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X+ -48.000000",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 112778,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.024414 * X",
+        "units": "% DK"
+      },
+      "z": {
+        "addr": 112810,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "ML: threshod for B_minflr diagnosis HFM/HLM (KFMLDMN)",
+    "desc": "ML: threshod for B_minflr diagnosis HFM/HLM",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 112630,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 112614,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.024414 * X",
+        "units": "% DK"
+      },
+      "z": {
+        "addr": 112646,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "Correction factor for fuel supply system (FKKVS)",
+    "desc": "Correction factor for fuel supply system",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 113836,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.004000 * X",
+        "units": "ms"
+      },
+      "y": {
+        "addr": 113820,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 113868,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000031 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Delta pressure for overboost protection diagnosis (KFDLULS)",
+    "desc": "Delta pressure for overboost protection diagnosis",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 104107,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "10.000000 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 104115,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 104123,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "5.000000 * X",
+        "units": "hPa"
+      }
+    }
+  },
+  {
+    "name": "Correction factor for combustion chamber pressure (KFPBRK)",
+    "desc": "Correction factor for combustion chamber pressure",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 112970,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 112990,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 113010,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 10,
+        "signed": false,
+        "math": "0.000031 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Factor for maximum pressure ratio with auxilliary load signal  (FPVMXN2)",
+    "desc": "Factor for maximum pressure ratio with auxilliary load signal",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 112942,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 112954,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 1,
+        "signed": false,
+        "math": "0.000061 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit (KFLDIMX)",
+    "desc": "LDR I-Regulator limit",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 65760,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.039063 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 65692,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 119230,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Map for linearization of boost pressure (KFLDRL)",
+    "desc": "Map for linearization of boost pressure = f (TV)",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 120094,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 65694,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 119568,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit correction as a function of IAT (LDIATA)",
+    "desc": "LDR I-Regulator limit correction as a function of IAT",
+    "pn": "06A906032CM",
+    "axes": {
+      "x": {
+        "addr": 82777,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X+ -48.000000",
+        "units": "Grad C"
+      },
+      "z": {
+        "addr": 103771,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.640000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Engine load desired (KFMIRL)",
+    "desc": "Engine load desired (rlsol)",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 72910,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.001526 * X",
+        "units": "% rltsol"
+      },
+      "y": {
+        "addr": 72878,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 72934,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 16,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Ignition angle map (KFZW)",
+    "desc": "Ignition angle map",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 82764,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.75* X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 82703,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40* X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 90562,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Map with permanent latest possible ignition angle (KFZWMS)",
+    "desc": "Map with permanent latest possible ignition angle",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 82764,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 82703,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 90368,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Minimum ignition angle (KFZWMN)",
+    "desc": "Minimum ignition angle",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 80256,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 80237,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 80268,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "degress CW"
+      }
+    }
+  },
+  {
+    "name": "Optimal ignition angle (KFZWOP)",
+    "desc": "Optimal ignition angle",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 79350,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 65728,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 88415,
+        "elemsize": 1,
+        "cols": 11,
+        "rows": 16,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "*Optimal ignition angle under monitoring (KFZW_UM)",
+    "desc": "Map: optimal ignition angle under monitoring",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 82046,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 82055,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "z": {
+        "addr": 82136,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": true,
+        "math": "0.750000 * X",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "Correction  map for MAF (KFKHFM)",
+    "desc": "Correction map for MAF",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 86448,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 86434,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 86462,
+        "elemsize": 1,
+        "cols": 14,
+        "rows": 14,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load during continuous knock (LDRXNZK)",
+    "desc": "Maximum specified load during continuous knock",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 120952,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 120984,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Maximum specified load (LDRXN)",
+    "desc": "Maximum specified load",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 120886,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 120918,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDR altitude limitation (maximum pressure ratio) (KFLDHBN)",
+    "desc": "LDR altitude limitation (maximum pressure ratio)",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 82642,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X+ -48.000000",
+        "units": "Grad C"
+      },
+      "y": {
+        "addr": 82777,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 103881,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.015625 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Delta desired lambda for component protection (DLBTS)",
+    "desc": "Delta desired lambda for component protection",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 114645,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.500000 * X",
+        "units": "%"
+      },
+      "z": {
+        "addr": 114653,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.007813 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "ML: threshold for B_maxflr diagnosis HFM/HLM (KFMLDMX)",
+    "desc": "ML: threshold for B_maxflr diagnosis HFM/HLM",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 112794,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X+ -48.000000",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 112778,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.024414 * X",
+        "units": "% DK"
+      },
+      "z": {
+        "addr": 112810,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "ML: threshod for B_minflr diagnosis HFM/HLM (KFMLDMN)",
+    "desc": "ML: threshod for B_minflr diagnosis HFM/HLM",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 112630,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "Upm"
+      },
+      "y": {
+        "addr": 112614,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.024414 * X",
+        "units": "% DK"
+      },
+      "z": {
+        "addr": 112646,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "Correction factor for fuel supply system (FKKVS)",
+    "desc": "Correction factor for fuel supply system",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 113836,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.004000 * X",
+        "units": "ms"
+      },
+      "y": {
+        "addr": 113820,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "Upm"
+      },
+      "z": {
+        "addr": 113868,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000031 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Delta pressure for overboost protection diagnosis (KFDLULS)",
+    "desc": "Delta pressure for overboost protection diagnosis",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 104107,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "10.000000 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 104115,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "40.000000 * X",
+        "units": "RPM"
+      },
+      "z": {
+        "addr": 104123,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 8,
+        "signed": false,
+        "math": "5.000000 * X",
+        "units": "hPa"
+      }
+    }
+  },
+  {
+    "name": "Correction factor for combustion chamber pressure (KFPBRK)",
+    "desc": "Correction factor for combustion chamber pressure",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 112970,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.023438 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 112990,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 113010,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 10,
+        "signed": false,
+        "math": "0.000031 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "Factor for maximum pressure ratio with auxilliary load signal  (FPVMXN2)",
+    "desc": "Factor for maximum pressure ratio with auxilliary load signal",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 112942,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 112954,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 1,
+        "signed": false,
+        "math": "0.000061 * X",
+        "units": "-"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit (KFLDIMX)",
+    "desc": "LDR I-Regulator limit",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 65760,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.039063 * X",
+        "units": "hPa"
+      },
+      "y": {
+        "addr": 65692,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 119230,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "Map for linearization of boost pressure (KFLDRL)",
+    "desc": "Map for linearization of boost pressure = f (TV)",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 120094,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 1,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      },
+      "y": {
+        "addr": 65694,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": false,
+        "math": "0.250000 * X",
+        "units": "U/min"
+      },
+      "z": {
+        "addr": 119568,
+        "elemsize": 2,
+        "cols": 10,
+        "rows": 16,
+        "signed": false,
+        "math": "0.005000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDR I-Regulator limit correction as a function of IAT (LDIATA)",
+    "desc": "LDR I-Regulator limit correction as a function of IAT",
+    "pn": "06A906032CL",
+    "axes": {
+      "x": {
+        "addr": 82777,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.750000 * X+ -48.000000",
+        "units": "Grad C"
+      },
+      "z": {
+        "addr": 103771,
+        "elemsize": 1,
+        "cols": 8,
+        "rows": 1,
+        "signed": false,
+        "math": "0.640000 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "MLHFM",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 83654,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 512,
+        "signed": false,
+        "math": "0.000000+X*0.100000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LAMFA",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 118356,
+        "elemsize": 1,
+        "cols": 6,
+        "rows": 15,
+        "signed": false,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SRL12GKUW",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 118690,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 12,
+        "signed": false,
+        "math": "0.000000+X*0.023438",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SNM16GKUB",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 103251,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000000+X*40.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SRL12GKUB",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 99081,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 8,
+        "signed": false,
+        "math": "0.000000+X*0.750000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "SNM16ZUUB",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 78532,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 16,
+        "signed": false,
+        "math": "0.000000+X*0.250000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LAMFA_ROWAXIS",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 110652,
+        "elemsize": 1,
+        "cols": 1,
+        "rows": 4,
+        "signed": false,
+        "math": "0.000000+X*40.000000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFLBTS",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 103058,
+        "elemsize": 1,
+        "cols": 16,
+        "rows": 12,
+        "signed": false,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LAMFA_COLAXIS",
+    "desc": "",
+    "pn": "8D0907557P",
+    "axes": {
+      "z": {
+        "addr": 110656,
+        "elemsize": 2,
+        "cols": 1,
+        "rows": 4,
+        "signed": false,
+        "math": "0.000000+X*0.003052",
+        "units": ""
+      }
+    }
+  }
+]
