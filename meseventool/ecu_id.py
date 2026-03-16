@@ -44,6 +44,9 @@ _ENGINE_CODE_RE = re.compile(
 #   06A906032xx (1.8T), 06B906018xx (2.0T) — digit-digit-letter-6digits-suffix
 #   8D0907551xx (S4 B5), 4Z7907551xx (Allroad), 4B0907551xx (A6 C5)
 #   4D1907558xx (RS4/S8 V8) — digit-letter-7digits-suffix
+# ME7.x version string: "40/1/ME7.5/..." or "42/1/ME7.1.1/..."
+_VS_RE = re.compile(rb'(?:40|42|43|44)/1/ME7[.0-9A-Za-z]{1,8}')
+
 _PN_RE = re.compile(rb'(?:'
     rb'[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'   # 8D0907551M, 4Z7907551AA, 4D1907558 (no suffix)
     rb'|0[0-9][A-Z][0-9]{6}[A-Z]{0,4}'   # 06A906032DL, 06B906018, 06A906032
@@ -70,6 +73,7 @@ class ECUIdentity:
     bosch_number: str = ""    # 10-digit Bosch number (0261XXXXXX)
     engine_code:  str = ""    # 3-letter engine code (AWP, AUM, BAM …)
     rom_size_kb:  int = 0     # ROM size in KB
+    version_string: str = ""  # ME7.x build version e.g. "40/1/ME7.5/3/4019.20"
     source:       str = "unknown"
 
     @property
@@ -195,6 +199,17 @@ def identify(rom: ROMImage) -> ECUIdentity:
         code = suffix_map.get(suffix)
         if code:
             ident.engine_code = code
+
+    # ── ME7.x version string ─────────────────────────────────────────────────
+    vs_match = _VS_RE.search(raw)
+    if vs_match:
+        # Extend to full slash-delimited version string (up to 60 chars)
+        start = vs_match.start()
+        end   = min(start + 60, len(raw))
+        run   = raw[start:end]
+        # Trim at first non-printable or non-path character
+        stop  = next((k for k, b in enumerate(run) if b < 0x20 or b > 0x7E), len(run))
+        ident.version_string = run[:stop].decode('ascii', 'replace').rstrip('/')
 
     return ident
 

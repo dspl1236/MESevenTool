@@ -405,14 +405,44 @@ PROFILES = ALL_PROFILES   # legacy alias
 
 
 def detect_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
-    """Return the best matching profile, falling back to UNKNOWN."""
+    """Return the best matching profile, falling back to UNKNOWN.
+
+    Match priority:
+      1. part_prefixes match (most specific)
+      2. DPP1 range match filtered by ME7 hw version in version_string
+      3. DPP1 range match (unfiltered)
+      4. UNKNOWN
+    """
     for profile in ALL_PROFILES:
         if profile.matches(ecu_id, dpp):
             return profile
+
     if dpp.dpp1:
+        # Use ECU version string to narrow DPP matches:
+        # "ME7.5" → prefer ME7.5 profiles; "ME7.1.1" → ME7.1.1 profiles etc.
+        vs = getattr(ecu_id, "version_string", "") or ""
+        hw_hint = None
+        for tag in ("ME7.1.1", "ME7.5", "ME7.1", "ME71"):
+            if tag.replace(".", "").lower() in vs.replace(".", "").lower():
+                hw_hint = tag.replace("ME71", "ME7.1").replace("ME7.1.1", "ME7.1.1")
+                break
+
+        if hw_hint:
+            for profile in ALL_PROFILES:
+                if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
+                    # Exact match beats prefix — "ME7.1.1" != "ME7.1"
+                    if profile.ecu_hw == hw_hint:
+                        return profile
+            # Fallback: prefix match (e.g. "ME7.1" matches "ME7.1" profiles)
+            for profile in ALL_PROFILES:
+                if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
+                    if hw_hint.startswith(profile.ecu_hw):
+                        return profile
+
         for profile in ALL_PROFILES:
             if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
                 return profile
+
     return PROFILE_UNKNOWN
 
 

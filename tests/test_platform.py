@@ -337,3 +337,119 @@ class TestDetectAllWithProfile:
                 assert patch_requires and not patch_requires.issubset(awp_platforms), \
                     (f"Patch '{r.patch.name}' returned NOT_APPLICABLE for AWP "
                      f"but applies_to={r.patch.applies_to} should match AWP platforms {awp_platforms}")
+
+
+# ── ECU ID and profile detection — corpus tests ───────────────────────────────
+
+class TestECUIdentityVersionString:
+    """version_string field populated by identify() from ROM content."""
+
+    def _make_rom_with_vs(self, vs_bytes):
+        import io
+        from meseventool.rom import ROMImage
+        data = bytearray(0x100000)
+        pos  = 0x010007
+        data[pos:pos+len(vs_bytes)] = vs_bytes
+        # ROMImage.load reads from a file-like; use a temp file
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as f:
+            f.write(data); tmp = f.name
+        try:
+            rom = ROMImage.load(tmp)
+        finally:
+            os.unlink(tmp)
+        return rom
+
+    def test_me75_version_string_extracted(self):
+        from meseventool.ecu_id import identify
+        vs = b'40/1/ME7.5/3/4019.20//24b/Dst06o/110303//'
+        rom = self._make_rom_with_vs(vs)
+        ident = identify(rom)
+        assert 'ME7.5' in ident.version_string
+
+    def test_me711_version_string_extracted(self):
+        from meseventool.ecu_id import identify
+        vs = b'42/1/ME7.1.1/5/8542.05//25C/Dst01o/'
+        rom = self._make_rom_with_vs(vs)
+        ident = identify(rom)
+        assert 'ME7.1.1' in ident.version_string
+
+    def test_me71_version_string_extracted(self):
+        from meseventool.ecu_id import identify
+        vs = b'40/1/ME7.1/5/6005.02//22m/DstE1o/110700//'
+        rom = self._make_rom_with_vs(vs)
+        ident = identify(rom)
+        assert 'ME7.1' in ident.version_string
+
+    def test_no_vs_gives_empty_string(self):
+        from meseventool.ecu_id import identify
+        rom = self._make_rom_with_vs(b'\x00' * 40)
+        ident = identify(rom)
+        assert ident.version_string == ''
+
+
+class TestProfileVersionStringTiebreaker:
+    """detect_profile uses version_string to break DPP1=0x0205 ambiguity."""
+
+    def _detect(self, pn, vs_tag):
+        from meseventool.ecu_id import ECUIdentity
+        from meseventool.dpp import DPPValues
+        from meseventool.profiles import detect_profile
+        ident = ECUIdentity(vmecuhn=pn, version_string=vs_tag)
+        dpp   = DPPValues(dpp0=0, dpp1=0x0205, dpp2=0x00E0, dpp3=3)
+        return detect_profile(ident, dpp)
+
+    def test_8d0907551_detects_27t(self):
+        p = self._detect('8D0907551M', '40/1/ME7.1/5/6005.01')
+        assert '2.7T' in p.name
+
+    def test_4z7907551_detects_27t(self):
+        p = self._detect('4Z7907551AA', '42/1/ME7.1.1/5/6030.03')
+        assert '2.7T' in p.name
+
+    def test_4d1907558_detects_v8(self):
+        p = self._detect('4D1907558B', '42/1/ME7.1.1/5/8542.05')
+        assert 'V8' in p.name
+
+    def test_06a906032_detects_18t(self):
+        p = self._detect('06A906032DL', '40/1/ME7.5/3/4019.20')
+        assert '1.8T' in p.name
+
+    def test_me711_no_pn_uses_vs_tiebreaker(self):
+        """No PN, but ME7.1.1 version string → should prefer ME7.1.1 profiles over ME7.1."""
+        from meseventool.ecu_id import ECUIdentity
+        from meseventool.dpp import DPPValues
+        from meseventool.profiles import detect_profile
+        ident = ECUIdentity(vmecuhn='', version_string='43/1/ME7.1.1/5/8100.00')
+        dpp   = DPPValues(dpp0=0, dpp1=0x0205, dpp2=0x00E0, dpp3=3)
+        p = detect_profile(ident, dpp)
+        assert 'ME7.1.1' in p.ecu_hw, \
+            f"Expected ME7.1.1 profile from version string, got {p.name}"
+
+    def test_dual_bank_27t_profile(self):
+        p = self._detect('8D0907551M', '40/1/ME7.1/5/6005.01')
+        assert p.dual_bank, "2.7T profile should be dual_bank=True"
+
+    def test_v8_rs4_is_dual_bank(self):
+        p = self._detect('4D1907558B', '42/1/ME7.1.1/5/8542.05')
+        assert p.dual_bank, "V8 RS4 profile should be dual_bank=True"
+
+
+class TestNewPNRegex:
+    """_PN_RE must match all VAG ECU part number formats."""
+
+    def _match(self, b):
+        import re
+        from meseventool.ecu_id import _PN_RE
+        m = _PN_RE.search(b)
+        return m.group().decode() if m else None
+
+    def test_18t_dl(self):    assert self._match(b'06A906032DL') == '06A906032DL'
+    def test_18t_bn(self):    assert self._match(b'06A906032BN') == '06A906032BN'
+    def test_s4_b5(self):     assert self._match(b'8D0907551M')  == '8D0907551M'
+    def test_allroad(self):   assert self._match(b'4Z7907551AA') == '4Z7907551AA'
+    def test_a6_c5(self):     assert self._match(b'4B0907551K')  == '4B0907551K'
+    def test_rs4_v8(self):    assert self._match(b'4D1907558B')  == '4D1907558B'
+    def test_20t_06b(self):   assert self._match(b'06B906018EL') == '06B906018EL'
+    def test_no_false_pos(self): assert self._match(b'234567890AB') is None
+    def test_no_garbage(self):   assert self._match(b'XXXXXXXXXX') is None
