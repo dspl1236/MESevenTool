@@ -7,6 +7,18 @@ Bosch ME7.x ROM editor and analysis tool for VAG 1.8T/2.0T engines.
 Primary target: **06A-906-032** (AWP · AUM · AUQ · BAM · AVC and related).  
 Also supports **06B-906-018** (AWM · AUG · AWT) and **06A-906-018** ME7.1 variants.
 
+
+> **🚧 Development status — not yet validated on real hardware**
+>
+> Map offsets are PROVISIONAL and patch needles are UNCONFIRMED until tested
+> against a real ME7 `.bin`. The tool will open ROMs and display data, but
+> **do not write to any ECU** until a real ROM has been loaded and the needle
+> hits confirmed. All map cells showing data from this version should be
+> treated as illustrative only.
+>
+> If you have a ME7.5 `.bin` (06A-906-032 family), loading it and reporting
+> which needles hit is the most useful contribution you can make right now.
+
 ---
 
 ## Philosophy

@@ -197,6 +197,17 @@ class ROMInfoWidget(QWidget):
         epk_lay.addWidget(self._txt_epk)
         root.addWidget(epk_box)
 
+        # Validation status banner
+        self._lbl_validation = QLabel()
+        self._lbl_validation.setWordWrap(True)
+        self._lbl_validation.setStyleSheet(
+            f"color:{C_AMBER}; font-size:10px; padding:6px 8px; "
+            f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
+        self._lbl_validation.setText(
+            "⚠  No ROM loaded — map offsets are PROVISIONAL until validated against a real .bin.  "
+            "Do not write to any ECU until needle hits have been confirmed.")
+        root.addWidget(self._lbl_validation)
+
         root.addStretch()
 
     def update(self, rom: ROMImage, ident, dpp: DPPValues,
@@ -237,6 +248,35 @@ class ROMInfoWidget(QWidget):
         # Description
         desc_parts = [s for s in [ident.erotan, ident.epk] if s]
         self._txt_epk.setPlainText("\n".join(desc_parts) if desc_parts else "(none)")
+
+        # Validation status
+        if profile:
+            maps = profile.make_maps(xdf_pn=ident.vmecuhn or None)
+            n_confirmed   = sum(1 for m in maps if m.confidence == "CONFIRMED")
+            n_provisional = sum(1 for m in maps if m.confidence == "PROVISIONAL")
+            n_unconfirmed = sum(1 for m in maps if m.confidence == "UNCONFIRMED")
+            total = len(maps)
+            if n_confirmed == total and total > 0:
+                self._lbl_validation.setText(
+                    f"✓  All {total} maps have CONFIRMED offsets for this part number.")
+                self._lbl_validation.setStyleSheet(
+                    f"color:#3ddc84; font-size:10px; padding:6px 8px; "
+                    f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
+            elif n_confirmed > 0:
+                self._lbl_validation.setText(
+                    f"⚠  {n_confirmed}/{total} maps CONFIRMED · "
+                    f"{n_provisional} PROVISIONAL · {n_unconfirmed} UNCONFIRMED  — "
+                    "verify needle hits before writing.")
+                self._lbl_validation.setStyleSheet(
+                    f"color:{C_AMBER}; font-size:10px; padding:6px 8px; "
+                    f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
+            else:
+                self._lbl_validation.setText(
+                    f"⚠  Map offsets PROVISIONAL/UNCONFIRMED for this variant — "
+                    "do not write to ECU until needle hits are confirmed against a real .bin.")
+                self._lbl_validation.setStyleSheet(
+                    f"color:{C_AMBER}; font-size:10px; padding:6px 8px; "
+                    f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
 
 
 # ── Patches panel ─────────────────────────────────────────────────────────────
