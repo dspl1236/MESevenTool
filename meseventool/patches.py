@@ -800,6 +800,34 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to  = {"me7.1", "2.7t"},
     ),
 
+    PatchDef(
+        name        = "Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+        description = ("Raises the top speed limiter from 250 km/h to ~655 km/h "
+                       "for the later ME7.1.1 Allroad (4Z7907551 N/Q/R/S/T/AA) "
+                       "and all V8 RS4 / S8 variants (4D1907558).  "
+                       "Same mechanism as the ME7.1 patch but the code uses a "
+                       "different suffix instruction sequence (DA 00 9A 10) "
+                       "instead of the ME7.1 form (E6 FE xx xx DA 00 9C 6C)."),
+        category    = PatchCategory.PERFORMANCE,
+        # C167: MOV R13, #25000  +  CLR Rx  +  DA 00 9A 10  +  (varies)
+        # The post-VMAX bytes DA 00 9A 10 are stable across ME7.1.1 variants.
+        # Bytes 8-11 vary (the instruction after the 9A 10 branch target) → masked.
+        needle      = [0xE6, 0xFD, 0xA8, 0x61, 0xDA, 0x00, 0x9A, 0x10,
+                       0x00, 0x00, 0x00, 0x00],
+        mask        = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                       0x00, 0x00, 0x00, 0x00],
+        offset      = 2,
+        stock_bytes = bytes([0xA8, 0x61]),  # 25000 = 250.00 km/h
+        patch_bytes = bytes([0xFF, 0xFF]),
+        confidence  = "CONFIRMED",
+        notes       = ("Validated on 7 × 4D1907558 (RS4 B5 / S8 D2 V8) and "
+                       "10 × 4Z7907551 N/Q/R/S/T/AA (ME7.1.1 Allroad). "
+                       "Does NOT hit ME7.1 files (confirmed zero false positives). "
+                       "Together with the ME7.1 VMAX patch this gives 57/57 1MB "
+                       "corpus coverage (100%)."),
+        applies_to  = {"me7.1.1", "2.7t"},
+    ),
+
     # ── Confirmed offset-based patches (DL / 06A906032DL verified) ──────────
 
     OffsetPatchDef(

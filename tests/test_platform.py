@@ -252,7 +252,7 @@ class TestCataloguePatches:
         known_tags = {
             "turbo", "na", "narrowband", "wideband",
             "mpi", "fsi", "tfsi",
-            "me7.5", "me7.1", "me7",
+            "me7.5", "me7.1", "me7.1.1", "me7",
             "bosch_hfm5", "hitachi",
             "dual_bank",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
