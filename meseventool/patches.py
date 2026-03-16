@@ -269,6 +269,197 @@ class ScalarPatchDef:
         return True
 
 
+@dataclass
+class OffsetPatchDef:
+    """
+    A byte-level patch located by an anchor string rather than a C167 needle.
+
+    Used for DATA patches — cal table values at known stable offsets — where
+    needle-based detection is fragile because the surrounding code varies across
+    ROM variants.
+
+    anchor_bytes   : byte string to search for in the ROM (e.g. EROTAN string).
+    anchor_offset  : signed offset from the start of anchor_bytes to the patch
+                     site.  Negative = before the anchor.
+    stock_bytes    : expected bytes at the patch site in stock form.
+    patch_bytes    : bytes written when the patch is applied.
+
+    Example — O2 monitor threshold in DL ROM:
+        anchor_bytes  = b'06A906032DL'   (EROTAN string at 0x0111E7)
+        anchor_offset = -16              (threshold is 16 bytes before EROTAN)
+        stock_bytes   = bytes([0x8D, 0x80])
+        patch_bytes   = bytes([0x80, 0x73])
+
+    Multiple patches per anchor are not supported — use one OffsetPatchDef per
+    patch site if the same anchor has multiple dependent patches.
+    """
+    name:          str
+    description:   str
+    category:      PatchCategory | str
+    anchor_bytes:  bytes
+    anchor_offset: int
+    stock_bytes:   bytes
+    patch_bytes:   bytes
+    warning:       str      = ""
+    confidence:    str      = "UNCONFIRMED"
+    notes:         str      = ""
+    applies_to:    Set[str] = field(default_factory=set)
+
+    def __post_init__(self):
+        assert len(self.stock_bytes) == len(self.patch_bytes), \
+            f"OffsetPatch '{self.name}': stock/patch bytes length mismatch"
+        assert self.anchor_bytes, \
+            f"OffsetPatch '{self.name}': anchor_bytes must not be empty"
+
+    def check_applicable(self, profile) -> bool:
+        if not self.applies_to:
+            return True
+        return bool(self.applies_to & set(profile.platforms))
+
+    def _find_addr(self, rom: ROMImage) -> int:
+        """Return file offset of patch site, or 0 if anchor not found."""
+        anchor_pos = bytes(rom.data).find(self.anchor_bytes)
+        if anchor_pos < 0:
+            return 0
+        addr = anchor_pos + self.anchor_offset
+        if addr < 0 or addr + len(self.stock_bytes) > rom.size:
+            return 0
+        return addr
+
+    def detect(self, rom: ROMImage,
+               searcher=None,
+               profile=None) -> PatchResult:
+        if profile is not None and not self.check_applicable(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0, "N/A")
+
+        addr = self._find_addr(rom)
+        if addr == 0:
+            return PatchResult(self, PatchState.MISSING, 0,
+                               "Anchor string not found")
+
+        current = bytes(rom.data[addr : addr + len(self.stock_bytes)])
+        if current == self.stock_bytes:
+            return PatchResult(self, PatchState.STOCK,   addr, "Stock")
+        elif current == self.patch_bytes:
+            return PatchResult(self, PatchState.PATCHED, addr, "Patched")
+        else:
+            return PatchResult(self, PatchState.UNKNOWN, addr,
+                               f"Modified: {current.hex().upper()}")
+
+    def apply(self, rom: ROMImage, result: PatchResult) -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                 PatchState.NOT_APPLICABLE):
+            return False
+        rom.write(result.addr, self.patch_bytes)
+        return True
+
+    def revert(self, rom: ROMImage, result: PatchResult) -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                 PatchState.NOT_APPLICABLE):
+            return False
+        rom.write(result.addr, self.stock_bytes)
+        return True
+
+
+@dataclass
+class MultiOffsetPatchDef:
+    """
+    A patch affecting multiple non-contiguous byte sites, all located relative
+    to a single anchor string.
+
+    Used for OBD readiness flag tables where the same logical patch clears
+    several scattered bytes across a data table.
+
+    sites : list of (anchor_offset: int, stock_byte: int, patch_byte: int)
+            Each tuple names one byte site relative to anchor_bytes.
+
+    Detect logic:
+        STOCK       — all sites contain their stock_byte
+        PATCHED     — all sites contain their patch_byte
+        UNKNOWN     — mixed (some patched, some not)
+        MISSING     — anchor not found in ROM
+    """
+    name:          str
+    description:   str
+    category:      PatchCategory | str
+    anchor_bytes:  bytes
+    sites:         List[tuple]   # [(anchor_offset, stock_byte, patch_byte), ...]
+    warning:       str      = ""
+    confidence:    str      = "UNCONFIRMED"
+    notes:         str      = ""
+    applies_to:    Set[str] = field(default_factory=set)
+
+    def check_applicable(self, profile) -> bool:
+        if not self.applies_to:
+            return True
+        return bool(self.applies_to & set(profile.platforms))
+
+    def _find_anchor(self, rom: ROMImage) -> int:
+        """Return file offset of anchor string start, or -1 if not found."""
+        return bytes(rom.data).find(self.anchor_bytes)
+
+    def detect(self, rom: ROMImage,
+               searcher=None,
+               profile=None) -> PatchResult:
+        if profile is not None and not self.check_applicable(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0, "N/A")
+
+        anchor_pos = self._find_anchor(rom)
+        if anchor_pos < 0:
+            return PatchResult(self, PatchState.MISSING, 0,
+                               "Anchor string not found")
+
+        stock_count   = 0
+        patched_count = 0
+        for anchor_off, stock_b, patch_b in self.sites:
+            addr = anchor_pos + anchor_off
+            if addr < 0 or addr >= rom.size:
+                continue
+            b = rom.data[addr]
+            if b == stock_b:
+                stock_count   += 1
+            elif b == patch_b:
+                patched_count += 1
+
+        total = len(self.sites)
+        # Use first site address as the representative addr
+        first_addr = anchor_pos + self.sites[0][0] if self.sites else 0
+
+        if stock_count == total:
+            return PatchResult(self, PatchState.STOCK,   first_addr, "Stock")
+        elif patched_count == total:
+            return PatchResult(self, PatchState.PATCHED, first_addr, "Patched")
+        else:
+            return PatchResult(self, PatchState.UNKNOWN, first_addr,
+                               f"Mixed: {stock_count} stock, {patched_count} patched")
+
+    def apply(self, rom: ROMImage, result: PatchResult) -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                 PatchState.NOT_APPLICABLE):
+            return False
+        anchor_pos = self._find_anchor(rom)
+        if anchor_pos < 0:
+            return False
+        for anchor_off, _stock_b, patch_b in self.sites:
+            addr = anchor_pos + anchor_off
+            if 0 <= addr < rom.size:
+                rom.write(addr, bytes([patch_b]))
+        return True
+
+    def revert(self, rom: ROMImage, result: PatchResult) -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                 PatchState.NOT_APPLICABLE):
+            return False
+        anchor_pos = self._find_anchor(rom)
+        if anchor_pos < 0:
+            return False
+        for anchor_off, stock_b, _patch_b in self.sites:
+            addr = anchor_pos + anchor_off
+            if 0 <= addr < rom.size:
+                rom.write(addr, bytes([stock_b]))
+        return True
+
+
 # ── C167 helper constants ──────────────────────────────────────────────────────
 XX = 0x00   # wildcard in needle/mask
 MM = 0xFF   # must-match
@@ -276,7 +467,7 @@ MM = 0xFF   # must-match
 
 # ── Patch catalogue ────────────────────────────────────────────────────────────
 
-ALL_PATCHES: list[PatchDef] = [
+ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
 
     # ── Immobiliser ───────────────────────────────────────────────────────────
 
@@ -532,6 +723,56 @@ ALL_PATCHES: list[PatchDef] = [
                       "detonation without protection. Never use on the road.",
         notes       = "Placeholder needle — real ERKSP sequence to be confirmed "
                       "against a real ROM. Do not enable until confirmed.",
+    ),
+
+    # ── Confirmed offset-based patches (DL / 06A906032DL verified) ──────────
+
+    OffsetPatchDef(
+        name          = "Rear O2 Monitor Threshold",
+        description   = ("O2 monitor pass/fail threshold table immediately "
+                         "before the EROTAN component string. Patching these "
+                         "two bytes effectively disables the rear O2 readiness "
+                         "check — the monitor always passes regardless of sensor "
+                         "state. Part of the 'O2 Delete Rev2' tune."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = b"06A906032DL",
+        anchor_offset = -16,          # 0x0111E7 - 16 = 0x0111D7 on DL
+        stock_bytes   = bytes([0x8D, 0x80]),
+        patch_bytes   = bytes([0x80, 0x73]),
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed on 06A906032DL 1.8L R4/5VT (AWW 150hp). "
+                         "Anchor = EROTAN string. Threshold at anchor-16. "
+                         "Other part-numbers must be validated individually."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    MultiOffsetPatchDef(
+        name          = "Rear O2 OBD Readiness Flags",
+        description   = ("Clears 7 OBD readiness flag bytes that track whether "
+                         "the rear O2 monitor has run and passed. Setting these "
+                         "to 0x00 disables the monitor reporting entirely — MIL "
+                         "will not illuminate for a missing/failed rear O2. "
+                         "Part of the 'O2 Delete Rev2' tune alongside the "
+                         "threshold patch above."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = b"40/1/ME7.5",
+        # Offsets relative to anchor at 0x010005 on DL ROM:
+        # flag_addr - 0x010005 for each of the 7 readiness bytes
+        sites         = [
+            (0x074C, 0x03, 0x00),  # 0x010751
+            (0x074E, 0x03, 0x00),  # 0x010753
+            (0x0767, 0x03, 0x00),  # 0x01076C
+            (0x076D, 0x03, 0x00),  # 0x010772
+            (0x0781, 0x03, 0x00),  # 0x010786
+            (0x0784, 0x03, 0x00),  # 0x010789
+            (0x078C, 0x03, 0x00),  # 0x010791
+        ],
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed on 06A906032DL 1.8L R4/5VT (AWW 150hp). "
+                         "Anchor = '40/1/ME7.5' in version string at 0x010005. "
+                         "All 7 flag bytes: stock=0x03, patched=0x00. "
+                         "Offsets will differ for other software versions."),
+        applies_to    = {"me7.5", "1.8t"},
     ),
 
 ]  # end ALL_PATCHES
