@@ -1,0 +1,3810 @@
+[
+  {
+    "name": "16 bit KFZW load axis patch #1",
+    "addr": 24393,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "16 bit KFZW load axis patch #2",
+    "addr": 24405,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (KFZW, 16bit) (HEX)",
+    "addr": 65584,
+    "rows": 1,
+    "cols": 13,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (KFZW, 16bit)",
+    "addr": 65586,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (KFZW, 16bit)",
+    "addr": 65586,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SLD04LDUB",
+    "addr": 65648,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: RPM (misfire detection)",
+    "addr": 65660,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: RPM (timing)",
+    "addr": 65730,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SPU08LDUB",
+    "addr": 65747,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (timing)",
+    "addr": 65791,
+    "rows": 1,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KVNPZ",
+    "addr": 65953,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MDNORM",
+    "addr": 65955,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFDLUR",
+    "addr": 66355,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDLUR1",
+    "addr": 66419,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDLUR2",
+    "addr": 66483,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDLURZ",
+    "addr": 66547,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NMIDLU",
+    "addr": 66611,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMIALU",
+    "addr": 66615,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RLSALULL",
+    "addr": 66617,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RLSALUN",
+    "addr": 66618,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CLA DTC table",
+    "addr": 67245,
+    "rows": 354,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CLAATR",
+    "addr": 67248,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAATR2",
+    "addr": 67249,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAATS",
+    "addr": 67252,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAATS2",
+    "addr": 67253,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLACINS",
+    "addr": 67267,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAHSH",
+    "addr": 67312,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAHSH2",
+    "addr": 67313,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAHSHE",
+    "addr": 67314,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLAHSHE2",
+    "addr": 67315,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLALSH",
+    "addr": 67351,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLALSH2",
+    "addr": 67352,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWDNMAX",
+    "addr": 67985,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RLDKTSO_0_A",
+    "addr": 67998,
+    "rows": 1,
+    "cols": 5,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NWPMBBR",
+    "addr": 68051,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TWPMBBR",
+    "addr": 68060,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UPWGVG",
+    "addr": 68074,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VWPMBBR",
+    "addr": 68075,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFWDKPP",
+    "addr": 68109,
+    "rows": 12,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "WDKPMXN",
+    "addr": 68293,
+    "rows": 1,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "ESKONF",
+    "addr": 68725,
+    "rows": 13,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFKHFM",
+    "addr": 68769,
+    "rows": 14,
+    "cols": 14,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CWBGMSZS",
+    "addr": 68969,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KUMSRL",
+    "addr": 68972,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KUMSRL",
+    "addr": 68972,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KVLAD",
+    "addr": 68973,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LADFIL",
+    "addr": 68974,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MSALLMN",
+    "addr": 68975,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DPUPS",
+    "addr": 69013,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWLAMKH",
+    "addr": 69202,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFHSTT",
+    "addr": 69308,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFWKSTT",
+    "addr": 69411,
+    "rows": 12,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KRDWA",
+    "addr": 69789,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FRK_AOG",
+    "addr": 69855,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FRK_AUG",
+    "addr": 69856,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "Engine ID",
+    "addr": 69881,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SW Version",
+    "addr": 69901,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SDLDSUA",
+    "addr": 69913,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFVPLGU",
+    "addr": 69929,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMRES",
+    "addr": 70315,
+    "rows": 6,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMRESK",
+    "addr": 70339,
+    "rows": 6,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZWOP",
+    "addr": 70670,
+    "rows": 16,
+    "cols": 11,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZWOP2",
+    "addr": 70846,
+    "rows": 16,
+    "cols": 11,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "MDIMX",
+    "addr": 71023,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMXDAEF",
+    "addr": 71031,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "VNMX",
+    "addr": 71038,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWMSRCAN",
+    "addr": 71045,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DBZ_MN",
+    "addr": 71046,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DBZ_MX",
+    "addr": 71047,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KLDMASRL",
+    "addr": 71054,
+    "rows": 1,
+    "cols": 5,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NOASR",
+    "addr": 71059,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMSRCERR",
+    "addr": 71060,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMSRCNU",
+    "addr": 71061,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "T_NOMASR",
+    "addr": 71062,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "T_NOMASRTA",
+    "addr": 71063,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "T_NOMBR3",
+    "addr": 71064,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFMIZUFIL",
+    "addr": 71065,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMIZUNS",
+    "addr": 71129,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMIZUOF",
+    "addr": 71193,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TMNSMN",
+    "addr": 71286,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CW_NOROMCHKRESET",
+    "addr": 72228,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLRKA",
+    "addr": 72306,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CLRHK",
+    "addr": 72327,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFZWMS",
+    "addr": 72624,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW",
+    "addr": 72818,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW",
+    "addr": 72818,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW",
+    "addr": 72818,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW2",
+    "addr": 73010,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW2",
+    "addr": 73010,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW2",
+    "addr": 73010,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZWWLNM",
+    "addr": 73275,
+    "rows": 12,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FHOKOB",
+    "addr": 73509,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TANSKOB",
+    "addr": 73544,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TKOMBKOA",
+    "addr": 73586,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TKOMBKOE",
+    "addr": 73587,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMKOAO",
+    "addr": 73605,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMKOAU",
+    "addr": 73606,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMSTMAD",
+    "addr": 73607,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VKO",
+    "addr": 73610,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VKOAO",
+    "addr": 73611,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VKOB",
+    "addr": 73612,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "WPEDKO",
+    "addr": 73613,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CWGGPBKV",
+    "addr": 73633,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWGGPBKV",
+    "addr": 73633,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "AIMVM",
+    "addr": 76374,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "Axis: RPM (PID)",
+    "addr": 76514,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SNM16OPUW",
+    "addr": 76548,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SPL08LDUW",
+    "addr": 76582,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Pressure ratio for KVPBDKSD/E",
+    "addr": 76610,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CW_CAN_R0",
+    "addr": 76922,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CW_CAN_R1",
+    "addr": 76924,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NGALU",
+    "addr": 76964,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Manufacturer P code table",
+    "addr": 76996,
+    "rows": 354,
+    "cols": 4,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NMAXF",
+    "addr": 80722,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KISRM",
+    "addr": 81386,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSLGRAD",
+    "addr": 81388,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSLGRAD",
+    "addr": 81388,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSLOFS",
+    "addr": 81390,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSLOFS",
+    "addr": 81390,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFWDKSMX",
+    "addr": 81686,
+    "rows": 10,
+    "cols": 3,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMI_UM",
+    "addr": 82072,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZW_UM",
+    "addr": 82136,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMDZOF_UM",
+    "addr": 82217,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMPED_UM",
+    "addr": 82281,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMPNS_UM",
+    "addr": 82345,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "MLHFM",
+    "addr": 82516,
+    "rows": 512,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "MLHFM",
+    "addr": 82516,
+    "rows": 512,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "MLOFS",
+    "addr": 83542,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFMSNWDK",
+    "addr": 83622,
+    "rows": 16,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "PSSOLNGRD",
+    "addr": 84818,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PSSOLPGRD",
+    "addr": 84820,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "WDKUGDN",
+    "addr": 84822,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMIRL",
+    "addr": 84974,
+    "rows": 16,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TEMIN",
+    "addr": 85732,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TEMINVA",
+    "addr": 85734,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TVUB",
+    "addr": 85742,
+    "rows": 1,
+    "cols": 5,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FKSTT_1_A",
+    "addr": 85928,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FKSTT_0_A",
+    "addr": 85966,
+    "rows": 1,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFWKSTAB",
+    "addr": 86004,
+    "rows": 4,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FBSTABGM",
+    "addr": 86210,
+    "rows": 1,
+    "cols": 4,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DFRBAF",
+    "addr": 86218,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DFRBAM",
+    "addr": 86220,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DFRVAF",
+    "addr": 86222,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DFRVAM",
+    "addr": 86224,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RKUKKUKA",
+    "addr": 86226,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMNUUKA",
+    "addr": 86228,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TNSUUKA",
+    "addr": 86230,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDTMMA",
+    "addr": 86232,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDTMNP",
+    "addr": 86234,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DZWTIN",
+    "addr": 86594,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "ADRONLOGIN",
+    "addr": 86802,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "GRAOFLOGIN",
+    "addr": 86804,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "GRAONLOGIN",
+    "addr": 86806,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KLOGIN",
+    "addr": 86808,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "SLOGIN",
+    "addr": 86810,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VARDEF",
+    "addr": 86812,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "THLDUVD",
+    "addr": 87144,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFVPDKSD",
+    "addr": 87146,
+    "rows": 12,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFVPDKSE",
+    "addr": 87434,
+    "rows": 12,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TDPDK",
+    "addr": 87722,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "SPS08LDUW",
+    "addr": 87726,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPLSDWG",
+    "addr": 87768,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPVDKDWG",
+    "addr": 87794,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPVDKDWG",
+    "addr": 87794,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMDST_0_A",
+    "addr": 88158,
+    "rows": 8,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KIFZGHG",
+    "addr": 88218,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "WPEDU",
+    "addr": 88250,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFPED_0_A",
+    "addr": 89652,
+    "rows": 16,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFPEDR_0_A",
+    "addr": 90088,
+    "rows": 16,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMIOP",
+    "addr": 90502,
+    "rows": 16,
+    "cols": 11,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (timing)",
+    "addr": 90856,
+    "rows": 1,
+    "cols": 11,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DNMAX",
+    "addr": 90880,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DNMAXDZ",
+    "addr": 90882,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DNMAXH",
+    "addr": 90884,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "ITNMAXP",
+    "addr": 90886,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "ITNMXH",
+    "addr": 90888,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMAX",
+    "addr": 90890,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMAXDV",
+    "addr": 90892,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMAXDZ",
+    "addr": 90894,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMAXNL",
+    "addr": 90896,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMAXOG",
+    "addr": 90898,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NMXDKPU",
+    "addr": 90900,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TMOTNMX",
+    "addr": 90902,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TNMAXP",
+    "addr": 90904,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TNMXH",
+    "addr": 90906,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RAMPASR",
+    "addr": 90910,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RAMPASR",
+    "addr": 90910,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TVCAMSR",
+    "addr": 90912,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VMINAMSR",
+    "addr": 90914,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TFMIZU",
+    "addr": 90916,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TNSC",
+    "addr": 90918,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DIFFMAX",
+    "addr": 92380,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DIFFMAX",
+    "addr": 92380,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUSMAX",
+    "addr": 92382,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUSMAX",
+    "addr": 92382,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUSMIN",
+    "addr": 92384,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUSMIN",
+    "addr": 92384,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DPVLMS",
+    "addr": 92400,
+    "rows": 1,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPVLMS",
+    "addr": 92400,
+    "rows": 1,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LALIUSH",
+    "addr": 92664,
+    "rows": 1,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZWMN",
+    "addr": 92968,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFZWMNST",
+    "addr": 93200,
+    "rows": 16,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SpeedThreshold",
+    "addr": 97792,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LaunchRPM",
+    "addr": 97794,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "IgnitionCutDuration",
+    "addr": 97796,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "RPMThreshold",
+    "addr": 97798,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "AccPedalThreshold",
+    "addr": 97800,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDAGR",
+    "addr": 98708,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDAGRL",
+    "addr": 98709,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDATR",
+    "addr": 98710,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDATS",
+    "addr": 98711,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDBKVP",
+    "addr": 98712,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDDSBKV",
+    "addr": 98713,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDDST",
+    "addr": 98714,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDEGFE",
+    "addr": 98715,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDEHFM",
+    "addr": 98716,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDGGGTS",
+    "addr": 98717,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDHSH",
+    "addr": 98718,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDHSHE",
+    "addr": 98719,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDHSV",
+    "addr": 98720,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDHSVE",
+    "addr": 98721,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDKAT",
+    "addr": 98722,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDKVS",
+    "addr": 98723,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLASH",
+    "addr": 98724,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLATP",
+    "addr": 98725,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLATV",
+    "addr": 98726,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLDP",
+    "addr": 98727,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLLR",
+    "addr": 98728,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLSA",
+    "addr": 98729,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLSH",
+    "addr": 98730,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLSHV",
+    "addr": 98731,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLSV",
+    "addr": 98732,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDLSVV",
+    "addr": 98733,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDMD",
+    "addr": 98734,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDNWS",
+    "addr": 98735,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDSLS",
+    "addr": 98736,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDTANKL",
+    "addr": 98737,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDTES",
+    "addr": 98738,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CDWVERAD",
+    "addr": 98739,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWADRES",
+    "addr": 98740,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWDLSU",
+    "addr": 98741,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWERFIL",
+    "addr": 98742,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWGRABH",
+    "addr": 98743,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWKMMILSCT",
+    "addr": 98744,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWKONABG",
+    "addr": 98745,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWKONFLS",
+    "addr": 98746,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWKONLS",
+    "addr": 98747,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWLSHA",
+    "addr": 98748,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWMDAPP",
+    "addr": 98749,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWOBD",
+    "addr": 98750,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWSCTMDE",
+    "addr": 98751,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWSLS",
+    "addr": 98752,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWTF",
+    "addr": 98753,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "CWUHR",
+    "addr": 98754,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NSWO1",
+    "addr": 98755,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "NSWO2",
+    "addr": 98756,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "Axis: RPM (knock regulation)",
+    "addr": 98919,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load KFLAMKR, KFLAMKRL, KFLAFWL",
+    "addr": 98962,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: Load (EGT enrich)",
+    "addr": 98999,
+    "rows": 1,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFMSML_0_A",
+    "addr": 99185,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "HWNumber",
+    "addr": 99328,
+    "rows": 1,
+    "cols": 10,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SWNumber",
+    "addr": 99338,
+    "rows": 1,
+    "cols": 10,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CWDLSAHK",
+    "addr": 99939,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FHOE",
+    "addr": 100373,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UADPLMN",
+    "addr": 100382,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UADPLMX",
+    "addr": 100383,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UADPUMN",
+    "addr": 100384,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UADPUMX",
+    "addr": 100385,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "ZDSU",
+    "addr": 100399,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FWFTBRTA",
+    "addr": 100458,
+    "rows": 1,
+    "cols": 14,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFWTBR",
+    "addr": 100492,
+    "rows": 10,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFNW",
+    "addr": 100708,
+    "rows": 12,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFNWWL",
+    "addr": 100826,
+    "rows": 12,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLF",
+    "addr": 101018,
+    "rows": 12,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FNSA_0_A",
+    "addr": 101210,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FNSA_1_A",
+    "addr": 101216,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFWEE",
+    "addr": 101319,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFWEEK",
+    "addr": 101383,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFWL_0_A",
+    "addr": 101615,
+    "rows": 12,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFWL_1_A",
+    "addr": 101759,
+    "rows": 12,
+    "cols": 12,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CWLAMFAW",
+    "addr": 102091,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DLAMFAW",
+    "addr": 102092,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFLAFWL",
+    "addr": 102100,
+    "rows": 8,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLAMKR",
+    "addr": 102148,
+    "rows": 6,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLAMKRL",
+    "addr": 102184,
+    "rows": 6,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLAMKRL",
+    "addr": 102184,
+    "rows": 6,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFDLBTS_0_A",
+    "addr": 102727,
+    "rows": 12,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLBTS_0_A",
+    "addr": 102919,
+    "rows": 12,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLBTS_0_A",
+    "addr": 102919,
+    "rows": 12,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CATR",
+    "addr": 103114,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FKHABMN",
+    "addr": 103293,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TKHLLAB",
+    "addr": 103345,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DWKRMSN",
+    "addr": 103908,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KRALH",
+    "addr": 103972,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KRANH",
+    "addr": 103977,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KRDWSN",
+    "addr": 103978,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KRFKLN",
+    "addr": 103994,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KRMXN",
+    "addr": 104010,
+    "rows": 1,
+    "cols": 16,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FTLDIA",
+    "addr": 104199,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FTLDIAP",
+    "addr": 104200,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFLDIOPU",
+    "addr": 104201,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFWPLGTA",
+    "addr": 104265,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDEIAO",
+    "addr": 104329,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAO",
+    "addr": 104329,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAP",
+    "addr": 104330,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAP",
+    "addr": 104330,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAPS",
+    "addr": 104331,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAPS",
+    "addr": 104331,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAU",
+    "addr": 104332,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDEIAU",
+    "addr": 104332,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDHIA",
+    "addr": 104333,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDHIA",
+    "addr": 104333,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDIATA",
+    "addr": 104334,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NLDIAPU",
+    "addr": 104344,
+    "rows": 1,
+    "cols": 2,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NLDIAPU",
+    "addr": 104346,
+    "rows": 1,
+    "cols": 2,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "STLDIA",
+    "addr": 104348,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TLDIAN",
+    "addr": 104352,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TLDIAPN",
+    "addr": 104353,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "UMDYLDR",
+    "addr": 104361,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "UMDYLDR",
+    "addr": 104361,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "ELDOB",
+    "addr": 104362,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFLDRXO",
+    "addr": 104386,
+    "rows": 8,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TABLDOBN",
+    "addr": 104418,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TLDOBAN",
+    "addr": 104426,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TLDOBN",
+    "addr": 104434,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDHBN",
+    "addr": 104470,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDHBN_PSI",
+    "addr": 104470,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDHBN_mBar",
+    "addr": 104470,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDORXN",
+    "addr": 104534,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDPBN",
+    "addr": 104542,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDPBN",
+    "addr": 104542,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "RLKRLDA",
+    "addr": 104550,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDRAPP",
+    "addr": 104576,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DLUL",
+    "addr": 104689,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DLUL",
+    "addr": 104689,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "EDLDRP",
+    "addr": 104690,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "EDLDRP",
+    "addr": 104690,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFDLULS",
+    "addr": 104709,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDLULS",
+    "addr": 104709,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFVPDKLD",
+    "addr": 104791,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NDLDRAPU",
+    "addr": 104858,
+    "rows": 1,
+    "cols": 2,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "SDLDRL",
+    "addr": 104860,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDLDRA",
+    "addr": 104861,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDLDRA2",
+    "addr": 104862,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TLDRA",
+    "addr": 104863,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TULV1",
+    "addr": 104864,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TULV3",
+    "addr": 104865,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFNLLNST",
+    "addr": 104987,
+    "rows": 6,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NFSM",
+    "addr": 105048,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NLL2M_0_A",
+    "addr": 105055,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NLL2M_1_A",
+    "addr": 105061,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NLLM",
+    "addr": 105084,
+    "rows": 1,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TVFSREM",
+    "addr": 105205,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "RLVMXN",
+    "addr": 105453,
+    "rows": 1,
+    "cols": 11,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "RLVSMXN",
+    "addr": 105476,
+    "rows": 1,
+    "cols": 11,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NASNOTKL",
+    "addr": 105492,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "RLLRTMO",
+    "addr": 106392,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CLRHKA",
+    "addr": 106447,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FTOMN",
+    "addr": 107339,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFSZT",
+    "addr": 107551,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFTSRL",
+    "addr": 107636,
+    "rows": 9,
+    "cols": 10,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FKVA",
+    "addr": 107733,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KVB",
+    "addr": 107735,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDDHBKV",
+    "addr": 107763,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MLSLMX",
+    "addr": 108164,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FHODSL",
+    "addr": 108254,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MLWDSLMN",
+    "addr": 108272,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MLLASH",
+    "addr": 112014,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TWDDTV",
+    "addr": 112016,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFWPFGR",
+    "addr": 112620,
+    "rows": 16,
+    "cols": 12,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMLDMN",
+    "addr": 113122,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMLDMX",
+    "addr": 113286,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFMLDMX",
+    "addr": 113286,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FPVMXN2",
+    "addr": 113430,
+    "rows": 1,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFPBRK",
+    "addr": 113486,
+    "rows": 10,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFPBRKNW",
+    "addr": 113730,
+    "rows": 10,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFPRG",
+    "addr": 113966,
+    "rows": 3,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFPRG",
+    "addr": 113966,
+    "rows": 3,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFURL",
+    "addr": 114122,
+    "rows": 6,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFURL",
+    "addr": 114122,
+    "rows": 6,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPDSVLU",
+    "addr": 114244,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DPDSVLU",
+    "addr": 114244,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSUGRAD",
+    "addr": 114280,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DSUOFS",
+    "addr": 114282,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUE",
+    "addr": 114284,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUMN",
+    "addr": 114286,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUMX",
+    "addr": 114288,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUMX",
+    "addr": 114288,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUSPSMX",
+    "addr": 114290,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PVDKMN",
+    "addr": 114292,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "MLMAX",
+    "addr": 114352,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFWDKMSN",
+    "addr": 114422,
+    "rows": 16,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FRKAP_0_A",
+    "addr": 114688,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FRKAP_1_A",
+    "addr": 114689,
+    "rows": 1,
+    "cols": 1,
+    "bits": 8,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFWWNS",
+    "addr": 114716,
+    "rows": 8,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FKKVS",
+    "addr": 114830,
+    "rows": 16,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FRLFSDP",
+    "addr": 115344,
+    "rows": 1,
+    "cols": 11,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FRLFSDP",
+    "addr": 115366,
+    "rows": 1,
+    "cols": 11,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KRKTE",
+    "addr": 115388,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KRKTE",
+    "addr": 115388,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PSAPES",
+    "addr": 115390,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PSAPES",
+    "addr": 115390,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DLAMTANS",
+    "addr": 115563,
+    "rows": 1,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Axis: driver requested relative torque (mrfa: LAMFA)",
+    "addr": 115586,
+    "rows": 1,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LAMFA",
+    "addr": 115598,
+    "rows": 15,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LAMFA",
+    "addr": 115598,
+    "rows": 15,
+    "cols": 6,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "ZKWLAFWL",
+    "addr": 115694,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DLBTS",
+    "addr": 115879,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TABGBTS",
+    "addr": 115890,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TABGSS",
+    "addr": 115988,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TABGSS2",
+    "addr": 115990,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "TDATSO",
+    "addr": 115998,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FHOKH",
+    "addr": 116354,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFNFSKHM",
+    "addr": 116444,
+    "rows": 8,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TTEGA",
+    "addr": 116530,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFDYES",
+    "addr": 117566,
+    "rows": 16,
+    "cols": 6,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "CWFA195A",
+    "addr": 118300,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFLDIMX",
+    "addr": 120412,
+    "rows": 16,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDRL",
+    "addr": 120750,
+    "rows": 16,
+    "cols": 10,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDRQ2",
+    "addr": 121070,
+    "rows": 8,
+    "cols": 4,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFLDRQ2",
+    "addr": 121070,
+    "rows": 8,
+    "cols": 4,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ0DY",
+    "addr": 121176,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ0DY",
+    "addr": 121176,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ0S",
+    "addr": 121208,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDRQ0S",
+    "addr": 121208,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "LDRQ1DY",
+    "addr": 121210,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ1DY",
+    "addr": 121210,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ1ST",
+    "addr": 121242,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRQ1ST",
+    "addr": 121242,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "TVLDMX",
+    "addr": 121296,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFFLDEO",
+    "addr": 121298,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFLLDE",
+    "addr": 121426,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFSLDE",
+    "addr": 121554,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFFWLLDE",
+    "addr": 121682,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFTARX",
+    "addr": 121810,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFTARXZK",
+    "addr": 121938,
+    "rows": 8,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRXN_1_A",
+    "addr": 122100,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRXN_1_A",
+    "addr": 122100,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "LDRXNZK",
+    "addr": 122166,
+    "rows": 1,
+    "cols": 16,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDMDADP",
+    "addr": 122396,
+    "rows": 6,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "KFDMDARO",
+    "addr": 122492,
+    "rows": 6,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "NMAXDVG",
+    "addr": 124064,
+    "rows": 1,
+    "cols": 8,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "VAVMXNIV",
+    "addr": 124096,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VAVMXPNG",
+    "addr": 124098,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VMAXNB",
+    "addr": 124100,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VMAXNIV",
+    "addr": 124102,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VMAXPNG",
+    "addr": 124104,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "VMAXTM",
+    "addr": 124118,
+    "rows": 1,
+    "cols": 5,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "VMAXTOL",
+    "addr": 124140,
+    "rows": 1,
+    "cols": 5,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FQTEFR",
+    "addr": 125831,
+    "rows": 1,
+    "cols": 8,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "FHODTEA",
+    "addr": 125968,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "KFDZWOB",
+    "addr": 127532,
+    "rows": 4,
+    "cols": 4,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "DPBKVEVKEP",
+    "addr": 127860,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DPBKVEVKEP",
+    "addr": 127860,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FBKVP",
+    "addr": 127870,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "FBKVP",
+    "addr": 127870,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUEBKV",
+    "addr": 127916,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "PUEBKV",
+    "addr": 127916,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "DPBKVPMN",
+    "addr": 128056,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "Mono Lambda (bank2)",
+    "addr": 248048,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Mono Lambda (bank2)",
+    "addr": 248066,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Mono Lambda (bank2)",
+    "addr": 256656,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Mono Lambda (bank2)",
+    "addr": 256868,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "pvdk_w 1013 division #1",
+    "addr": 330740,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "pvdk_w 1013 division #2",
+    "addr": 332422,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "pus_w 1013 division #1",
+    "addr": 334142,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "pus_w 1013 division #2",
+    "addr": 334200,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "fvpdkds 1013 division #1",
+    "addr": 334326,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "fvpdkds 1013 division #2",
+    "addr": 334578,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "fho_w 1013 division",
+    "addr": 335840,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "frhodkr_w 1013 division",
+    "addr": 338658,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "SDLDSUA axis calculation",
+    "addr": 454132,
+    "rows": 1,
+    "cols": 2,
+    "bits": 8,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Mono Lambda (bank2) 0001",
+    "addr": 563976,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "Mono Lambda (bank2) 0002",
+    "addr": 563986,
+    "rows": 1,
+    "cols": 1,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  },
+  {
+    "name": "JumpToALNLS",
+    "addr": 570278,
+    "rows": 1,
+    "cols": 1,
+    "bits": 32,
+    "tag": "XDFCONSTANT"
+  },
+  {
+    "name": "ALNLS",
+    "addr": 583680,
+    "rows": 1,
+    "cols": 71,
+    "bits": 16,
+    "tag": "XDFTABLE"
+  }
+]

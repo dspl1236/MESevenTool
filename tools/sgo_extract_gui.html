@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SGO Extract</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:      #0a0a0c;
+    --bg2:     #111114;
+    --bg3:     #18181d;
+    --border:  #222228;
+    --border2: #2e2e38;
+    --accent:  #e8c840;
+    --green:   #3ddc84;
+    --red:     #ff5252;
+    --blue:    #4db8ff;
+    --dim:     #55556a;
+    --mid:     #8888a0;
+    --fg:      #e2e2ee;
+    --mono:    'JetBrains Mono', monospace;
+    --head:    'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── header ── */
+  header {
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: var(--bg2);
+  }
+  header h1 {
+    font-family: var(--head);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  header .sub {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  header .alg {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.6;
+  }
+  header .alg span { color: var(--accent); }
+
+  /* ── drop zone ── */
+  .drop-area {
+    margin: 24px 28px;
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: var(--bg2);
+    position: relative;
+  }
+  .drop-area:hover, .drop-area.over {
+    border-color: var(--accent);
+    background: #16150a;
+  }
+  .drop-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    filter: grayscale(1) brightness(.6);
+    transition: filter .15s;
+  }
+  .drop-area:hover .drop-icon { filter: none; }
+  .drop-label {
+    font-family: var(--head);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--mid);
+    margin-bottom: 6px;
+  }
+  .drop-area:hover .drop-label { color: var(--accent); }
+  .drop-hint {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  /* ── queue ── */
+  .queue-wrap {
+    flex: 1;
+    padding: 0 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .queue-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .queue-header h2 {
+    font-family: var(--head);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .badge {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--mid);
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 20px;
+  }
+  .btn-extract {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--head);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 5px 16px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background .12s, color .12s;
+  }
+  .btn-extract:hover:not(:disabled) { background: var(--accent); color: #000; }
+  .btn-extract:disabled { opacity: .35; cursor: default; }
+  .btn-clear {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: border-color .12s, color .12s;
+  }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── file rows ── */
+  .file-list { flex: 1; overflow-y: auto; }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 180px 28px;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    transition: background .07s;
+  }
+  .file-row:hover { background: var(--bg2); }
+  .file-name {
+    font-size: 12px;
+    color: var(--blue);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-size { font-size: 11px; color: var(--dim); }
+  .file-type {
+    font-size: 10px;
+    color: var(--dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .status {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .status.queued   { color: var(--dim); }
+  .status.working  { color: var(--accent); }
+  .status.done     { color: var(--green); }
+  .status.error    { color: var(--red); }
+  .status.skip     { color: var(--mid); }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .dot.spin {
+    animation: spin-dot .8s linear infinite;
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  }
+  @keyframes spin-dot {
+    to { transform: rotate(360deg); }
+  }
+  .rm-btn {
+    background: none; border: none;
+    color: var(--dim); font-size: 16px;
+    cursor: pointer; padding: 0;
+    line-height: 1;
+    transition: color .1s;
+  }
+  .rm-btn:hover { color: var(--red); }
+
+  /* ── empty state ── */
+  .empty {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* ── log strip ── */
+  .log-strip {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 8px 28px;
+    font-size: 10px;
+    color: var(--dim);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .log-strip .log-msg { color: var(--mid); }
+  .log-strip .log-ok  { color: var(--green); }
+  .log-strip .log-err { color: var(--red); }
+
+  /* ── column labels ── */
+  .col-labels {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 180px 28px;
+    gap: 12px;
+    padding: 6px 12px 4px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SGO Extract</h1>
+  <span class="sub">Bosch ODIS Flash Extractor</span>
+  <div class="alg">
+    Algo: <span>XOR(FF)</span> → sync <span>1A 01</span> → GEHEIM key → literal/RLE decode → <span>1MB .bin</span><br>
+    RE'd from SGO Extract.exe (2013) · ME7.x · EDC16 · Siemens PPD
+  </div>
+</header>
+
+<div class="drop-area" id="dropArea">
+  <input type="file" id="fileInput" multiple accept=".sgo,.frf">
+  <div class="drop-icon">📦</div>
+  <div class="drop-label">Drop .sgo / .frf files here</div>
+  <div class="drop-hint">or click to browse — multiple files supported</div>
+</div>
+
+<div class="queue-wrap">
+  <div class="queue-header">
+    <h2>Queue</h2>
+    <span class="badge" id="badge">0</span>
+    <button class="btn-clear" onclick="clearAll()">Clear</button>
+    <button class="btn-extract" id="extractBtn" onclick="extractAll()" disabled>⤓ Extract All</button>
+  </div>
+  <div class="col-labels">
+    <span>Filename</span><span>Size</span><span>Type</span><span>Status</span><span></span>
+  </div>
+  <div class="file-list" id="fileList">
+    <div class="empty" id="emptyMsg">No files queued — drop .sgo or .frf files above</div>
+  </div>
+</div>
+
+<div class="log-strip" id="logStrip">
+  <span class="log-msg">Ready.</span>
+</div>
+
+<script>
+// ── SGO extraction algorithm (JS port of sgo_extract.py) ──────────────────────
+const KEY         = [0x47,0x45,0x48,0x45,0x49,0x4D]; // "GEHEIM"
+const FLASH_START = 0x01B7;
+const FLASH_SIZE  = 0x100000; // 1MB
+
+function extractSGO(arrayBuffer) {
+  const raw = new Uint8Array(arrayBuffer);
+  const hdr = String.fromCharCode(...raw.slice(0, 16));
+  if (hdr !== 'SGML Object File') {
+    return { error: 'not a valid SGO file (missing SGML Object File header)' };
+  }
+
+  const output  = new Uint8Array(FLASH_SIZE).fill(0xFF);
+  let state     = 0, keyPos = 0, prev = 0;
+  let recLen    = 0, recHi  = 0, writePos = 0;
+  let written   = 0;
+
+  for (let i = FLASH_START; i < raw.length; i++) {
+    const inv = raw[i] ^ 0xFF;
+
+    if (state === 0) {
+      if (prev === 0x1A && inv === 0x01) state = 1;
+      prev = inv;
+
+    } else if (state === 1) {
+      recHi  = inv ^ KEY[keyPos++ % 6];
+      state  = 2;
+
+    } else if (state === 2) {
+      const recLo = inv ^ KEY[keyPos++ % 6];
+      const raw16 = (recHi << 8) | recLo;
+      if (raw16 < 0x4000) {
+        recLen = raw16; state = 3;
+      } else if (raw16 < 0xC000) {
+        recLen = raw16 - 0x4000; state = 4;
+      } else {
+        state = 0;
+      }
+
+    } else if (state === 3) {                     // literal byte
+      const dec = inv ^ KEY[keyPos++ % 6];
+      if (writePos < FLASH_SIZE) { output[writePos] = dec; written++; }
+      writePos++;
+      if (--recLen === 0) state = 1;
+
+    } else if (state === 4) {                     // RLE fill
+      const fill = inv ^ KEY[keyPos++ % 6];
+      for (let k = 0; k < recLen; k++) {
+        if (writePos < FLASH_SIZE) { output[writePos] = fill; written++; }
+        writePos++;
+      }
+      state = 1;
+    }
+  }
+
+  return { bin: output, writtenKB: Math.round(written / 1024) };
+}
+
+// ── FRF: may be a zip container — try unzip, fall back to raw pass-through ────
+async function extractFRF(arrayBuffer) {
+  // FRF files are sometimes ZIP-wrapped SGOs
+  const u8 = new Uint8Array(arrayBuffer);
+  if (u8[0] === 0x50 && u8[1] === 0x4B) {
+    return { error: 'FRF is a ZIP container — extract the inner .sgo first' };
+  }
+  // Try raw SGO decode on FRF
+  return extractSGO(arrayBuffer);
+}
+
+// ── File queue state ──────────────────────────────────────────────────────────
+let files = []; // {file, id, status, msg}
+let nextId = 0;
+
+const dropArea   = document.getElementById('dropArea');
+const fileInput  = document.getElementById('fileInput');
+const fileList   = document.getElementById('fileList');
+const emptyMsg   = document.getElementById('emptyMsg');
+const badge      = document.getElementById('badge');
+const extractBtn = document.getElementById('extractBtn');
+const logStrip   = document.getElementById('logStrip');
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
+['dragover','dragenter'].forEach(e => dropArea.addEventListener(e, ev => {
+  ev.preventDefault(); dropArea.classList.add('over');
+}));
+['dragleave','drop'].forEach(e => dropArea.addEventListener(e, ev => {
+  ev.preventDefault(); dropArea.classList.remove('over');
+}));
+dropArea.addEventListener('drop', ev => addFiles(ev.dataTransfer.files));
+fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+function addFiles(fileList) {
+  [...fileList].forEach(f => {
+    const lo = f.name.toLowerCase();
+    if (!lo.endsWith('.sgo') && !lo.endsWith('.frf')) return;
+    if (files.find(x => x.file.name === f.name && x.file.size === f.size)) return;
+    files.push({ file: f, id: nextId++, status: 'queued', msg: 'queued' });
+  });
+  render();
+}
+
+function removeFile(id) {
+  files = files.filter(x => x.id !== id);
+  render();
+}
+
+function clearAll() {
+  files = [];
+  render();
+  log('Cleared.', 'log-msg');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  badge.textContent = files.length;
+  extractBtn.disabled = files.length === 0;
+  emptyMsg.style.display = files.length ? 'none' : '';
+
+  // Rebuild rows
+  const existing = {};
+  fileList.querySelectorAll('.file-row').forEach(r => existing[r.dataset.id] = r);
+
+  // Remove stale
+  Object.keys(existing).forEach(id => {
+    if (!files.find(f => f.id == id)) existing[id].remove();
+  });
+
+  // Upsert
+  files.forEach(entry => {
+    let row = existing[entry.id];
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'file-row';
+      row.dataset.id = entry.id;
+      fileList.appendChild(row);
+    }
+    const ext  = entry.file.name.toLowerCase().endsWith('.frf') ? 'FRF' : 'SGO';
+    const kb   = (entry.file.size / 1024).toFixed(0);
+    const spin = entry.status === 'working' ? ' spin' : '';
+    const scls = entry.status;
+    const icons = { queued:'–', working:'▲', done:'✓', error:'✗', skip:'⊘' };
+    row.innerHTML = `
+      <span class="file-name" title="${entry.file.name}">${entry.file.name}</span>
+      <span class="file-size">${kb} KB</span>
+      <span class="file-type">${ext} · ODIS flash</span>
+      <span class="status ${scls}"><span class="dot${spin}"></span>${entry.msg}</span>
+      <button class="rm-btn" onclick="removeFile(${entry.id})" title="Remove">×</button>
+    `;
+  });
+}
+
+// ── Extract ───────────────────────────────────────────────────────────────────
+let running = false;
+
+async function extractAll() {
+  if (running) return;
+  running = true;
+  extractBtn.disabled = true;
+  let ok = 0, fail = 0;
+
+  for (const entry of files) {
+    entry.status = 'working';
+    entry.msg = 'reading…';
+    render();
+
+    try {
+      const buf = await entry.file.arrayBuffer();
+      const lo  = entry.file.name.toLowerCase();
+      const res = lo.endsWith('.frf') ? await extractFRF(buf) : extractSGO(buf);
+
+      if (res.error) {
+        entry.status = 'error';
+        entry.msg = res.error;
+        fail++;
+      } else {
+        // Trigger download
+        const outName = entry.file.name.replace(/\.(sgo|frf)$/i, '.bin');
+        const blob    = new Blob([res.bin], { type: 'application/octet-stream' });
+        const a       = document.createElement('a');
+        a.href        = URL.createObjectURL(blob);
+        a.download    = outName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        entry.status = 'done';
+        entry.msg    = `✓ ${res.writtenKB} KB written → ${outName}`;
+        ok++;
+      }
+    } catch (e) {
+      entry.status = 'error';
+      entry.msg    = e.message || 'unknown error';
+      fail++;
+    }
+
+    render();
+    await new Promise(r => setTimeout(r, 30)); // let UI breathe
+  }
+
+  running = false;
+  extractBtn.disabled = false;
+  const summary = `${ok} extracted${fail ? `, ${fail} failed` : ''}.`;
+  log(summary, ok > 0 ? 'log-ok' : 'log-err');
+}
+
+function log(msg, cls='log-msg') {
+  logStrip.innerHTML = `<span class="${cls}">${msg}</span>`;
+}
+
+render();
+</script>
+</body>
+</html>
