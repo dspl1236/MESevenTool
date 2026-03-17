@@ -9,3 +9,5 @@ build/
 venv/
 *.bin
 *.sgo
+reference/c167cr_um.pdf
+reference/*.pdf
