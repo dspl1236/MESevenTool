@@ -989,6 +989,110 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.1", "2.7t"},
     ),
 
+
+    # ╔══════════════════════════════════════════════════════════════════════╗
+    # ║  ME7.5 1.8T — confirmed from real tune analysis (06A906032 family)  ║
+    # ╚══════════════════════════════════════════════════════════════════════╝
+
+    # ── MAF Delete / Alpha-N load redirect ────────────────────────────────
+    # Unitronic and others redirect MAF-based load to throttle-position (Alpha-N)
+    # by changing two paired JMPA (FA xx) function pointer targets at 0x00DDC4.
+    # The DESTINATION is always FA 22 / FA 23 across all 06A variants.
+    # The SOURCE differs by firmware variant — 0x18/0x19 for 4019, 0x48/0x49 for 4013.
+    # Needle: "f7 f8 [src1] fa  f7 8e [src2] fa" — unique in code region (1 hit).
+    # Confirmed: uni630HN (DL/HN 4019 base), uni870 (RN 4013 base).
+
+    PatchDef(
+        name          = "MAF Delete / Alpha-N load redirect (ME7.5 06A)",
+        description   = ("Redirects MAF-based engine load calculation to throttle-"
+                         "position (Alpha-N) path by changing two paired JMPA "
+                         "function pointer targets at 0x00DDC4. Used with large "
+                         "injectors (630cc+), alternative MAF sensors, or MAF-delete "
+                         "builds. The JMPA source operand varies by firmware variant "
+                         "(0x18/0x19 for 4019, 0x48/0x49 for 4013) but the patched "
+                         "destination is always FA 22 / FA 23."),
+        category      = PatchCategory.FUELLING,
+        needle        = bytes([0xF7,0xF8,0x00,0xFA, 0xF7,0x8E,0x00,0xFA]),
+        mask          = bytes([0xFF,0xFF,0x00,0xFF, 0xFF,0xFF,0x00,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0x18,0xFA, 0xF7,0x8E,0x19,0xFA]),  # 4019 DL/HN
+        patch_bytes   = bytes([0x22,0xFA, 0xF7,0x8E,0x23,0xFA]),  # universal destination
+        confidence    = "CONFIRMED",
+        notes         = ("Universal masked needle matches all 06A firmware variants. "
+                         "Detected STOCK in DL/HN (4019: FA_18/FA_19) and RN/LP (4013: FA_48/FA_49). "
+                         "Detected PATCHED in uni630HN and uni870 (both → FA_22/FA_23). "
+                         "1 clean hit in code region at 0x00DDC4 in all tested ECUs. "
+                         "stock_bytes is the 4019 form — UNKNOWN state will show for 4013 "
+                         "stock (expected; both are 'stock' in practice)."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── Vmax Speed Limiter Disable (ME7.5 1.8T — value-based, 4019 firmware) ──
+    # In firmware 4019 (DL/HN), the speed limiter is stored as a literal speed value.
+    # 0xA861 LE = 25000 = 250 km/h (at 0.01 km/h resolution).
+    # Context needle: "88 00 A8 61" (1 hit in DL cal region).
+    # Confirmed: DL_OEM stock has 25000 at 0x124BE.
+
+    OffsetPatchDef(
+        name          = "Vmax Speed Limiter Disable (ME7.5 4019 — DL/HN)",
+        description   = ("Disables the electronic speed limiter on ME7.5 firmware "
+                         "4019 ECUs (06A906032DL AWD 150hp, HN AMU/APX 225hp). "
+                         "The limiter in this firmware variant is stored as a literal "
+                         "speed value: 0xA861 = 25000 = 250 km/h at 0.01 km/h resolution. "
+                         "Writes 0xFFFF (655 km/h) to disable."),
+        category      = PatchCategory.PERFORMANCE,
+        anchor_bytes  = bytes([0x88, 0x00, 0xA8, 0x61]),  # adjacent value + speed word
+        anchor_offset = 2,
+        stock_bytes   = bytes([0xA8, 0x61]),   # 25000 = 250 km/h
+        patch_bytes   = bytes([0xFF, 0xFF]),   # 65535 = 655 km/h
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed: DL_OEM 250 km/h at 0x124BE. 1 hit in cal region. "
+                         "uni630HN reorganises the cal layout so the anchor address shifts — "
+                         "but the anchor sequence 88 00 A8 61 remains unique."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── SAP Diagnosis Disable (ME7.5 1.8T) ────────────────────────────────
+    # CDSLS at stable codeword block address 0x0181B0.
+    # Confirmed 0x01→0x00 in uni630HN (DL/HN base). SAP pump removed.
+    # Uses the same stable block as ME7.1 — address confirmed same for ME7.5.
+
+    OffsetPatchDef(
+        name          = "SAP Diagnosis Disable (ME7.5 1.8T)",
+        description   = ("Disables secondary air injection pump (SAP/J299) fault "
+                         "monitoring by setting CDSLS=0 in the stable codeword block. "
+                         "Prevents P0410/P1411 when SAP pump or relay is removed."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01]),
+        anchor_offset = 6,   # CDSLS is 6 bytes after CDLSA (which is 0x01)
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("CDSLS at 0x0181B0. Confirmed patched in uni630HN. "
+                         "Anchor: CDLSA..CDTANKL run of 0x01 bytes preceding CDSLS."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── EVAP Diagnosis Disable (ME7.5 1.8T) ───────────────────────────────
+    # CDTES at stable codeword block address 0x0181B2.
+    # Confirmed 0x01→0x00 in uni630HN. EVAP system removed.
+
+    OffsetPatchDef(
+        name          = "EVAP Purge Diagnosis Disable (ME7.5 1.8T)",
+        description   = ("Disables EVAP purge system fault monitoring by setting "
+                         "CDTES=0 in the stable codeword block. Prevents EVAP-related "
+                         "DTCs (P0440-P0446) when the charcoal canister or purge valve "
+                         "is removed."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]),
+        anchor_offset = 8,   # CDTES is byte 8 of the block
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("CDTES at 0x0181B2. Confirmed patched in uni630HN."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_PATCHES
 
 
