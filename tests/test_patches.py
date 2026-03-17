@@ -777,3 +777,324 @@ class TestVmaxPatch:
         from meseventool.profiles import PROFILE_AWP
         assert not self.patch.check_applicable(PROFILE_AWP), \
             "VMAX 2.7T patch should not apply to AWP 1.8T"
+
+
+# =============================================================================
+# ME7.1.1 VMAX — 4Z7 late / 4D1 RS4/S8 (3 instances, ATOMIC prefix)
+# =============================================================================
+import unittest
+
+class TestVmaxME711(unittest.TestCase):
+    """VMAX patch for ME7.1.1 — needle E0 1C E6 FD A8 61 DA 00 9A 10, appears 3x."""
+
+    STOCK_NEEDLE = bytes([0xE0,0x1C, 0xE6,0xFD,0xA8,0x61, 0xDA,0x00,0x9A,0x10])
+    PATCH_NEEDLE = bytes([0xE0,0x1C, 0xE6,0xFD,0xFF,0xFF, 0xDA,0x00,0x9A,0x10])
+
+    def _make_rom(self, payload, count=3):
+        import struct
+        data = bytearray(0x100000)
+        base = 0x022000
+        for i in range(count):
+            offset = base + i * 0x200
+            data[offset:offset+len(payload)] = payload
+        return data
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES
+                          if 'ME7.1.1' in p.name and 'Vmax' in p.name)
+
+    def test_detects_stock_3x(self):
+        """Detects STOCK when all 3 instances have 250km/h value."""
+        from meseventool.patches import PatchState
+        data = self._make_rom(self.STOCK_NEEDLE, count=3)
+        rom = self._rom(data)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.STOCK
+
+    def test_detects_patched_3x(self):
+        """Detects PATCHED when at least one instance has FF FF."""
+        from meseventool.patches import PatchState
+        data = self._make_rom(self.PATCH_NEEDLE, count=3)
+        rom = self._rom(data)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.PATCHED
+
+    def test_missing_when_no_needle(self):
+        """MISSING when needle absent — wrong ECU family."""
+        from meseventool.patches import PatchState
+        rom = self._rom(bytearray(0x100000))
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.MISSING
+
+    def test_apply_patches_ff_ff(self):
+        """apply() writes 0xFFFF at offset 4 of the needle."""
+        import struct
+        from meseventool.patches import PatchState
+        data = self._make_rom(self.STOCK_NEEDLE, count=3)
+        rom = self._rom(data)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.STOCK
+        self.patch.apply(rom, r)
+        r2 = self.patch.detect(rom)
+        assert r2.state == PatchState.PATCHED
+        raw = struct.unpack_from('<H', bytes(rom.data), r.addr + 4)[0]
+        assert raw == 0xFFFF
+
+    def test_revert_restores_a861(self):
+        """revert() restores 0xA861 from 0xFFFF."""
+        import struct
+        from meseventool.patches import PatchState
+        data = self._make_rom(self.PATCH_NEEDLE, count=3)
+        rom = self._rom(data)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.PATCHED
+        self.patch.revert(rom, r)
+        r2 = self.patch.detect(rom)
+        assert r2.state == PatchState.STOCK
+        raw = struct.unpack_from('<H', bytes(rom.data), r.addr + 4)[0]
+        assert raw == 0xA861
+
+    def test_not_applicable_to_early_me71(self):
+        """ME7.1.1 VMAX should not apply to early ME7.1 2.7T profile."""
+        from meseventool.profiles import PROFILE_V6_2_7T_EARLY
+        result = self.patch.check_applicable(PROFILE_V6_2_7T_EARLY)
+        assert not result, "ME7.1.1 VMAX should not apply to ME7.1 early profile"
+
+    def _rom(self, data):
+        from meseventool.rom import ROMImage
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(bytes(data)); tmp = f.name
+        rom = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom
+
+
+# =============================================================================
+# P1681 CEL Disable (ME7.1.1)
+# =============================================================================
+class TestP1681Disable(unittest.TestCase):
+    """P1681 patch: JMPR UGE (0x2D) → JMPR always (0x0D), byte 6 of needle."""
+
+    STOCK_SEQ  = bytes([0xF0,0xBE, 0x66,0xF4, 0x80,0x00, 0x2D,0x0D, 0xE6,0xF4])
+    PATCH_SEQ  = bytes([0xF0,0xBE, 0x66,0xF4, 0x80,0x00, 0x0D,0x0D, 0xE6,0xF4])
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES if 'P1681' in p.name)
+
+    def _rom(self, seq, base=0x06C0B0):
+        from meseventool.rom import ROMImage
+        import tempfile, os
+        data = bytearray(0x100000)
+        data[base:base+len(seq)] = seq
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(bytes(data)); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        return rom
+
+    def test_stock_detected(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(self.STOCK_SEQ)).state == PatchState.STOCK
+
+    def test_patched_detected(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(self.PATCH_SEQ)).state == PatchState.PATCHED
+
+    def test_missing_on_empty(self):
+        from meseventool.patches import PatchState
+        data = bytearray(0x100000)
+        rom = self._rom(bytes(10), base=0)
+        r = self.patch.detect(rom)
+        assert r.state in (PatchState.MISSING, PatchState.STOCK)
+
+    def test_apply_changes_2d_to_0d(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(self.STOCK_SEQ)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.STOCK
+        self.patch.apply(rom, r)
+        assert rom.data[r.addr + 6] == 0x0D
+
+    def test_revert_changes_0d_to_2d(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(self.PATCH_SEQ)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.PATCHED
+        self.patch.revert(rom, r)
+        assert rom.data[r.addr + 6] == 0x2D
+
+
+# =============================================================================
+# Rear O2 Diagnosis Disable 2.7T (CDLSH codeword)
+# =============================================================================
+class TestRearO2Disable27T(unittest.TestCase):
+    """CDLSH codeword patch: 0x01 → 0x00 at stable block 0x0181AA."""
+
+    BLOCK_ADDR = 0x0181AA - 22  # anchor_offset=22 means anchor starts 22 bytes before CDLSH
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES
+                          if 'Rear O2' in p.name and '2.7T' in p.name)
+
+    def _rom(self, cdlsh_val):
+        from meseventool.rom import ROMImage
+        import tempfile, os
+        data = bytearray(0x100000)
+        # Build 16-byte all-0x01 anchor block, then CDLSH at offset 22
+        base = self.BLOCK_ADDR
+        for i in range(16):
+            data[base + i] = 0x01
+        data[base + 22] = cdlsh_val
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(bytes(data)); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        return rom
+
+    def test_stock_detected(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(0x01)).state == PatchState.STOCK
+
+    def test_patched_detected(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(0x00)).state == PatchState.PATCHED
+
+    def test_apply_zeros_cdlsh(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(0x01)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.STOCK
+        self.patch.apply(rom, r)
+        assert rom.data[r.addr] == 0x00
+
+    def test_revert_restores_cdlsh(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(0x00)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.PATCHED
+        self.patch.revert(rom, r)
+        assert rom.data[r.addr] == 0x01
+
+
+# =============================================================================
+# Real-ROM corpus tests for new 2.7T/V8 patches
+# =============================================================================
+class TestRealROM27T(unittest.TestCase):
+    """Integration tests against real ROM files from the stock corpus."""
+
+    S4WIKI = '/home/claude/s4wiki_stock'
+
+    def _load(self, fname):
+        import os
+        from meseventool.rom import ROMImage
+        path = os.path.join(self.S4WIKI, fname)
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        return ROMImage.load(path)
+
+    def _detect(self, patch_name, fname):
+        from meseventool.patches import detect_all, ALL_PATCHES
+        from meseventool.needle import Searcher
+        from meseventool.dpp import DPPExtractor
+        from meseventool.profiles import detect_profile
+        from meseventool.ecu_id import identify
+        patch = next(p for p in ALL_PATCHES if p.name == patch_name)
+        rom = self._load(fname)
+        s = Searcher(rom); s.find_dppx()
+        return patch.detect(rom)
+
+    # ── VMAX ME7.1 on 8D S4 B5 ────────────────────────────────────────────
+    def test_vmax_me71_8d_stock(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1)",
+                         "8D0907551M-0001.bin")
+        assert r.state == PatchState.STOCK, f"Expected STOCK, got {r.state}"
+
+    def test_vmax_me71_4b_stock(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1)",
+                         "4B0907551AA.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_vmax_me71_4z7_early_stock(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1)",
+                         "4Z7907551B.bin")
+        assert r.state == PatchState.STOCK
+
+    # ── VMAX ME7.1.1 on late 4Z7 + 4D1 ───────────────────────────────────
+    def test_vmax_me711_4z7_aa_stock(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+                         "4Z7907551AA.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_vmax_me711_4d1_stock(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+                         "4D1907558-0002.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_vmax_me711_not_in_early_4z7(self):
+        """ME7.1.1 needle should be MISSING in early ME7.1 4Z7 (different code)."""
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+                         "4Z7907551B.bin")
+        assert r.state == PatchState.MISSING, \
+            f"ME7.1.1 needle should be MISSING in early ME7.1 4Z7, got {r.state}"
+
+    def test_vmax_me71_not_in_late_4z7(self):
+        """ME7.1 needle should be MISSING in late ME7.1.1 4Z7."""
+        from meseventool.patches import PatchState
+        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1)",
+                         "4Z7907551AA.bin")
+        assert r.state == PatchState.MISSING, \
+            f"ME7.1 needle should be MISSING in late ME7.1.1 4Z7, got {r.state}"
+
+    # ── P1681 ──────────────────────────────────────────────────────────────
+    def test_p1681_stock_in_4z7_aa(self):
+        from meseventool.patches import PatchState
+        r = self._detect("P1681 Immobiliser Databus CEL Disable (ME7.1.1)",
+                         "4Z7907551AA.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_p1681_patched_in_4z7_aa_p1681file(self):
+        from meseventool.patches import PatchState
+        r = self._detect("P1681 Immobiliser Databus CEL Disable (ME7.1.1)",
+                         "4Z7907551AA-disable-P1681.bin")
+        assert r.state == PatchState.PATCHED, \
+            f"Expected PATCHED in P1681-disabled file, got {r.state}"
+
+    def test_p1681_patched_in_4z7_s_p1681file(self):
+        from meseventool.patches import PatchState
+        r = self._detect("P1681 Immobiliser Databus CEL Disable (ME7.1.1)",
+                         "4Z7907551S-disable-P1681.bin")
+        assert r.state == PatchState.PATCHED
+
+    def test_p1681_missing_in_early_me71(self):
+        """P1681 only exists in ME7.1.1 — should be MISSING in 8D S4."""
+        from meseventool.patches import PatchState
+        r = self._detect("P1681 Immobiliser Databus CEL Disable (ME7.1.1)",
+                         "8D0907551M-0001.bin")
+        assert r.state == PatchState.MISSING
+
+    # ── Rear O2 CDLSH ──────────────────────────────────────────────────────
+    def test_rear_o2_cdlsh_stock_8d(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)",
+                         "8D0907551M-0001.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_rear_o2_cdlsh_stock_4z7(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)",
+                         "4Z7907551AA.bin")
+        assert r.state == PatchState.STOCK
+
+    def test_rear_o2_cdlsh_stock_4d1(self):
+        from meseventool.patches import PatchState
+        r = self._detect("Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)",
+                         "4D1907558-0002.bin")
+        assert r.state == PatchState.STOCK
