@@ -796,7 +796,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "(A6 C5), and 10/20 4Z7907551 (early Allroad ME7.1) ROMs. "
                        "4Z7907551 R/S/T/AA/N/Q (ME7.1.1) and all 4D1907558 (RS4 V8) "
                        "use a different code structure and are NOT covered — "
-                       "for those use VAVMX/VMAX table edit in TunerPro instead."),
+                       "for those use the ME7.1.1 Vmax patch."),
         applies_to  = {"me7.1", "2.7t"},
     ),
 
@@ -812,11 +812,9 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         # C167: MOV R13, #25000  +  CLR Rx  +  DA 00 9A 10  +  (varies)
         # The post-VMAX bytes DA 00 9A 10 are stable across ME7.1.1 variants.
         # Bytes 8-11 vary (the instruction after the 9A 10 branch target) → masked.
-        needle      = [0xE6, 0xFD, 0xA8, 0x61, 0xDA, 0x00, 0x9A, 0x10,
-                       0x00, 0x00, 0x00, 0x00],
-        mask        = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                       0x00, 0x00, 0x00, 0x00],
-        offset      = 2,
+        needle      = [0xE0, 0x1C, 0xE6, 0xFD, 0xA8, 0x61, 0xDA, 0x00, 0x9A, 0x10],
+        mask        = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
+        offset      = 4,
         stock_bytes = bytes([0xA8, 0x61]),  # 25000 = 250.00 km/h
         patch_bytes = bytes([0xFF, 0xFF]),
         confidence  = "CONFIRMED",
@@ -1091,6 +1089,57 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         confidence    = "CONFIRMED",
         notes         = ("CDTES at 0x0181B2. Confirmed patched in uni630HN."),
         applies_to    = {"me7.5", "1.8t"},
+    ),
+
+
+    # -- P1681 Immobiliser Databus CEL Disable (ME7.1.1) -------------------
+
+    PatchDef(
+        name          = "P1681 Immobiliser Databus CEL Disable (ME7.1.1)",
+        description   = ("Suppresses fault P1681 (immobiliser databus comms fault) "
+                         "on ME7.1.1 ECUs. Common on bench-flashed ECUs or after "
+                         "immo module removal. Changes a conditional JMPR UGE "
+                         "(opcode 0x2D = skip-if-unsigned->=) into an unconditional "
+                         "JMPR (0x0D = always skip), permanently bypassing the "
+                         "P1681 diagnosis routine.\n"
+                         "Covers: 4Z7907551 ME7.1.1 (AA/N/Q/R/S), "
+                         "4D1907558 RS4 B5 / S8 D2, 4B0907551 late A6 C5."),
+        category      = PatchCategory.DIAGNOSTICS,
+        needle        = bytes([0xF0,0xBE, 0x66,0xF4, 0x80,0x00, 0x00,0x0D, 0xE6,0xF4]),
+        mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0x00,0xFF, 0xFF,0xFF]),
+        offset        = 6,
+        stock_bytes   = bytes([0x2D]),
+        patch_bytes   = bytes([0x0D]),
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed: 4Z7907551AA-disable-P1681, 4Z7907551S-disable-P1681. "
+                         "ME7.1.1 only - no P1681 in ME7.1 firmware. "
+                         "Needle context F0 BE 66 F4 80 00 is stable across all ME7.1.1 variants. "
+                         "Stock 0x2D = JMPR cc=2 (unsigned >=). Patch 0x0D = JMPR cc=0 (always)."),
+        applies_to    = {"me7.1.1", "2.7t"},
+    ),
+
+    # -- Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1) ------------
+
+    OffsetPatchDef(
+        name          = "Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)",
+        description   = ("Disables rear (post-catalyst) O2 sensor fault monitoring "
+                         "by setting CDLSH=0 at the stable codeword block address "
+                         "0x0181AA. Prevents P0140/P0160 (rear O2 sensor no activity) "
+                         "when downstream O2 sensors are removed or replaced with "
+                         "simulators. Same stable block address as ME7.5 1.8T.\n"
+                         "Covers: ALL 8D0907551 (S4 B5), ALL 4B0907551 (A6 C5 2.7T), "
+                         "ALL 4Z7907551 (allroad), ALL 4D1907558 (RS4/S8 V8)."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = bytes([0x01]*16),
+        anchor_offset = 22,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("CDLSH at codeword block offset 22 = flat address 0x0181AA. "
+                         "Stock=0x01 confirmed in 8D0907551M, 4B0907551AA, "
+                         "4Z7907551AA, 4D1907558-0002. "
+                         "16x 0x01 anchor (CDKAT through CDHSVE) is unique in all 2.7T files."),
+        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
     ),
 
 ]  # end ALL_PATCHES
