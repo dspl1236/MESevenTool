@@ -1616,6 +1616,40 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── Hard Rev Limit — alternate code path (ME7.5 1.8T, universal) ───────────
+    # A third code path using the rev limit, with a stable 8-byte prefix
+    # (48 42 EA 30 E0 03 24 8F) that is constant across all fw variants.
+    # Present in ALL ME7.5 1.8T files including SL DSG (unlike overrev scalar).
+    # Values: fw4019 DL/LP/RN stock=7160 RPM, fw4012 18CM stock=6776 RPM.
+    # All tuned files (HN/870/20th/rn_base/SL) raise to 7352 RPM.
+    # Raw 0x254A/0x234A/0x264A. Scale: 0.75 RPM/bit.
+
+    ScalarPatchDef(
+        name          = "Hard Rev Limit — alt path (ME7.5 1.8T universal)",
+        description   = ("Alternative hard-rev code path with a universal 8-byte prefix. "
+                         "Present in all ME7.5 1.8T variants including SL DSG. "
+                         "DL/LP/RN stock=7160 RPM, 18CM stock=6776 RPM. "
+                         "All tuned files raise to 7352 RPM. Scale: 0.75 RPM/bit."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0x48,0x42, 0xEA,0x30, 0xE0,0x03, 0x24,0x8F,
+                               0x00,0x00, 0xE1,0x08, 0x00,0x00, 0xF4]),
+        mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF,
+                               0x00,0x00, 0xFF,0xFF, 0x00,0x00, 0xFF]),
+        offset        = 12,
+        size          = 2,
+        big_endian    = False,
+        scale         = 0.75,
+        unit          = "RPM",
+        min_val       = 4000.0,
+        max_val       = 9000.0,
+        confidence    = "CONFIRMED",
+        notes         = ("1 hit per file, universal across all uploads including SL DSG. "
+                         "fw4019 DL/LP/RN stock=0x254A(7160RPM), fw4012 18CM=0x234A(6776RPM). "
+                         "Tuned files all read 0x264A(7352RPM). "
+                         "Likely a third hard-rev check in a different execution path."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_SCALAR_PATCHES
 
 # Legacy aliases
