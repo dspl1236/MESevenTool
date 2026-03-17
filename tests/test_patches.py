@@ -1356,11 +1356,14 @@ class TestMAFDeleteAllVariants(unittest.TestCase):
         r = p.detect(self._load('18CM.Bin'))
         self.assertEqual(r.state, PatchState.STOCK)
 
-    def test_uni630_hn_patched_all_maf(self):
-        """uni630 HN tune patches to FA22/23 — PATCHED in all MAF variants."""
+    def test_uni630_hn_patched_fa22_maf(self):
+        """uni630 HN patches to FA22/23 — PATCHED in FA22-target MAF variants only."""
         from meseventool.patches import PatchState, ALL_PATCHES
         rom = self._load('1773719875938_uni_630HN.bin')
-        for p in [p for p in ALL_PATCHES if 'MAF Delete' in p.name]:
+        # FA22/23 target patches show PATCHED; FA1E/1F alt target shows UNKNOWN (has FA22, not FA1E)
+        fa22_patches = [p for p in ALL_PATCHES
+                        if 'MAF Delete' in p.name and p.patch_bytes[0] == 0x22]
+        for p in fa22_patches:
             r = p.detect(rom)
             self.assertEqual(r.state, PatchState.PATCHED,
                              f"{p.name} should be PATCHED in uni630_HN, got {r.state}")

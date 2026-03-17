@@ -1188,6 +1188,32 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── MAF Delete (ME7.5 fw4013 — FA1E/FA1F alt target: 20th / rn_base tunes) ───
+    # Some fw4013-based tunes (20th Anniversary 180hp, certain Stage 1 RN tunes)
+    # redirect MAF functions to FA1E/FA1F instead of the Unitronic FA22/FA23.
+    # Confirmed PATCHED in: 20th_180hp_032pl.bin, rn.bin (rn_base Stage 1).
+
+    PatchDef(
+        name          = "MAF Delete / Alpha-N load redirect (ME7.5 fw4013 alt FA1E/1F)",
+        description   = ("MAF-to-Alpha-N redirect using alternate function pointer "
+                         "FA1E/FA1F as destination, used by 20th Anniversary 180hp "
+                         "and some Stage 1 RN fw4013 tunes. Stock pointer for RN: "
+                         "FA48/FA49 → FA1E/FA1F (instead of the more common FA22/FA23). "
+                         "Prefer FA22/FA23 for new tunes."),
+        category      = PatchCategory.FUELLING,
+        needle        = bytes([0xF7,0xF8,0x00,0xFA, 0xF7,0x8E,0x00,0xFA]),
+        mask          = bytes([0xFF,0xFF,0x00,0xFF, 0xFF,0xFF,0x00,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0x48,0xFA, 0xF7,0x8E,0x49,0xFA]),  # RN fw4013 stock
+        patch_bytes   = bytes([0x1E,0xFA, 0xF7,0x8E,0x1F,0xFA]),  # 20th/rn_base target
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed PATCHED in: 20th_180hp_032pl (RN base, 180hp) and rn.bin. "
+                         "LP/18CM with FA34/FA35 stock show UNKNOWN with this def. "
+                         "Same needle as other MAF patches — stock_bytes selects RN variant. "
+                         "FA1E/FA1F is an older alternate Alpha-N entry point."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
     # ── Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — code-immediate) ──────────
     # fw4013 (06A906032 RN/LP/SL) and fw4012 (4B0906018) store the 250 km/h limit
     # as an IMMEDIATE CONSTANT in code rather than a cal-area value.
@@ -1222,9 +1248,10 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "tested — no corpus file has patched this yet. "
                          "Both call sites share identical context "
                          "E6 FD A8 61 E6 FE 9A 02 DA 00 9C 6C. "
-                         "fw4019 files also contain this sequence but the preferred "
-                         "approach for fw4019 is the cal-area OffsetPatchDef. "
-                         "This needle gives exactly 2 hits per file across all variants."),
+                         "IMPORTANT: needle hits exactly 2 sites per file. "
+                         "Apply TWICE: detect() site1 → apply; detect() site2 → apply; "
+                         "third detect() returns PATCHED via patched-needle fallback. "
+                         "fw4019 files also contain this sequence (preferred: cal-area def)."),
         applies_to    = {"me7.5", "1.8t"},
     ),
 
