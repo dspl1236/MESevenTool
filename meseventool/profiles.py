@@ -321,26 +321,48 @@ PROFILE_BGU_FSI = ROMProfile(
     notes         = "FSI direct injection.  No patches or maps yet.",
 )
 
-PROFILE_V6_2_7T = ROMProfile(
-    name          = "ME7.1 — 2.7T V6 Biturbo (AGB/ARE/APX/BES/BCY)",
-    description   = "2.7T V6 biturbo: S4 B5 (8D0907551), A6 C5 / Allroad (4Z7907551), "
-                    "A6 C5 tip (4B0907551).  Twin KKK K03/K04 turbos.  "
-                    "NB O2 per bank.  Rear O2 delete needs B1+B2 patches.  "
-                    "DPP1=0x0205 across all known software versions.",
-    part_prefixes = ["8D0907551", "4Z7907551", "4B0907551"],
+PROFILE_V6_27T_ME71 = ROMProfile(
+    name          = "ME7.1 — 2.7T V6 Biturbo early (AGB/ARE/BES — 8D0/4B0/early 4Z7)",
+    description   = "2.7T V6 biturbo, ME7.1 software: S4 B5 (8D0907551), "
+                    "A6 C5 tip (4B0907551), early Allroad (4Z7907551 up to M). "
+                    "Version string: '40/1/ME7.1/'.  Twin KKK K03/K04 turbos. "
+                    "NB O2 per bank.  DPP1=0x0205.",
+    part_prefixes = ["8D0907551", "4B0907551", "4Z7907551"],
     rom_size      = 0x100000,
     ecu_hw        = "ME7.1",
     variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp",
-                     "BES 2.7T 250hp", "BCY 2.7T 265hp", "APX 2.7T 256hp"],
+                     "BES 2.7T 250hp", "APX 2.7T 256hp"],
     dpp1_min      = 0x0205,
     dpp1_max      = 0x0205,
     induction     = "turbo",
     o2_system     = "narrowband",
     fuel_system   = "mpi",
     dual_bank     = True,
-    notes         = "Twin turbo V6.  dual_bank=True — rear O2 patches need Bank1+Bank2.  "
-                    "64 stock ROMs validated, DPP1=0x0205 consistent across all.",
+    notes         = "Twin turbo V6.  DPP1=0x0205 confirmed across 34 corpus ROMs.",
 )
+
+PROFILE_V6_27T_ME711 = ROMProfile(
+    name          = "ME7.1.1 — 2.7T V6 Biturbo later (4Z7907551 N/Q/R/S/T/AA)",
+    description   = "2.7T V6 biturbo, ME7.1.1 software: later Allroad variants "
+                    "(4Z7907551 N/Q/R/S/T/AA).  Version string: '42/1/ME7.1.1/'. "
+                    "Same hardware as ME7.1 but updated software with K-box logging "
+                    "support and revised ESKONF layout.  DPP1=0x0205.",
+    part_prefixes = ["4Z7907551"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["AGB 2.7T 250hp", "ARE 2.7T 265hp", "BCY 2.7T 265hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "turbo",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,
+    notes         = "Confirmed on 10 × 4Z7907551 N/Q/R/S/T/AA corpus ROMs. "
+                    "DPP1=0x0205.  ME7.1.1 VMAX needle applies to this profile.",
+)
+
+# Legacy alias — keep for any code that references PROFILE_V6_2_7T by name
+PROFILE_V6_2_7T = PROFILE_V6_27T_ME71
 
 PROFILE_V8_RS4 = ROMProfile(
     name          = "ME7.1.1 — 4.2T V8 Biturbo (BCY/AKH/AQJ — 4D1907558 family)",
@@ -396,7 +418,8 @@ ALL_PROFILES: List[ROMProfile] = [
     PROFILE_AGU_ME71,
     PROFILE_06B,
     PROFILE_BGU_FSI,
-    PROFILE_V6_2_7T,
+    PROFILE_V6_27T_ME71,    # 8D0/4B0/early 4Z7 — ecu_hw ME7.1
+    PROFILE_V6_27T_ME711,   # later 4Z7 N/Q/R/S/T/AA — ecu_hw ME7.1.1
     PROFILE_V8_RS4,
     PROFILE_NA_V6,
 ]
@@ -408,11 +431,26 @@ def detect_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
     """Return the best matching profile, falling back to UNKNOWN.
 
     Match priority:
-      1. part_prefixes match (most specific)
-      2. DPP1 range match filtered by ME7 hw version in version_string
-      3. DPP1 range match (unfiltered)
-      4. UNKNOWN
+      1. part_prefixes match + ecu_hw matches version_string (most specific)
+      2. part_prefixes match (any ecu_hw — first in ALL_PROFILES wins)
+      3. DPP1 range match filtered by ME7 hw version in version_string
+      4. DPP1 range match (unfiltered)
+      5. UNKNOWN
     """
+    vs = getattr(ecu_id, "version_string", "") or ""
+    hw_hint = None
+    for tag in ("ME7.1.1", "ME7.5", "ME7.1", "ME71"):
+        if tag.replace(".", "").lower() in vs.replace(".", "").lower():
+            hw_hint = tag.replace("ME71", "ME7.1")
+            break
+
+    # Pass 1: prefix match + ecu_hw agrees with version_string
+    if hw_hint:
+        for profile in ALL_PROFILES:
+            if profile.matches(ecu_id, dpp) and profile.ecu_hw == hw_hint:
+                return profile
+
+    # Pass 2: prefix match regardless of ecu_hw
     for profile in ALL_PROFILES:
         if profile.matches(ecu_id, dpp):
             return profile
