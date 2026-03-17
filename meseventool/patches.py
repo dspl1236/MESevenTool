@@ -1109,32 +1109,6 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # Note: fw4013 DL file contains the A861 as a code reference at 0x9BC7A (not cal).
     # Needle with CALLS signature uniquely isolates limiter call sites (2 hits per ROM).
 
-    PatchDef(
-        name          = "Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — RN/LP/18CM)",
-        description   = ("Disables the electronic speed limiter on ME7.5 firmware "
-                         "4013 (06A906032RN/LP/SL) and 4012 (4B0906018CM) ECUs. "
-                         "In these firmware variants the 250 km/h limit (0x61A8) is "
-                         "an immediate constant loaded before calling the limiter function: "
-                         "MOV R13, #0x61A8 / MOV R14, #0x029A / CALLS speed_limit_fn. "
-                         "Patching the immediate to 0xFFFF (65535 = 655 km/h) disables "
-                         "the limiter. Two identical call sites exist per ROM — both "
-                         "are patched automatically."),
-        category      = PatchCategory.PERFORMANCE,
-        needle        = bytes([0xE6,0xFD, 0xA8,0x61, 0xE6,0xFE, 0x9A,0x02, 0xDA,0x00, 0x9C,0x6C]),
-        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF]),
-        offset        = 2,
-        stock_bytes   = bytes([0xA8,0x61]),
-        patch_bytes   = bytes([0xFF,0xFF]),
-        all_hits      = True,
-        confidence    = "CONFIRMED",
-        notes         = ("Confirmed STOCK in: RN_4013 (FA48), LP_4013, SL_X505R, 18CM_4012. "
-                         "Confirmed PATCHED in: 20th_180hp (both sites), rn_4013_base (both). "
-                         "RN_uni2 and WO_uni2 do NOT patch this (modest Stage 1 tune). "
-                         "fw4019 (DL/HN) has this code too at 0x9BC7A but NOT in cal — "
-                         "the 4019 VMAX is a cal-area value (use the 4019 OffsetPatchDef). "
-                         "CALLS target 0x9C6C is the speed limiter function in all fw4013/4012."),
-        applies_to    = {"me7.5", "1.8t"},
-    ),
 
     # ── Vmax Speed Limiter Disable (ME7.5 1.8T — value-based, 4019 firmware) ──
     # In firmware 4019 (DL/HN), the speed limiter is stored as a literal speed value.
