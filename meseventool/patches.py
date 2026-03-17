@@ -568,7 +568,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         offset      = 8,
         stock_bytes = bytes([0x20, 0xF0]),     # AND r0, r0 — return as-is
         patch_bytes = bytes([0xE0, 0x01]),     # MOV r0, #1 — always success
-        confidence  = "PROVISIONAL",
+        confidence  = "UNCONFIRMED",
         warning     = "⚠ BENCH TESTING ONLY. Do not drive.",
         notes       = "Variant 1 of ME7RomTool -seedkey patch (360trev).",
     ),
@@ -617,7 +617,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         offset      = 10,
         stock_bytes = bytes([0x8D]),    # conditional jump (fault if not OK)
         patch_bytes = bytes([0x0D]),    # unconditional jump (always OK)
-        confidence  = "PROVISIONAL",
+        confidence  = "UNCONFIRMED",
         warning     = "Disables OBD-II rear O2 monitoring (P0140/P0141).  "
                       "For 2.7T biturbo: also apply Rear O2 Delete Bank 2.",
         # No applies_to restriction — rear post-cat O2 patch applies to all
@@ -702,7 +702,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         offset      = 4,
         stock_bytes = bytes([0x42, 0xF0, 0xFA, 0x00]),  # CMP r0, #250 (approx)
         patch_bytes = bytes([0x42, 0xF0, 0xFF, 0xFF]),  # CMP r0, #65535 — never fires
-        confidence  = "PROVISIONAL",
+        confidence  = "UNCONFIRMED",
         notes       = "Stock comparison value varies by market/tune.",
     ),
 
@@ -808,41 +808,30 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "15 needle hits across full ROM — all in ERKSP function.  "
                        "applies_to={'1.8t'} — 2.7T uses a separate needle (R6 not R4)."),
     ),
-
-    PatchDef(
-        name        = "Knock Retard Disable (2.7T)",
-        description = ("Disables ignition retard response to knock events on the "
-                       "2.7T biturbo (S4 B5 / Allroad / A6 C5).  Same functional "
-                       "effect as the 1.8T variant but uses R6 register (not R4).  "
-                       "USE WITH EXTREME CAUTION — dyno/bench only."),
-        category    = PatchCategory.IGNITION,
-        # C167 instruction sequence (each instruction is 4 bytes):
-        #   D7 40 pp qq = EXTP #page, #1  (extend page pointer for next instruction)
-        #   F2 F4 aa bb = MOVBZ R15, [R4+#bbaa]  (load ERKSP accumulator → R15)
-        #   F6 F4 cc dd = MOVBZ R6,  [R4+#ddcc]  (load compare value → R6)
-        #
-        # The address bytes (aa bb / cc dd) vary per software version — wildcarded.
-        # stock_bytes = F6 F4 (opcode of the second MOVBZ — bytes 8-9 in the needle).
-        # patch_bytes = F2 F4 by analogy to 1.8T's 46→42 bit-2 transformation.
-        # NOTE: patch_bytes UNCONFIRMED — needs validation on a known-patched 2.7T ROM.
-        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
-                       0xF2, 0xF4, XX, XX,   # MOVBZ R15, [R4+d16]  (ERKSP load)
-                       0xF6, 0xF4, XX, XX],  # MOVBZ R6,  [R4+d16]  (compare load)
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM, XX, XX],
-        offset      = 8,
-        stock_bytes = bytes([0xF6, 0xF4]),   # MOVBZ R6, [R4+d16] opcode
-        patch_bytes = bytes([0xF2, 0xF4]),   # analogous zero path — UNCONFIRMED
-        confidence  = "UNCONFIRMED",
-        applies_to  = {"2.7t"},
-        warning     = "⚠ DYNO/BENCH USE ONLY. patch_bytes UNCONFIRMED — derived "
-                      "by analogy to 1.8T, not validated on a known-patched 2.7T ROM.",
-        notes       = ("Needle confirmed: 12–28 hits per 8D0907551 ROM, all in "
-                       "ERKSP function 0x03BC00-0x03E600.  "
-                       "The 0x9D byte in the original attempt was the high displacement "
-                       "byte of MOVBZ, not a JMPR opcode — needle corrected to 12 bytes.  "
-                       "patch_bytes=F2F4 by 0xF6→0xF2 bit-2 analogy to 1.8T 0x46→0x42."),
+    OffsetPatchDef(
+        name          = "Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)",
+        description   = ("Disables knock retard accumulation on 2.7T biturbo ME7.1/ME7.1.1 "
+                         "ECUs by zeroing the KRMXN (maximum knock retard angle) table. "
+                         "Setting KRMXN=0 limits timing pull to 0 degrees per knock event; "
+                         "knock events are still detected but timing is not retarded. "
+                         "Uses the calibration-based approach (safer than code patching). "
+                         "WARNING: Disabling knock retard on a boosted engine risks engine "
+                         "damage from undetected detonation. Use only with quality fuel."),
+        category      = PatchCategory.PERFORMANCE,
+        # Anchor: 8 consecutive 5140 (0x1414 LE) values = first 8 active KRMXN entries.
+        # The 16-byte [14 14 × 8] pattern is unique (exactly 1 hit) in all tested files:
+        # 18/18 8D0907551 (S4 B5), 12/12 4B0907551 (A6 C5 2.7T), 20/20 4Z7907551 (allroad).
+        anchor_bytes  = bytes([0x14, 0x14] * 8),
+        anchor_offset = 0,
+        stock_bytes   = bytes([0x14, 0x14] * 8),   # 8 × 5140 = 51.40° max retard (stock)
+        patch_bytes   = bytes(16),                  # 8 × 0.00° max retard (disabled)
+        confidence    = "CONFIRMED",
+        notes         = ("8x 0x1414 anchor unique in all 50 tested 2.7T files. "
+                         "Address varies by firmware (0x194A1 to 0x1990B across 8D variants) "
+                         "but the content anchor is stable. "
+                         "KRMXN rows 8-15 (65535=no limit at high RPM) are left untouched. "
+                         "4D1907558 RS4/S8 V8 uses different KRMXN values — not covered."),
+        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
     ),
 
     # ── Confirmed needle patches — 2.7T/V8 corpus validated ─────────────────
