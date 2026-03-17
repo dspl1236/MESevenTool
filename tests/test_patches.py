@@ -1445,3 +1445,78 @@ class TestVmaxFw4013CodeImmediate(unittest.TestCase):
         self.patch.revert(rom, r)
         self.assertEqual(rom.data[addr+2], 0xA8)
         self.assertEqual(rom.data[addr+3], 0x61)
+
+
+# =============================================================================
+# VMAX code-immediate — double-apply covers both call sites
+# =============================================================================
+class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
+    """Both VMAX call sites patched by applying twice on real RN ROM."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES if 'code-immediate' in p.name)
+
+    def _apply_all_sites(self, rom):
+        from meseventool.patches import PatchState
+        from meseventool.needle import Searcher
+        applied = 0
+        for _ in range(5):  # safety limit
+            s = Searcher(rom)
+            r = self.patch.detect(rom, s)
+            if r.state == PatchState.STOCK:
+                self.patch.apply(rom, r)
+                applied += 1
+            else:
+                break
+        return applied
+
+    def test_rn_double_apply_both_sites(self):
+        """Applying twice on RN ROM patches both call sites."""
+        rom = self._load('1773719274810_06A906032RN.bin')
+        n = self._apply_all_sites(rom)
+        self.assertEqual(n, 2, f"Expected 2 applies (2 call sites), got {n}")
+        # Both sites should be 0xFFFF
+        site1, site2 = 0x0AF25A, 0x0AF3CE
+        self.assertEqual(rom.data[site1], 0xFF, "site1 not patched")
+        self.assertEqual(rom.data[site2], 0xFF, "site2 not patched")
+
+    def test_lp_double_apply_both_sites(self):
+        """LP ROM: 2 applies, both sites patched."""
+        rom = self._load('1773719875934_06A906032LP_0005.bin')
+        n = self._apply_all_sites(rom)
+        self.assertEqual(n, 2)
+
+    def test_sl_double_apply_both_sites(self):
+        """SL DSG ROM: 2 applies, both sites patched."""
+        rom = self._load('1773719274817_032sl_auto_revo_1.bin')
+        n = self._apply_all_sites(rom)
+        self.assertEqual(n, 2)
+
+    def test_18cm_double_apply_both_sites(self):
+        """18CM ROM: 2 applies, both sites patched."""
+        rom = self._load('18CM.Bin')
+        n = self._apply_all_sites(rom)
+        self.assertEqual(n, 2)
+
+    def test_final_state_is_patched(self):
+        """After double-apply, detect returns PATCHED."""
+        from meseventool.patches import PatchState
+        from meseventool.needle import Searcher
+        rom = self._load('1773719274810_06A906032RN.bin')
+        self._apply_all_sites(rom)
+        s = Searcher(rom)
+        r = self.patch.detect(rom, s)
+        self.assertEqual(r.state, PatchState.PATCHED)
