@@ -1073,7 +1073,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # than the cal-area approach), but mechanism is established.
 
     PatchDef(
-        name          = "Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — code-immediate)",
+        name          = "Vmax Speed Limiter Disable (ME7.5 — all variants — code-immediate)",
         description   = ("Disables the electronic speed limiter on ME7.5 fw4013 "
                          "(06A906032 RN/LP/SL) and fw4012 (4B0906018) ECUs by "
                          "changing the hard-coded 250 km/h limit constant from "
@@ -1142,31 +1142,6 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # Note: fw4013 DL file contains the A861 as a code reference at 0x9BC7A (not cal).
     # Needle with CALLS signature uniquely isolates limiter call sites (2 hits per ROM).
 
-
-    # ── Vmax Speed Limiter Disable (ME7.5 1.8T — value-based, 4019 firmware) ──
-    # In firmware 4019 (DL/HN), the speed limiter is stored as a literal speed value.
-    # 0xA861 LE = 25000 = 250 km/h (at 0.01 km/h resolution).
-    # Context needle: "88 00 A8 61" (1 hit in DL cal region).
-    # Confirmed: DL_OEM stock has 25000 at 0x124BE.
-
-    OffsetPatchDef(
-        name          = "Vmax Speed Limiter Disable (ME7.5 4019 — DL/HN)",
-        description   = ("Disables the electronic speed limiter on ME7.5 firmware "
-                         "4019 ECUs (06A906032DL AWD 150hp, HN AMU/APX 225hp). "
-                         "The limiter in this firmware variant is stored as a literal "
-                         "speed value: 0xA861 = 25000 = 250 km/h at 0.01 km/h resolution. "
-                         "Writes 0xFFFF (655 km/h) to disable."),
-        category      = PatchCategory.PERFORMANCE,
-        anchor_bytes  = bytes([0x88, 0x00, 0xA8, 0x61]),  # adjacent value + speed word
-        anchor_offset = 2,
-        stock_bytes   = bytes([0xA8, 0x61]),   # 25000 = 250 km/h
-        patch_bytes   = bytes([0xFF, 0xFF]),   # 65535 = 655 km/h
-        confidence    = "CONFIRMED",
-        notes         = ("Confirmed: DL_OEM 250 km/h at 0x124BE. 1 hit in cal region. "
-                         "uni630HN reorganises the cal layout so the anchor address shifts — "
-                         "but the anchor sequence 88 00 A8 61 remains unique."),
-        applies_to    = {"me7.5", "1.8t"},
-    ),
 
     # ── SAP Diagnosis Disable (ME7.5 1.8T — universal) ─────────────────────────
     # CDSLS at fixed codeword block address 0x0181B0.

@@ -1397,7 +1397,7 @@ class TestVmaxFw4013CodeImmediate(unittest.TestCase):
     def setUp(self):
         from meseventool.patches import ALL_PATCHES
         self.patch = next(p for p in ALL_PATCHES
-                          if 'fw4013/4012' in p.name and 'code-immediate' in p.name)
+                          if 'code-immediate' in p.name or ('ME7.5' in p.name and 'all variants' in p.name))
 
     def test_rn_stock(self):
         from meseventool.patches import PatchState
