@@ -149,6 +149,18 @@ class PatchDef:
         s   = searcher or Searcher(rom)
         hit = s.search_one(list(self.needle), list(self.mask))
         if hit is None:
+            # Also search with patch_bytes substituted in — handles already-patched ROMs
+            # where the stock value has been replaced and the strict needle no longer matches.
+            if self.patch_bytes != self.stock_bytes:
+                patched_needle = list(self.needle)
+                patched_mask   = list(self.mask)
+                for i, b in enumerate(self.patch_bytes):
+                    patched_needle[self.offset + i] = b
+                    patched_mask[self.offset + i]   = 0xFF
+                hit2 = s.search_one(patched_needle, patched_mask)
+                if hit2 is not None:
+                    addr2 = hit2.file_offset + self.offset
+                    return PatchResult(self, PatchState.PATCHED, addr2, "Patched (alt needle)")
             return PatchResult(self, PatchState.MISSING, 0,
                                "Needle not found — variant may differ")
 
@@ -359,6 +371,73 @@ class OffsetPatchDef:
             return False
         rom.write(result.addr, self.stock_bytes)
         return True
+
+
+@dataclass
+class FixedAddressPatchDef:
+    """Patch at a known fixed address in the ROM — no anchor search needed.
+
+    Used when the target address is stable across all firmware versions
+    (e.g. the ME7 codeword block which is always at 0x018194 in all variants).
+    A sanity set of expected values is provided to confirm the site before patching.
+    """
+    name:          str
+    description:   str
+    category:      PatchCategory
+    fixed_addr:    int               # ROM file offset of the byte(s) to patch
+    stock_bytes:   bytes             # expected bytes at that address when stock
+    patch_bytes:   bytes             # bytes to write when applying patch
+    warning:       str    = ""
+    confidence:    str    = "UNCONFIRMED"
+    notes:         str    = ""
+    applies_to:    set    = field(default_factory=set)
+
+    # Stub fields for compatibility with PatchDef callers
+    requires_induction: list = field(default_factory=list)
+    requires_lambda:    list = field(default_factory=list)
+    requires_fuel:      list = field(default_factory=list)
+    requires_family:    list = field(default_factory=list)
+
+    def check_applicable(self, profile=None) -> bool:
+        if not self.applies_to or profile is None:
+            return True
+        tags = getattr(profile, 'tags', set())
+        return bool(self.applies_to & tags)
+
+    def detect(self, rom: ROMImage,
+               searcher=None, profile=None) -> 'PatchResult':
+        if profile is not None and not self.check_applicable(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0, "N/A")
+
+        addr = self.fixed_addr
+        if addr + len(self.stock_bytes) > rom.size:
+            return PatchResult(self, PatchState.MISSING, 0, "Address outside ROM")
+
+        current = bytes(rom.data[addr : addr + len(self.stock_bytes)])
+        if current == self.stock_bytes:
+            return PatchResult(self, PatchState.STOCK,   addr, "Stock")
+        elif current == self.patch_bytes:
+            return PatchResult(self, PatchState.PATCHED, addr, "Patched")
+        else:
+            return PatchResult(self, PatchState.UNKNOWN, addr,
+                               f"Unexpected: {current.hex().upper()}")
+
+    def apply(self, rom: ROMImage, result: 'PatchResult') -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                  PatchState.NOT_APPLICABLE):
+            return False
+        rom.write(result.addr, self.patch_bytes)
+        return True
+
+    def revert(self, rom: ROMImage, result: 'PatchResult') -> bool:
+        if result.addr == 0 or result.state in (PatchState.MISSING,
+                                                  PatchState.NOT_APPLICABLE):
+            return False
+        rom.write(result.addr, self.stock_bytes)
+        return True
+
+    def __repr__(self) -> str:
+        return f"FixedAddressPatchDef(name={self.name!r}, addr=0x{self.fixed_addr:06X})"
 
 
 @dataclass
@@ -1130,15 +1209,18 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "Covers: ALL 8D0907551 (S4 B5), ALL 4B0907551 (A6 C5 2.7T), "
                          "ALL 4Z7907551 (allroad), ALL 4D1907558 (RS4/S8 V8)."),
         category      = PatchCategory.EMISSIONS,
-        anchor_bytes  = bytes([0x01]*16),
-        anchor_offset = 22,
+        # Anchor: 8 bytes at 0x018190 = FF FF FF FF 00 00 01 01
+        # Unique (exactly 1 hit) across 8D/4B/4Z7/4D1 — confirmed all families.
+        # CDLSH is 26 bytes after anchor start = flat 0x018190+26 = 0x0181AA.
+        anchor_bytes  = bytes([0xFF,0xFF,0xFF,0xFF, 0x00,0x00,0x01,0x01]),
+        anchor_offset = 26,
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
-        notes         = ("CDLSH at codeword block offset 22 = flat address 0x0181AA. "
-                         "Stock=0x01 confirmed in 8D0907551M, 4B0907551AA, "
-                         "4Z7907551AA, 4D1907558-0002. "
-                         "16x 0x01 anchor (CDKAT through CDHSVE) is unique in all 2.7T files."),
+        notes         = ("CDLSH at flat 0x0181AA. Stock=0x01 confirmed in 8D/4B/4Z7/4D1. "
+                         "Anchor FF FF FF FF 00 00 01 01 at 0x018190 appears exactly once "
+                         "in every tested 1MB ME7 file. Offset 26 from anchor = CDLSH. "
+                         "Front O2 codewords at other offsets are untouched."),
         applies_to    = {"me7.1", "me7.1.1", "2.7t"},
     ),
 
