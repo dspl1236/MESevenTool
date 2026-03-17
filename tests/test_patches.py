@@ -1302,3 +1302,144 @@ class TestRealROM4B0906018(unittest.TestCase):
         r = self._detect('EVAP Diagnosis Disable (4B0906018 A6/Passat 1.8T)',
                          self._load(fname))
         assert r.state == PatchState.PATCHED
+
+
+# =============================================================================
+# MAF Delete — real ROM detection across all 06A firmware variants
+# =============================================================================
+class TestMAFDeleteAllVariants(unittest.TestCase):
+    """MAF Delete patches cover all ME7.5 1.8T firmware variants."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def _patch(self, name):
+        from meseventool.patches import ALL_PATCHES
+        return next(p for p in ALL_PATCHES if p.name == name)
+
+    def test_dl_fw4019_stock(self):
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 06A)')
+        r = p.detect(self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_rn_fw4013_stock(self):
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 RN/LP fw4013)')
+        r = p.detect(self._load('1773719274810_06A906032RN.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_lp_fw4013_stock(self):
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 LP/18CM fw4013/4012)')
+        r = p.detect(self._load('1773719875934_06A906032LP_0005.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_sl_dsg_stock(self):
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 SL DSG X505R)')
+        r = p.detect(self._load('1773719274817_032sl_auto_revo_1.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_18cm_fw4012_stock(self):
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 LP/18CM fw4013/4012)')
+        r = p.detect(self._load('18CM.Bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_uni630_hn_patched_all_maf(self):
+        """uni630 HN tune patches to FA22/23 — PATCHED in all MAF variants."""
+        from meseventool.patches import PatchState, ALL_PATCHES
+        rom = self._load('1773719875938_uni_630HN.bin')
+        for p in [p for p in ALL_PATCHES if 'MAF Delete' in p.name]:
+            r = p.detect(rom)
+            self.assertEqual(r.state, PatchState.PATCHED,
+                             f"{p.name} should be PATCHED in uni630_HN, got {r.state}")
+
+    def test_rn_uni2_no_maf_delete(self):
+        """Unitronic Stage 1 RN tune does NOT do MAF delete."""
+        from meseventool.patches import PatchState
+        p = self._patch('MAF Delete / Alpha-N load redirect (ME7.5 RN/LP fw4013)')
+        r = p.detect(self._load('1773719274816_032RN_Uni_2.bin'))
+        self.assertEqual(r.state, PatchState.STOCK,
+                         "RN_uni2 (Unitronic Stage 1) should NOT have MAF delete")
+
+
+# =============================================================================
+# VMAX fw4013/4012 code-immediate — real ROM detection
+# =============================================================================
+class TestVmaxFw4013CodeImmediate(unittest.TestCase):
+    """VMAX code-immediate: E6 FD A8 61 → E6 FD FF FF, exactly 2 hits per file."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES
+                          if 'fw4013/4012' in p.name and 'code-immediate' in p.name)
+
+    def test_rn_stock(self):
+        from meseventool.patches import PatchState
+        r = self.patch.detect(self._load('1773719274810_06A906032RN.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_lp_stock(self):
+        from meseventool.patches import PatchState
+        r = self.patch.detect(self._load('1773719875934_06A906032LP_0005.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_sl_stock(self):
+        from meseventool.patches import PatchState
+        r = self.patch.detect(self._load('1773719274817_032sl_auto_revo_1.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_18cm_stock(self):
+        from meseventool.patches import PatchState
+        r = self.patch.detect(self._load('18CM.Bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_dl_stock(self):
+        """fw4019 DL also shows STOCK — needle present, value still 250 km/h."""
+        from meseventool.patches import PatchState
+        r = self.patch.detect(self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'))
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_synthetic_apply_revert(self):
+        """Synthetic: apply writes FF FF, revert restores A8 61."""
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        import tempfile, os
+        data = bytearray(0x100000)
+        # Build the 10-byte needle at address 0x0AF258
+        addr = 0x0AF258
+        data[addr:addr+10] = bytes([0xE6,0xFD,0xA8,0x61, 0xE6,0xFE, 0x9A,0x02, 0xDA,0x00])
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(bytes(data)); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        r = self.patch.detect(rom)
+        self.assertEqual(r.state, PatchState.STOCK)
+        self.patch.apply(rom, r)
+        self.assertEqual(rom.data[addr+2], 0xFF)
+        self.assertEqual(rom.data[addr+3], 0xFF)
+        self.patch.revert(rom, r)
+        self.assertEqual(rom.data[addr+2], 0xA8)
+        self.assertEqual(rom.data[addr+3], 0x61)

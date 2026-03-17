@@ -101,6 +101,7 @@ class PatchDef:
     confidence:  str       = "UNCONFIRMED"
     notes:       str       = ""
     applies_to:  Set[str]  = field(default_factory=set)
+    all_hits:    bool     = False  # if True, apply/revert patches ALL needle hits
     # Legacy requirement lists — translated to applies_to in __post_init__
     requires_induction: List[str] = None   # type: ignore
     requires_lambda:    List[str] = None
@@ -179,19 +180,33 @@ class PatchDef:
                                f"Modified: {current.hex().upper()}")
 
     def apply(self, rom: ROMImage, result: PatchResult) -> bool:
-        """Write patch_bytes at the discovered address. Returns True on success."""
+        """Write patch_bytes at the discovered address. Returns True on success.
+        If all_hits=True, patches every needle occurrence in the ROM."""
         if result.addr == 0 or result.state in (PatchState.MISSING,
                                                   PatchState.NOT_APPLICABLE):
             return False
-        rom.write(result.addr, self.patch_bytes)
+        if self.all_hits:
+            s = Searcher(rom)
+            hits = s.search(list(self.needle), list(self.mask))
+            for h in hits:
+                rom.write(h.file_offset + self.offset, self.patch_bytes)
+        else:
+            rom.write(result.addr, self.patch_bytes)
         return True
 
     def revert(self, rom: ROMImage, result: PatchResult) -> bool:
-        """Write stock_bytes at the discovered address."""
+        """Write stock_bytes at the discovered address.
+        If all_hits=True, reverts every needle occurrence in the ROM."""
         if result.addr == 0 or result.state in (PatchState.MISSING,
                                                   PatchState.NOT_APPLICABLE):
             return False
-        rom.write(result.addr, self.stock_bytes)
+        if self.all_hits:
+            s = Searcher(rom)
+            hits = s.search(list(self.needle), list(self.mask))
+            for h in hits:
+                rom.write(h.file_offset + self.offset, self.stock_bytes)
+        else:
+            rom.write(result.addr, self.stock_bytes)
         return True
 
 
@@ -1091,6 +1106,193 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "1 clean hit in code region at 0x00DDC4 in all tested ECUs. "
                          "stock_bytes is the 4019 form — UNKNOWN state will show for 4013 "
                          "stock (expected; both are 'stock' in practice)."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── MAF Delete / Alpha-N (ME7.5 fw4013 — RN/LP/SL variants) ─────────────────
+    # fw4013 (06A906032RN, LP) and fw4012 (4B0906018CM) use different MAF function
+    # pointer pairs than fw4019. Address 0x00DDC4 is stable; stock bytes vary:
+    #   RN fw4013: FA48/FA49    LP fw4013: FA34/FA35    SL X505R: FA4A/FA4B
+    #   18CM fw4012: FA34/FA35  (LP and 18CM share same stock bytes)
+    # Unitronic Stage 2+ redirect to FA22/FA23. Some tuners use FA1E/FA1F.
+    # Confirmed STOCK in: RN/LP/LP/SL/18CM stock files.
+    # Confirmed PATCHED in: uni870 (RN base fw4019.02 tune → FA22/FA23).
+
+    PatchDef(
+        name          = "MAF Delete / Alpha-N load redirect (ME7.5 RN/LP fw4013)",
+        description   = ("Redirects MAF-based engine load calculation to throttle-"
+                         "position (Alpha-N) path by changing paired JMPA function "
+                         "pointer targets at 0x00DDC4. fw4013 stock values: "
+                         "RN=FA48/FA49 (primary stock_bytes), LP=FA34/FA35, SL=FA4A/FA4B. "
+                         "4B0906018 fw4012 shares FA34/FA35 with LP. "
+                         "All redirect to FA22/FA23 (Unitronic/most tuners) or "
+                         "FA1E/FA1F (some fw4013-base tunes like 20th Anniversary)."),
+        category      = PatchCategory.FUELLING,
+        needle        = bytes([0xF7,0xF8,0x00,0xFA, 0xF7,0x8E,0x00,0xFA]),
+        mask          = bytes([0xFF,0xFF,0x00,0xFF, 0xFF,0xFF,0x00,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0x48,0xFA, 0xF7,0x8E,0x49,0xFA]),  # fw4013 RN primary
+        patch_bytes   = bytes([0x22,0xFA, 0xF7,0x8E,0x23,0xFA]),  # universal FA22/23
+        confidence    = "CONFIRMED",
+        notes         = ("Stock confirmed: RN=FA48/49, LP/18CM=FA34/35, SL=FA4A/4B. "
+                         "Patched confirmed: uni870 → FA22/23. 20th/rn_base → FA1E/1F. "
+                         "RN_uni2 (Unitronic Stage 1 RN) does NOT do MAF delete. "
+                         "LP and 18CM show UNKNOWN with this def (FA34 ≠ stock_bytes FA48) "
+                         "— apply still works; result becomes PATCHED after. "
+                         "Needle 0x00DDC4 stable across all ME7.5 1.8T firmware."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── MAF Delete (ME7.5 fw4013 LP/18CM — FA34/FA35 stock) ─────────────────────
+    # 06A906032LP (fw4013) and 4B0906018CM (fw4012) share FA34/FA35 as stock MAF
+    # function pointers despite being different ECU families.
+
+    PatchDef(
+        name          = "MAF Delete / Alpha-N load redirect (ME7.5 LP/18CM fw4013/4012)",
+        description   = ("MAF-to-Alpha-N redirect for 06A906032LP and 4B0906018CM ECUs "
+                         "which use FA34/FA35 as stock MAF function pointer pair. "
+                         "Same needle (0x00DDC4) and patch target (FA22/FA23) as other "
+                         "ME7.5 1.8T variants."),
+        category      = PatchCategory.FUELLING,
+        needle        = bytes([0xF7,0xF8,0x00,0xFA, 0xF7,0x8E,0x00,0xFA]),
+        mask          = bytes([0xFF,0xFF,0x00,0xFF, 0xFF,0xFF,0x00,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0x34,0xFA, 0xF7,0x8E,0x35,0xFA]),  # LP + 18CM stock
+        patch_bytes   = bytes([0x22,0xFA, 0xF7,0x8E,0x23,0xFA]),
+        confidence    = "CONFIRMED",
+        notes         = ("Stock FA34/FA35 confirmed in 06A906032LP and 4B0906018CM. "
+                         "LP is fw4013; 18CM is fw4012 — both share the same MAF ptr. "
+                         "No patched reference in corpus (neither LP nor 18CM files "
+                         "have had MAF delete applied in our test set)."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── MAF Delete (ME7.5 SL X505R — FA4A/FA4B stock) ────────────────────────────
+    # 06A906032SL (automatic/DSG, firmware X505R) uses FA4A/FA4B as stock MAF ptrs.
+
+    PatchDef(
+        name          = "MAF Delete / Alpha-N load redirect (ME7.5 SL DSG X505R)",
+        description   = ("MAF-to-Alpha-N redirect for 06A906032SL DSG ECU which uses "
+                         "FA4A/FA4B as stock MAF function pointer pair."),
+        category      = PatchCategory.FUELLING,
+        needle        = bytes([0xF7,0xF8,0x00,0xFA, 0xF7,0x8E,0x00,0xFA]),
+        mask          = bytes([0xFF,0xFF,0x00,0xFF, 0xFF,0xFF,0x00,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0x4A,0xFA, 0xF7,0x8E,0x4B,0xFA]),  # SL DSG stock
+        patch_bytes   = bytes([0x22,0xFA, 0xF7,0x8E,0x23,0xFA]),
+        confidence    = "CONFIRMED",
+        notes         = ("Stock FA4A/FA4B confirmed in 06A906032SL X505R DSG file. "
+                         "No patched reference in corpus. "
+                         "SL already had 5th-gear mode byte (0x881D) patched to 0x00 "
+                         "by Revo (presumably Stage 1 tune)."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — code-immediate) ──────────
+    # fw4013 (06A906032 RN/LP/SL) and fw4012 (4B0906018) store the 250 km/h limit
+    # as an IMMEDIATE CONSTANT in code rather than a cal-area value.
+    # Instruction: E6 FD A8 61 = MOV R13, #0x61A8 (250km/h at 0.01 km/h resolution)
+    # Appears TWICE per file (two speed limiter call sites — upper and lower threshold).
+    # Both must be patched to 0xFFFF (655.35 km/h = unlimited) to disable.
+    # fw4019 (DL/HN) also contains this sequence in its code area but the cal-area
+    # patch (OffsetPatchDef, "ME7.5 4019 — DL/HN") is preferred for fw4019.
+    # Confirmed STOCK in: RN/LP/SL/18CM and all fw4019 files (value still A8 61).
+    # No confirmed patched reference in corpus (code-immediate approach less common
+    # than the cal-area approach), but mechanism is established.
+
+    PatchDef(
+        name          = "Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — code-immediate)",
+        description   = ("Disables the electronic speed limiter on ME7.5 fw4013 "
+                         "(06A906032 RN/LP/SL) and fw4012 (4B0906018) ECUs by "
+                         "changing the hard-coded 250 km/h limit constant from "
+                         "0x61A8 (25000 × 0.01 km/h) to 0xFFFF (655.35 km/h). "
+                         "The value is stored as an immediate in two paired "
+                         "MOV R13, #0x61A8 instructions at two call sites. "
+                         "Both sites use E6 FD A8 61 E6 FE 9A 02 DA 00 9C 6C context. "
+                         "PatchDef applies to the FIRST hit — run detect/apply twice "
+                         "or use detect_all to cover both sites."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xE6,0xFD, 0xA8,0x61, 0xE6,0xFE, 0x9A,0x02, 0xDA,0x00]),
+        mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0xA8,0x61]),   # 25000 = 250 km/h (LE)
+        patch_bytes   = bytes([0xFF,0xFF]),   # 65535 = 655.35 km/h = unlimited
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed STOCK in: DL/RN/LP/SL/18CM and all tuned files "
+                         "tested — no corpus file has patched this yet. "
+                         "Both call sites share identical context "
+                         "E6 FD A8 61 E6 FE 9A 02 DA 00 9C 6C. "
+                         "fw4019 files also contain this sequence but the preferred "
+                         "approach for fw4019 is the cal-area OffsetPatchDef. "
+                         "This needle gives exactly 2 hits per file across all variants."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
+    # ── SAP Diagnosis Disable CDSLS (4B0906018 A6/Passat 1.8T) ──────────────────
+    # CDSLS at fixed address 0x0181B0 in 4B0906018 AWM (A6 C5 / Passat B5.5).
+    # Stock = 0x01 in 18CM. The corresponding 06A patch uses OffsetPatchDef with
+    # an anchor — but 4B0906018 codeword layout differs so this uses FixedAddressPatchDef.
+    # NOTE: without profile context this also fires on tuned 06A files (same address,
+    # same mechanism). With profile filtering (applies_to 4b0906018) it is correctly
+    # NOT_APPLICABLE for 06A ECUs.
+
+    FixedAddressPatchDef(
+        name        = "SAP Diagnosis Disable CDSLS (4B0906018 A6/Passat 1.8T)",
+        description = ("Disables secondary air injection pump fault monitoring "
+                       "by setting CDSLS=0 at fixed address 0x0181B0 in 4B0906018 "
+                       "AWM ECU. Prevents P0410/P1411 when SAP pump or relay is "
+                       "removed. Same physical address as the ME7.5 1.8T SAP patch "
+                       "but uses FixedAddressPatchDef due to differing codeword "
+                       "block pre-padding in 4B0906018 vs 06A906032."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181B0,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("18CM stock=0x01. Confirmed patched (0x00) in tuned 06A files "
+                       "via the same mechanism. Address 0x0181B0 (CDSLS) is fixed "
+                       "in all ME7.5 ECU families. Apply with profile to avoid "
+                       "false-positive detection on 06A906032 tuned files."),
+        applies_to  = {"me7.5", "1.8t", "4b0906018"},
+    ),
+
+    # ── Vmax Speed Limiter Disable (ME7.5 fw4013/fw4012 — code-immediate) ──────
+    # In firmware 4013 (06A906032RN/LP) and fw4012 (4B0906018CM), the speed limiter
+    # is encoded as an IMMEDIATE CONSTANT in code, not a cal table value:
+    #   E6 FD A8 61 = MOV R13, #0x61A8  (250 km/h)
+    #   E6 FE 9A 02 = MOV R14, #0x029A  (second param)
+    #   DA 00 9C 6C = CALLS speed_limiter_fn
+    # This instruction sequence appears TWICE per ROM (two call sites in the limiter
+    # routine). Both must be patched to disable the limiter: A8 61 → FF FF.
+    # Confirmed: 20th_180hp and rn_base tune both patch both occurrences.
+    # Uses all_hits=True so apply() patches both sites automatically.
+    # Note: fw4013 DL file contains the A861 as a code reference at 0x9BC7A (not cal).
+    # Needle with CALLS signature uniquely isolates limiter call sites (2 hits per ROM).
+
+    PatchDef(
+        name          = "Vmax Speed Limiter Disable (ME7.5 fw4013/4012 — RN/LP/18CM)",
+        description   = ("Disables the electronic speed limiter on ME7.5 firmware "
+                         "4013 (06A906032RN/LP/SL) and 4012 (4B0906018CM) ECUs. "
+                         "In these firmware variants the 250 km/h limit (0x61A8) is "
+                         "an immediate constant loaded before calling the limiter function: "
+                         "MOV R13, #0x61A8 / MOV R14, #0x029A / CALLS speed_limit_fn. "
+                         "Patching the immediate to 0xFFFF (65535 = 655 km/h) disables "
+                         "the limiter. Two identical call sites exist per ROM — both "
+                         "are patched automatically."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xE6,0xFD, 0xA8,0x61, 0xE6,0xFE, 0x9A,0x02, 0xDA,0x00, 0x9C,0x6C]),
+        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF]),
+        offset        = 2,
+        stock_bytes   = bytes([0xA8,0x61]),
+        patch_bytes   = bytes([0xFF,0xFF]),
+        all_hits      = True,
+        confidence    = "CONFIRMED",
+        notes         = ("Confirmed STOCK in: RN_4013 (FA48), LP_4013, SL_X505R, 18CM_4012. "
+                         "Confirmed PATCHED in: 20th_180hp (both sites), rn_4013_base (both). "
+                         "RN_uni2 and WO_uni2 do NOT patch this (modest Stage 1 tune). "
+                         "fw4019 (DL/HN) has this code too at 0x9BC7A but NOT in cal — "
+                         "the 4019 VMAX is a cal-area value (use the 4019 OffsetPatchDef). "
+                         "CALLS target 0x9C6C is the speed limiter function in all fw4013/4012."),
         applies_to    = {"me7.5", "1.8t"},
     ),
 
