@@ -1545,6 +1545,42 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         notes       = "Scale 0.75 RPM/count. Set 200-300 RPM below hard cut.",
     ),
 
+    # ── Hard Rev Limit (ME7.5 1.8T — universal) ─────────────────────────────────
+    # The rev limiter in ME7.5 1.8T is stored as a 2-byte LE immediate in code
+    # at two identical call sites (pattern: F7 F8 xx xx E1 08 [limit] F4 xx 49 81 3D 08).
+    # Both sites always hold the same value. Low byte 0x4A is constant; high byte varies:
+    #   fw4019 (DL/LP):   raw 0x254A = 9546 → 7160 RPM   (0.75 RPM/bit)
+    #   fw4013 (RN/SL):   raw 0x264A = 9802 → 7352 RPM
+    #   fw4012 (18CM):    raw 0x244A = 9290 → 6968 RPM
+    #   Unitronic Stage 2: raw 0x274A = 10058 → 7544 RPM
+    # Scale: 0.75 RPM/bit. Address 0x030348 in DL (both sites: 0x030348 and 0x030372).
+    # Confirmed: exactly 2 hits per file across all uploads. Apply twice (like VMAX-CI).
+
+    ScalarPatchDef(
+        name          = "Hard Rev Limit (ME7.5 1.8T — all variants)",
+        description   = ("Hard RPM limit stored as code-immediate in two call sites. "
+                         "Read/write both sites (2 hits per file). "
+                         "Stock values: fw4019 DL/LP=7160 RPM, fw4013 RN/SL=7352 RPM, "
+                         "fw4012 18CM=6968 RPM. Scale: 0.75 RPM/bit."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xF7,0xF8, 0x00,0x00, 0xE1,0x08,
+                               0x00,0x00, 0xF4,0x00, 0x49,0x81, 0x3D,0x08]),
+        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                               0x00,0x00, 0xFF,0x00, 0xFF,0xFF, 0xFF,0xFF]),
+        offset        = 6,
+        size          = 2,
+        big_endian    = False,
+        scale         = 0.75,
+        unit          = "RPM",
+        min_val       = 4000.0,
+        max_val       = 9000.0,
+        confidence    = "CONFIRMED",
+        notes         = ("2 hits per file (two call sites). Apply read/write to BOTH hits. "
+                         "fw4019=7160RPM(0x254A), fw4013=7352RPM(0x264A), fw4012=6968RPM(0x244A). "
+                         "Unitronic Stage 2 raises to 7544RPM(0x274A). Low byte always 0x4A."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_SCALAR_PATCHES
 
 # Legacy aliases

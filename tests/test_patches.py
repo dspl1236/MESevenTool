@@ -1520,3 +1520,88 @@ class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
         s = Searcher(rom)
         r = self.patch.detect(rom, s)
         self.assertEqual(r.state, PatchState.PATCHED)
+
+
+# =============================================================================
+# Hard Rev Limit ScalarPatchDef (ME7.5 1.8T — all variants)
+# =============================================================================
+class TestHardRevLimitScalar1p8T(unittest.TestCase):
+    """Hard Rev Limit ScalarPatchDef reads correct RPM from ME7.5 1.8T ROMs."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path, 'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_SCALAR_PATCHES
+        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'ME7.5' in p.name)
+
+    def _read_rpm(self, fname):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        s   = Searcher(rom)
+        v   = self.patch.read(rom, s)
+        self.assertIsNotNone(v, f"ScalarPatchDef returned None for {fname}")
+        return v
+
+    def _assert_hits(self, fname, expected_hits=2):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        s   = Searcher(rom)
+        hits = s.search(list(self.patch.needle), list(self.patch.mask))
+        self.assertEqual(len(hits), expected_hits,
+            f"{fname}: expected {expected_hits} hits, got {len(hits)}")
+
+    # ── exact-value tests ────────────────────────────────────────────────────
+    def test_dl_4019_stock_7160rpm(self):
+        v = self._read_rpm('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        self.assertAlmostEqual(v, 7160, delta=2)
+
+    def test_lp_4013_stock_7160rpm(self):
+        v = self._read_rpm('1773719875934_06A906032LP_0005.bin')
+        self.assertAlmostEqual(v, 7160, delta=2)
+
+    def test_rn_4013_stock_7352rpm(self):
+        v = self._read_rpm('1773719274810_06A906032RN.bin')
+        self.assertAlmostEqual(v, 7352, delta=2)
+
+    def test_sl_revo_7352rpm(self):
+        v = self._read_rpm('1773719274817_032sl_auto_revo_1.bin')
+        self.assertAlmostEqual(v, 7352, delta=2)
+
+    def test_18cm_stock_6968rpm(self):
+        v = self._read_rpm('18CM.Bin')
+        self.assertAlmostEqual(v, 6968, delta=2)
+
+    def test_hn_uni630_raised_7544rpm(self):
+        v = self._read_rpm('1773719875938_uni_630HN.bin')
+        self.assertAlmostEqual(v, 7544, delta=2)
+
+    def test_rn_uni870_raised_7544rpm(self):
+        v = self._read_rpm('1773719274820_uni870_032pl.bin')
+        self.assertAlmostEqual(v, 7544, delta=2)
+
+    def test_20th_4013_stock_7352rpm(self):
+        v = self._read_rpm('1773719274814_20th_180hp_032pl.bin')
+        self.assertAlmostEqual(v, 7352, delta=2)
+
+    # ── always exactly 2 hits ────────────────────────────────────────────────
+    def test_dl_two_hits(self):
+        self._assert_hits('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+
+    def test_rn_two_hits(self):
+        self._assert_hits('1773719274810_06A906032RN.bin')
+
+    def test_18cm_two_hits(self):
+        self._assert_hits('18CM.Bin')
+
+    def test_hn_tuned_two_hits(self):
+        self._assert_hits('1773719875938_uni_630HN.bin')
