@@ -226,26 +226,12 @@ class TestAppliestoMigration:
 # ── Existing patches in catalogue ────────────────────────────────────────────
 
 class TestCataloguePatches:
-    def test_rear_o2_applies_to_wideband_too(self):
-        """Rear O2 delete is post-cat only — applies regardless of front sensor type.
-        The post-cat sensor is always a conventional NB binary-switch sensor."""
-        o2_patch = next(p for p in ALL_PATCHES if "Rear O2" in p.name)
-        wb_profile = make_profile(induction="turbo", o2_system="wideband",
-                                   fuel_system="mpi")
-        # Should apply — rear sensor is always NB regardless of front sensor
-        assert wb_profile.patch_applies(o2_patch)
 
     def test_rear_o2_applies_to_awp(self):
         """Rear O2 delete should apply to AWP (NB MPI)."""
         o2_patch = next(p for p in ALL_PATCHES if "Rear O2" in p.name)
         assert PROFILE_AWP.patch_applies(o2_patch)
 
-    def test_immo_defeat_is_universal(self):
-        """Immo defeat has no platform restrictions."""
-        immo = next(p for p in ALL_PATCHES if "Immobiliser" in p.name)
-        na_profile = make_profile(induction="na", fuel_system="fsi",
-                                   o2_system="wideband")
-        assert na_profile.patch_applies(immo)
 
     def test_all_patches_valid_applies_to(self):
         """Every patch's applies_to contains only known tag strings."""

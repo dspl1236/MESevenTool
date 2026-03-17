@@ -224,8 +224,7 @@ class TestRegistry:
     def test_categories_present(self):
         cats = {p.category for p in PATCH_REGISTRY}
         assert PatchCategory.EMISSIONS in cats
-        assert PatchCategory.IMMOBILISER in cats
-
+        
 
 # ── OffsetPatchDef unit tests ─────────────────────────────────────────────────
 

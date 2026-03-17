@@ -566,230 +566,25 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
 
     # ── Immobiliser ───────────────────────────────────────────────────────────
 
-    PatchDef(
-        name        = "Immobiliser Disable (Bench)",
-        description = ("Patches the immobiliser seed/key routine to always "
-                       "return TRUE. Engine starts without a valid key signal "
-                       "from the instrument cluster. BENCH TESTING ONLY."),
-        category    = PatchCategory.IMMOBILISER,
-        needle      = [0xD7, 0x40, XX, XX,   # EXTP #seg, #1
-                       0xF2, 0xF0, XX, XX,   # MOV  r0, immo_status
-                       0x20, 0xF0,           # AND  r0, r0  (set flags)
-                       0xDB, 0x00],          # RETS
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM,
-                       MM, MM],
-        offset      = 8,
-        stock_bytes = bytes([0x20, 0xF0]),     # AND r0, r0 — return as-is
-        patch_bytes = bytes([0xE0, 0x01]),     # MOV r0, #1 — always success
-        confidence  = "UNCONFIRMED",
-        warning     = "⚠ BENCH TESTING ONLY. Do not drive.",
-        notes       = "Variant 1 of ME7RomTool -seedkey patch (360trev).",
-    ),
 
-    PatchDef(
-        name        = "Immobiliser Disable Variant 2",
-        description = ("Second immo defeat variant for ECUs where variant 1 "
-                       "needle is absent."),
-        category    = PatchCategory.IMMOBILISER,
-        needle      = [0xF2, 0xF0, XX, XX,   # MOV  r0, immo_word
-                       0x42, 0xF0, 0x01, 0x00,  # CMP r0, #1
-                       0x3D, XX,             # JMPR cc_NE, fail
-                       0xE6, 0xF0, 0x01, 0x00],  # MOV r0, #1
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, MM, MM,
-                       MM, XX,
-                       MM, MM, MM, MM],
-        offset      = 8,
-        stock_bytes = bytes([0x3D]),    # JMPR cc_NE — jump on not-equal
-        patch_bytes = bytes([0x0D]),    # JMPR cc_UC — always skip fail
-        confidence  = "UNCONFIRMED",
-        warning     = "⚠ BENCH TESTING ONLY.",
-    ),
 
     # ── Emissions ─────────────────────────────────────────────────────────────
 
-    PatchDef(
-        name        = "Rear O2 Sensor Delete",
-        description = ("Disables post-cat oxygen sensor diagnostic. Suppresses "
-                       "P0141/P0140 when rear O2 (B1S2) is removed or a decat fitted. "
-                       "The front lambda sensor still controls closed-loop fuelling "
-                       "normally — this only affects the post-cat monitoring circuit. "
-                       "The rear sensor is always a conventional NB binary-switch type "
-                       "regardless of what front sensor the ECU uses."),
-        category    = PatchCategory.EMISSIONS,
-        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
-                       0xF3, 0xF4, XX, XX,   # MOVBZ r4, LSUKATS (rear O2 byte)
-                       0x49, 0xF4,           # CMPB  rl4, r4
-                       0x8D, XX,             # JMPR  cc_Z, ok
-                       0xE6, 0xF4, XX, XX],  # MOV   r4, #fault_flag
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM,
-                       MM, XX,
-                       MM, MM, XX, XX],
-        offset      = 10,
-        stock_bytes = bytes([0x8D]),    # conditional jump (fault if not OK)
-        patch_bytes = bytes([0x0D]),    # unconditional jump (always OK)
-        confidence  = "UNCONFIRMED",
-        warning     = "Disables OBD-II rear O2 monitoring (P0140/P0141).  "
-                      "For 2.7T biturbo: also apply Rear O2 Delete Bank 2.",
-        # No applies_to restriction — rear post-cat O2 patch applies to all
-        # 1.8T and 06B profiles regardless of front sensor type.
-    ),
 
-    PatchDef(
-        name        = "Secondary Air Pump Delete",
-        description = ("Disables secondary air injection monitoring. "
-                       "Suppresses P0410/P0411 when pump is removed."),
-        category    = PatchCategory.EMISSIONS,
-        needle      = [0x9A, XX, XX, XX,     # JNB  bitfield.bit, target
-                       0xE6, 0xF0, XX, XX,   # MOV  r0, #LSBRKUM
-                       0xF6, 0xF0, XX, XX],  # MOV  word_XXXX, r0
-        mask        = [MM, XX, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM, XX, XX],
-        offset      = 0,
-        stock_bytes = bytes([0x9A]),    # JNB — conditional
-        patch_bytes = bytes([0x0D]),    # JMPR cc_UC — always skip
-        confidence  = "UNCONFIRMED",
-        warning      = "Disables P0410/P0411.",
-        requires_fuel = ["MPI"],
-    ),
 
-    PatchDef(
-        name        = "EGR Delete",
-        description = ("Disables EGR system monitoring. Suppresses P0400/P0401 "
-                       "when EGR valve is blocked or removed."),
-        category    = PatchCategory.EMISSIONS,
-        needle      = [0xE6, 0xF0, XX, XX,   # MOV  r0, #CWEGRAKTION
-                       0x20, 0xF0,           # AND  r0, r0
-                       0x8D, XX,             # JMPR cc_Z, skip_egr
-                       0xE6, 0xF0, XX, XX],  # MOV  r0, #egr_active
-        mask        = [MM, MM, XX, XX,
-                       MM, MM,
-                       MM, XX,
-                       MM, MM, XX, XX],
-        offset      = 6,
-        stock_bytes = bytes([0x8D]),
-        patch_bytes = bytes([0x0D]),
-        confidence  = "UNCONFIRMED",
-        warning      = "Disables P0400/P0401.",
-        requires_fuel = ["MPI"],
-    ),
 
-    PatchDef(
-        name        = "Decel Fuel Cut Disable (DFCO)",
-        description = ("Disables deceleration fuel cut. On stock ECUs fuel is "
-                       "cut when throttle closes above ~1500 RPM. Disabling "
-                       "smooths engine braking and prevents lean surge on "
-                       "aggressive lifts with modified intake."),
-        category    = PatchCategory.PERFORMANCE,
-        needle      = [0x9A, XX, XX, XX,     # JNB  CWKONFZ.DFCO_bit
-                       0xF2, 0xF0, XX, XX,   # MOV  r0, NMOT
-                       0x42, 0xF0, XX, XX],  # CMP  r0, #dfco_rpm
-        mask        = [MM, XX, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM, XX, XX],
-        offset      = 0,
-        stock_bytes = bytes([0x9A]),    # JNB — enters DFCO if bit set
-        patch_bytes = bytes([0x0D]),    # JMP — always skip DFCO
-        confidence  = "UNCONFIRMED",
-    ),
 
     # ── Performance ───────────────────────────────────────────────────────────
 
-    PatchDef(
-        name        = "Vmax Speed Limiter Disable",
-        description = ("Removes the 250 km/h electronic speed limiter. "
-                       "Stock limit enforced by fuel cut at vehicle speed "
-                       "threshold. Patch makes the comparison unreachable."),
-        category    = PatchCategory.PERFORMANCE,
-        needle      = [0xF2, 0xF0, XX, XX,   # MOV  r0, VFZGKL (speed)
-                       0x42, 0xF0, XX, XX,   # CMP  r0, #vmax_limit
-                       0x9D, XX,             # JMPR cc_NE
-                       0xE6, 0xF0, XX, XX],  # MOV  r0, #fuel_cut_flag
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, XX,
-                       MM, MM, XX, XX],
-        offset      = 4,
-        stock_bytes = bytes([0x42, 0xF0, 0xFA, 0x00]),  # CMP r0, #250 (approx)
-        patch_bytes = bytes([0x42, 0xF0, 0xFF, 0xFF]),  # CMP r0, #65535 — never fires
-        confidence  = "UNCONFIRMED",
-        notes       = "Stock comparison value varies by market/tune.",
-    ),
 
     # ── Diagnostics ───────────────────────────────────────────────────────────
 
-    PatchDef(
-        name        = "CEL O2 Readiness Suppress",
-        description = ("Suppresses the O2 sensor readiness bit in OBD-II "
-                       "mode 01. Prevents 'not ready' CEL after rear O2 "
-                       "delete. Does not affect fault code storage."),
-        category    = PatchCategory.DIAGNOSTICS,
-        needle      = [0xE6, 0xF0, XX, XX,   # MOV  r0, #CWSASY
-                       0xA2, 0xF0, XX, XX,   # CMPB rl0, DKWSASY
-                       0x8D, XX],            # JMPR cc_Z, ready
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, XX],
-        offset      = 8,
-        stock_bytes = bytes([0x8D]),   # conditional — CEL if not ready
-        patch_bytes = bytes([0x0D]),   # always "ready"
-        confidence  = "UNCONFIRMED",
-    ),
 
     # ── Dual-bank rear O2 (2.7T biturbo, V6) ─────────────────────────────────
 
-    PatchDef(
-        name        = "Rear O2 Sensor Delete — Bank 2",
-        description = ("Disables the Bank 2 post-cat oxygen sensor diagnostic. "
-                       "Required in addition to the Bank 1 patch on V6 biturbo "
-                       "engines (AGB/ARE/AZZ 2.7T) which have two separate "
-                       "catalyst monitors.  Suppresses P0161/P0160."),
-        category    = PatchCategory.EMISSIONS,
-        needle      = [0xD7, 0x40, XX, XX,   # EXTP  #seg, #1
-                       0xF3, 0xF4, XX, XX,   # MOVBZ r4, LSUKATS_B2 (bank 2 rear O2)
-                       0x49, 0xF4,           # CMPB  rl4, r4
-                       0x8D, XX,             # JMPR  cc_Z, ok_b2
-                       0xE6, 0xF4, XX, XX],  # MOV   r4, #fault_flag_b2
-        mask        = [MM, MM, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM,
-                       MM, XX,
-                       MM, MM, XX, XX],
-        offset      = 10,
-        stock_bytes = bytes([0x8D]),
-        patch_bytes = bytes([0x0D]),
-        confidence  = "UNCONFIRMED",
-        warning     = "Disables OBD-II Bank 2 rear O2 monitoring (P0160/P0161).",
-        applies_to  = {"dual_bank"},   # only shown for V6/V8 multi-bank profiles
-    ),
 
     # ── EVAP ──────────────────────────────────────────────────────────────────
 
-    PatchDef(
-        name        = "EVAP Purge Delete",
-        description = ("Disables EVAP (evaporative emissions) purge valve "
-                       "monitoring.  Suppresses P0441/P0442 when the charcoal "
-                       "canister or purge valve is removed.  Common on race builds "
-                       "running a vented catch tank instead of the OEM system."),
-        category    = PatchCategory.EMISSIONS,
-        # TEV (Tankreinigungsventil) enable check — bit in configuration codeword
-        needle      = [0x9A, XX, XX, XX,     # JNB   CWKONFZ.TEV_bit, skip_evap
-                       0xE6, 0xF0, XX, XX,   # MOV   r0, #TEV_state
-                       0x46, 0xF0, XX, XX],  # CMP   r0, #tev_active_mask
-        mask        = [MM, XX, XX, XX,
-                       MM, MM, XX, XX,
-                       MM, MM, XX, XX],
-        offset      = 0,
-        stock_bytes = bytes([0x9A]),   # JNB — enters EVAP monitor if bit set
-        patch_bytes = bytes([0x0D]),   # JMP — always skip EVAP monitor
-        confidence  = "UNCONFIRMED",
-        warning     = "Disables OBD-II EVAP monitoring (P0441/P0442).",
-    ),
 
     # ── Knock protection ──────────────────────────────────────────────────────
 
@@ -931,6 +726,24 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+
+    # ── Rear O2 Monitor Threshold — fw4013 LP variant ────────────────────────────
+    # 06A906032LP has 0x8D/0x73 O2 threshold bytes at 20 bytes before the LP PN string.
+
+    OffsetPatchDef(
+        name          = "Rear O2 Monitor Threshold (ME7.5 06A LP fw4013)",
+        description   = ("Raises the rear O2 sensor activity threshold on "
+                         "06A906032LP fw4013 ECUs. Anchored on the LP part number string."),
+        category      = PatchCategory.EMISSIONS,
+        anchor_bytes  = b"06A906032LP",
+        anchor_offset = -20,
+        stock_bytes   = bytes([0x8D,0x80]),
+        patch_bytes   = bytes([0x80,0x73]),
+        confidence    = "CONFIRMED",
+        notes         = ("LP PN at 0x01122F. 0x8D80 at PN-20 confirmed in LP_0005. "
+                         "Mechanism confirmed from DL patch. No patched LP in corpus."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
     MultiOffsetPatchDef(
         name          = "Rear O2 OBD Readiness Flags",
         description   = ("Clears 7 OBD readiness flag bytes that track whether "

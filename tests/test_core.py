@@ -373,8 +373,7 @@ class TestPatches:
     def test_categories_all_used(self):
         cats = {p.category for p in ALL_PATCHES}
         assert PatchCategory.EMISSIONS in cats
-        assert PatchCategory.IMMOBILISER in cats
-
+        
     def test_patch_count(self):
         assert len(ALL_PATCHES) >= 8
 
