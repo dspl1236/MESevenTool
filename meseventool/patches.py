@@ -618,6 +618,40 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "15 needle hits across full ROM — all in ERKSP function.  "
                        "applies_to={'1.8t'} — 2.7T uses a separate needle (R6 not R4)."),
     ),
+    # ── Knock Retard Code Disable (2.7T ME7.1 — STORE→LOAD redirect) ──────────────
+    # Needle uniquely identifies the single ERKSP retard-store instruction in ME7.1.
+    # F2 F4 [cal] F6 F4 [ram] F2 F4 [ram] 68 44
+    # offset=4: F6 F4 (STORE) → F2 F4 (LOAD). RAM variable never written, retard disabled.
+    # Coverage: all 30 ME7.1 variants (8D/4B/4Z7 early). ME7.1.1 has different code.
+
+    PatchDef(
+        name          = "Knock Retard Code Disable (2.7T ME7.1)",
+        description   = ("Prevents knock retard accumulation by changing a STORE "
+                         "instruction to a LOAD in the ERKSP function: "
+                         "F6 F4 [addr] (MOV [ram], R4) → F2 F4 [addr] (MOV R4, [ram]). "
+                         "The knock retard RAM variable is never written so timing is "
+                         "never retarded for knock events. "
+                         "Covers all 30 tested ME7.1 8D/4B/4Z7-early variants. "
+                         "ME7.1.1 (4Z7-late, 4D1 RS4/S8) uses different code."),
+        category      = PatchCategory.IGNITION,
+        needle        = bytes([0xF2,0xF4, 0x00,0x00, 0xF6,0xF4, 0x00,0x00,
+                                0xF2,0xF4, 0x00,0x00, 0x68,0x44]),
+        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0xFF, 0x00,0x00,
+                                0xFF,0xFF, 0x00,0x00, 0xFF,0xFF]),
+        offset        = 4,
+        stock_bytes   = bytes([0xF6,0xF4]),
+        patch_bytes   = bytes([0xF2,0xF4]),
+        warning       = "⚠ DYNO/BENCH USE ONLY. Disables knock protection entirely.",
+        confidence    = "CONFIRMED",
+        notes         = ("1 hit per file confirmed in 30/30 ME7.1 variants. "
+                         "68 44 (SUB R4,R4) is the unique discriminator vs other "
+                         "F2 F4/F6 F4 pairs in the ROM. "
+                         "8D/4B/4Z7 early: all confirmed STOCK (F6 F4). "
+                         "No patched reference in corpus — STOCK detection proven. "
+                         "4Z7-late/4D1 ME7.1.1 use different instruction at this site."),
+        applies_to    = {"me7.1", "2.7t"},
+    ),
+
     OffsetPatchDef(
         name          = "Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)",
         description   = ("Disables knock retard accumulation on 2.7T biturbo ME7.1/ME7.1.1 "
