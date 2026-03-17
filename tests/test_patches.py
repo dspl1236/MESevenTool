@@ -1737,3 +1737,99 @@ class TestHardRevAltPathScalar1p8T(unittest.TestCase):
 
     def test_sl_one_hit(self):
         self.assertEqual(self._hits('1773719274817_032sl_auto_revo_1.bin'), 1)
+
+
+# =============================================================================
+# Emergency RPM Cut ScalarPatchDef (ME7.5 1.8T — all variants)
+# =============================================================================
+class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
+    """Emergency RPM cut (NKILL) scalar reads correct values across ME7.5 1.8T ROMs."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path, 'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_SCALAR_PATCHES
+        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'NKILL' in p.name)
+
+    def _rpm(self, fname):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        s = Searcher(rom)
+        v = self.patch.read(rom, s)
+        self.assertIsNotNone(v, f"None for {fname}")
+        return v
+
+    def _assert_hits(self, fname, expected=2):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        s = Searcher(rom)
+        hits = s.search(list(self.patch.needle), list(self.patch.mask))
+        self.assertEqual(len(hits), expected, f"{fname}: expected {expected} hits, got {len(hits)}")
+
+    # ── exact-value tests ────────────────────────────────────────────────────
+    def test_dl_stock_10424rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'), 10424, delta=2)
+
+    def test_rn_stock_10424rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274810_06A906032RN.bin'), 10424, delta=2)
+
+    def test_lp_stock_10424rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875934_06A906032LP_0005.bin'), 10424, delta=2)
+
+    def test_18cm_stock_10424rpm(self):
+        self.assertAlmostEqual(self._rpm('18CM.Bin'), 10424, delta=2)
+
+    def test_hn_tuned_10808rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875938_uni_630HN.bin'), 10808, delta=2)
+
+    def test_rn_uni870_10808rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274820_uni870_032pl.bin'), 10808, delta=2)
+
+    def test_20th_raised_10616rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274814_20th_180hp_032pl.bin'), 10616, delta=2)
+
+    def test_sl_revo_10616rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274817_032sl_auto_revo_1.bin'), 10616, delta=2)
+
+    # ── 2 hits per file ──────────────────────────────────────────────────────
+    def test_dl_two_hits(self):
+        self._assert_hits('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+
+    def test_rn_two_hits(self):
+        self._assert_hits('1773719274810_06A906032RN.bin')
+
+    def test_sl_two_hits(self):
+        self._assert_hits('1773719274817_032sl_auto_revo_1.bin')
+
+    # ── low byte constant ─────────────────────────────────────────────────────
+    def test_low_byte_0x4a_constant_in_all_stock(self):
+        """All stock files have 0x4A as the constant low byte."""
+        from meseventool.needle import Searcher
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        for fname in [
+            '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin',
+            '1773719274810_06A906032RN.bin',
+            '18CM.Bin',
+        ]:
+            path = f'{self.UPLOADS}/{fname}'
+            if not os.path.exists(path):
+                continue
+            with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+                f.write(open(path,'rb').read()); tmp = f.name
+            rom = ROMImage.load(tmp); os.unlink(tmp)
+            s = Searcher(rom)
+            hits = s.search(list(self.patch.needle), list(self.patch.mask))
+            for h in hits:
+                lo = rom.data[h.file_offset + self.patch.offset]
+                self.assertEqual(lo, 0x4A, f"{fname}: low byte at 0x{h.file_offset:06X} = 0x{lo:02X}, expected 0x4A")

@@ -1650,6 +1650,42 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── Emergency RPM Cut / Absolute Maximum (ME7.5 1.8T — universal) ──────────
+    # A third RPM limit ~3264 RPM above the hard rev limit (same 0x4A low byte family).
+    # Likely NKILL: absolute maximum where both fuel and ignition are cut simultaneously.
+    # Present in all MT and DSG uploads, 2 hits per file, always consistent values.
+    # DL/RN/LP/18CM all stock  = 10424 RPM (raw 0x364A = 13898)
+    # SL DSG / 20th / rn_base = 10616 RPM (raw 0x384A-ish)
+    # Unitronic Stage 2        = 10808 RPM (raw 0x384A = 14410)
+    # Low byte 0x4A is constant. High byte: stock=0x36, tuned=0x38.
+
+    ScalarPatchDef(
+        name          = "Emergency RPM Cut — NKILL (ME7.5 1.8T — all variants)",
+        description   = ("Absolute maximum RPM — cuts fuel and ignition simultaneously. "
+                         "~3264 RPM above the hard rev limit; acts as failsafe backstop. "
+                         "Stock all MT variants: 10424 RPM. Unitronic Stage 2: 10808 RPM. "
+                         "Same 0x4A low-byte family as Hard Rev Limit and Overrev Protection. "
+                         "2 hits per file; apply to both sites."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xF7,0xF8, 0x00,0x00, 0xE1,0x08,
+                               0x00,0x00, 0xF4,0x00, 0x49,0x81, 0x3D,0x09]),
+        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                               0x00,0x00, 0xFF,0x00, 0xFF,0xFF, 0xFF,0xFF]),
+        offset        = 6,
+        size          = 2,
+        big_endian    = False,
+        scale         = 0.75,
+        unit          = "RPM",
+        min_val       = 7000.0,
+        max_val       = 13000.0,
+        confidence    = "CONFIRMED",
+        notes         = ("2 hits per file (two call sites). Apply to both. "
+                         "Low byte always 0x4A (74). High byte: 0x36=10424RPM(stock all), "
+                         "0x38=10808RPM(Unitronic S2). Delta from hard rev limit = +3264 RPM. "
+                         "Present in SL DSG unlike Overrev Protection scalar."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_SCALAR_PATCHES
 
 # Legacy aliases
