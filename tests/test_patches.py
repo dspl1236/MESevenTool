@@ -194,11 +194,12 @@ class TestRegistry:
             assert p.description
             assert isinstance(p.category, PatchCategory)
             # Needle/mask only on needle-based patches
+            from meseventool.patches import FixedAddressPatchDef
             if isinstance(p, MultiOffsetPatchDef):
                 assert len(p.sites) > 0
                 for site in p.sites:
                     assert len(site) == 3  # (offset, stock_byte, patch_byte)
-            elif isinstance(p, OffsetPatchDef):
+            elif isinstance(p, (OffsetPatchDef, FixedAddressPatchDef)):
                 assert len(p.stock_bytes) == len(p.patch_bytes)
             else:
                 assert len(p.needle) == len(p.mask)
@@ -1103,3 +1104,201 @@ class TestRealROM27T(unittest.TestCase):
         r = self._detect("Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)",
                          "4D1907558-0002.bin")
         assert r.state == PatchState.STOCK
+
+
+# =============================================================================
+# 5th-Gear Torque Mode Disable (universal 1.8T ME7.5) — FixedAddressPatchDef
+# =============================================================================
+class TestGearModePatch(unittest.TestCase):
+    """Fixed address patch at 0x00881D: 0x0F -> 0x00."""
+
+    ADDR = 0x00881D
+
+    def setUp(self):
+        from meseventool.patches import ALL_PATCHES
+        self.patch = next(p for p in ALL_PATCHES if '5th-Gear' in p.name)
+
+    def _rom(self, val):
+        from meseventool.rom import ROMImage
+        import tempfile, os
+        data = bytearray(0x100000)
+        data[self.ADDR] = val
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(bytes(data)); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        return rom
+
+    def test_stock_0f(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(0x0F)).state == PatchState.STOCK
+
+    def test_patched_00(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(0x00)).state == PatchState.PATCHED
+
+    def test_unknown_other(self):
+        from meseventool.patches import PatchState
+        assert self.patch.detect(self._rom(0x05)).state == PatchState.UNKNOWN
+
+    def test_apply_writes_00(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(0x0F)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.STOCK
+        self.patch.apply(rom, r)
+        assert rom.data[self.ADDR] == 0x00
+
+    def test_revert_restores_0f(self):
+        from meseventool.patches import PatchState
+        rom = self._rom(0x00)
+        r = self.patch.detect(rom)
+        assert r.state == PatchState.PATCHED
+        self.patch.revert(rom, r)
+        assert rom.data[self.ADDR] == 0x0F
+
+    def test_real_dl_stock(self):
+        import os, tempfile
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        path = '/mnt/user-data/uploads/1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'
+        if not os.path.exists(path):
+            self.skipTest("DL ROM not available")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        assert self.patch.detect(rom).state == PatchState.STOCK
+
+    def test_real_uni870_patched(self):
+        import os, tempfile
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        path = '/mnt/user-data/uploads/1773719274820_uni870_032pl.bin'
+        if not os.path.exists(path):
+            self.skipTest("uni870 ROM not available")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        assert self.patch.detect(rom).state == PatchState.PATCHED
+
+    def test_real_18cm_stock(self):
+        import os, tempfile
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        path = '/mnt/user-data/uploads/18CM.Bin'
+        if not os.path.exists(path):
+            self.skipTest("18CM ROM not available")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        assert self.patch.detect(rom).state == PatchState.STOCK
+
+    def test_real_18cm_uni2_patched(self):
+        import os, tempfile
+        from meseventool.patches import PatchState
+        from meseventool.rom import ROMImage
+        path = '/mnt/user-data/uploads/170hp_018cm_PassatUNI2.bin'
+        if not os.path.exists(path):
+            self.skipTest("18CM uni2 ROM not available")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp)
+        assert self.patch.detect(rom).state == PatchState.PATCHED
+
+
+# =============================================================================
+# 4B0906018 codeword patches (real ROM tests)
+# =============================================================================
+class TestRealROM4B0906018(unittest.TestCase):
+    """Integration tests against real 4B0906018 ROM files."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom
+
+    def _detect(self, patch_name, rom):
+        from meseventool.patches import ALL_PATCHES
+        p = next(p for p in ALL_PATCHES if p.name == patch_name)
+        return p.detect(rom)
+
+    # ── CDKAT ────────────────────────────────────────────────────────────
+    def test_cdkat_stock_in_18cm(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)',
+                         self._load('18CM.Bin'))
+        assert r.state == PatchState.STOCK
+
+    def test_cdkat_patched_in_18cm_uni2(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)',
+                         self._load('170hp_018cm_PassatUNI2.bin'))
+        assert r.state == PatchState.PATCHED
+
+    # ── CDKVS ────────────────────────────────────────────────────────────
+    def test_cdkvs_stock_in_18cm(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)',
+                         self._load('18CM.Bin'))
+        assert r.state == PatchState.STOCK
+
+    def test_cdkvs_patched_in_18cm_uni2(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)',
+                         self._load('170hp_018cm_PassatUNI2.bin'))
+        assert r.state == PatchState.PATCHED
+
+    # ── CDKVS2 ───────────────────────────────────────────────────────────
+    def test_cdkvs2_stock_in_18cm(self):
+        """18CM has unique stock value 0x03 for CDKVS2."""
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
+                         self._load('18CM.Bin'))
+        assert r.state == PatchState.STOCK, \
+            f"Expected STOCK (0x03) in 18CM, got {r.state}"
+
+    def test_cdkvs2_patched_in_18cm_uni2(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
+                         self._load('170hp_018cm_PassatUNI2.bin'))
+        assert r.state == PatchState.PATCHED
+
+    def test_cdkvs2_not_stock_in_06a(self):
+        """06A has 0x00 at 0x0181A3 (not 0x03), so NOT stock for this patch."""
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
+                         self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'))
+        # 06A has 0x00 there already — shows as PATCHED (not STOCK)
+        # With profile this would be NOT_APPLICABLE; without profile it shows PATCHED
+        assert r.state != PatchState.STOCK, \
+            "06A DL should not have CDKVS2=0x03 (the 18CM stock value)"
+
+    # ── EVAP ─────────────────────────────────────────────────────────────
+    def test_evap_stock_in_18cm(self):
+        from meseventool.patches import PatchState
+        r = self._detect('EVAP Diagnosis Disable (4B0906018 A6/Passat 1.8T)',
+                         self._load('18CM.Bin'))
+        assert r.state == PatchState.STOCK
+
+    def test_evap_stock_in_18cm_uni2(self):
+        """uni2 tune does NOT patch EVAP — only the dpf_evap file does."""
+        from meseventool.patches import PatchState
+        r = self._detect('EVAP Diagnosis Disable (4B0906018 A6/Passat 1.8T)',
+                         self._load('170hp_018cm_PassatUNI2.bin'))
+        assert r.state == PatchState.STOCK, \
+            "18CM_uni2 should NOT have EVAP patched"
+
+    def test_evap_patched_in_18cm_dpf_evap(self):
+        from meseventool.patches import PatchState
+        fname = 'dpffiles_com_3458_Volkswagen_Passat_1_8T_20V_Bosch_ME7_5_EVAP_no_chk.bin'
+        r = self._detect('EVAP Diagnosis Disable (4B0906018 A6/Passat 1.8T)',
+                         self._load(fname))
+        assert r.state == PatchState.PATCHED

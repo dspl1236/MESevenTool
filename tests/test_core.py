@@ -318,19 +318,19 @@ class TestMaps:
 
 class TestPatches:
     def test_all_patches_valid(self):
-        from meseventool.patches import OffsetPatchDef, MultiOffsetPatchDef
+        from meseventool.patches import OffsetPatchDef, MultiOffsetPatchDef, FixedAddressPatchDef
         for p in ALL_PATCHES:
             assert p.name
             assert p.description
             assert isinstance(p.category, PatchCategory)
             # Needle/mask only on needle-based patches
-            if not isinstance(p, (OffsetPatchDef, MultiOffsetPatchDef)):
+            if isinstance(p, (OffsetPatchDef, MultiOffsetPatchDef, FixedAddressPatchDef)):
+                # Offset/fixed patches: just check stock/patch length
+                if isinstance(p, (OffsetPatchDef, FixedAddressPatchDef)):
+                    assert len(p.stock_bytes) == len(p.patch_bytes)
+            else:
                 assert len(p.needle) == len(p.mask)
                 assert len(p.stock_bytes) == len(p.patch_bytes)
-            else:
-                # Offset patches: check stock/patch length equivalence differently
-                if isinstance(p, OffsetPatchDef):
-                    assert len(p.stock_bytes) == len(p.patch_bytes)
 
     def test_detect_missing_when_needle_absent(self):
         rom = make_rom(fill=0xFF)

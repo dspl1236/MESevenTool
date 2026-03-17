@@ -19,6 +19,8 @@ from .maps      import (MapDef, AxisDef, MapFinder, make_awp_maps,
                         U8, U16, S8, S16,
                         _rpm, _deg, _pct, _lambda)
 from .patches   import (PatchDef, PatchResult, PatchState, PatchCategory,
+                        FixedAddressPatchDef, OffsetPatchDef,
+                        ScalarPatchDef, MultiOffsetPatchDef,
                         ALL_PATCHES, detect_all)
 from .profiles  import (ROMProfile, PROFILE_AWP, PROFILE_UNKNOWN,
                         ALL_PROFILES, PROFILES, detect_profile, get_profile)

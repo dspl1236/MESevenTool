@@ -401,8 +401,9 @@ class FixedAddressPatchDef:
     def check_applicable(self, profile=None) -> bool:
         if not self.applies_to or profile is None:
             return True
-        tags = getattr(profile, 'tags', set())
-        return bool(self.applies_to & tags)
+        # Use .platforms (same as PatchDef) — .tags doesn't exist on ROMProfile
+        platforms = getattr(profile, 'platforms', set())
+        return self.applies_to.issubset(platforms)
 
     def detect(self, rom: ROMImage,
                searcher=None, profile=None) -> 'PatchResult':
@@ -1222,6 +1223,127 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "in every tested 1MB ME7 file. Offset 26 from anchor = CDLSH. "
                          "Front O2 codewords at other offsets are untouched."),
         applies_to    = {"me7.1", "me7.1.1", "2.7t"},
+    ),
+
+
+    # =========================================================================
+    # Universal 1.8T ME7.5 — gear/mode table byte 0x881D
+    # =========================================================================
+    # At address 0x00881D in ALL 1.8T ME7.5 files (06A906032 all variants AND
+    # 4B0906018 A6/Passat family) lies a gear-indexed operating mode lookup table:
+    #   [00 09 0A 0B 0C 0F 0D 0E]  (address 0x008818, 8 bytes)
+    # Index 5 (byte at 0x00881D) = mode 0x0F = applied to 5th gear.
+    # Setting to 0x00 makes 5th gear use the same mode as neutral/gear-0,
+    # removing a 5th-gear-specific torque reduction used for emissions compliance.
+    # EVERY known tuned 1.8T ME7.5 file patches this byte.
+    # Confirmed patched in: uni870_RN, uni630_HN, 20th_180hp, revo_RN,
+    #   170hp_18CM_PassatUNI2, dpf_EVAP (all tuned files tested).
+    # Confirmed stock in:   DL_OEM, RN_stock, LP_0005, 18CM_stock.
+    # Address 0x00881D is stable across firmware 4012/4013/4019 and both ECU families.
+
+    FixedAddressPatchDef(
+        name        = "5th-Gear Torque Mode Disable (ME7.5 1.8T universal)",
+        description = ("Removes a 5th-gear-specific torque reduction by setting "
+                       "the gear operating-mode table byte at 0x00881D from 0x0F to 0x00. "
+                       "The byte at 0x00881D is index 5 of an 8-element gear-mode table "
+                       "at 0x008818. Mode 0x0F applies an emissions/economy torque cap "
+                       "at steady highway speeds in 5th gear. Setting to 0x00 makes "
+                       "5th gear use mode 0 (same as neutral/idle), removing the cap. "
+                       "Present in every known tuned 1.8T ME7.5 file. Universal across "
+                       "06A906032 (Golf/Jetta/TT) and 4B0906018 (A6/Passat) families."),
+        category    = PatchCategory.PERFORMANCE,
+        fixed_addr  = 0x00881D,
+        stock_bytes = bytes([0x0F]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("Confirmed STOCK in: DL_OEM, RN_stock, LP_0005, 18CM_stock. "
+                       "Confirmed PATCHED in: uni870_RN, uni630_HN, 20th_180hp, revo_RN, "
+                       "170hp_18CM_PassatUNI2, dpf_EVAP. "
+                       "Address 0x00881D is identical in firmware 4012.31/4013.120/4019.3. "
+                       "No anchor needed — address is rock-solid across all variants."),
+        applies_to  = {"me7.5", "1.8t"},
+    ),
+
+    # =========================================================================
+    # 4B0906018 A6/Passat 1.8T — codeword patches
+    # =========================================================================
+    # The 4B0906018 ECU (AWM 170hp A6 C5 / Passat B5.5) uses the same codeword
+    # block at 0x018194 as all ME7.5 1.8T ECUs.
+    # Key differences from 06A906032:
+    #   CDKVS2 at 0x0181A3 = 0x03 in 18CM stock (06A has 0x00) — extra knock config
+    #   CWSLS  at 0x0181B5 = 0x04 in 18CM (06A has 0x00) — different O2 heater mode
+    # Confirmed from: 18CM.Bin (stock), 170hp_018cm_PassatUNI2.bin (tuned),
+    #   dpffiles_com_EVAP_no_chk.bin (EVAP+SAP delete).
+
+    # ── Catalyst + Knock Monitor Disable (CDKAT/CDKVS/CDKVS2) ────────────────
+    # CDKAT  0x0181A1: stock=0x01 — catalyst efficiency monitoring
+    # CDKVS  0x0181A2: stock=0x01 — knock sensor monitoring
+    # CDKVS2 0x0181A3: stock=0x03 — knock sensor variant (unique 0x03 in 18CM!)
+    # All three patched to 0x00 in 18CM_uni2 and dpf_evap.
+    # Anchor: the stable block preamble FF FF FF FF 00 00 01 01 at 0x018190.
+    # CDKAT is at anchor+17 (0x018190+17=0x0181A1), CDKVS at +18, CDKVS2 at +19.
+
+    # 4B0906018 codewords use FixedAddressPatchDef: codeword block fixed at 0x018194.
+    # 18CM anchor layout differs from 06A so OffsetPatchDef anchors don't work.
+
+    FixedAddressPatchDef(
+        name        = "Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)",
+        description = ("Disables catalyst efficiency monitoring (P0420) by setting "
+                       "CDKAT=0 at fixed address 0x0181A1 in 4B0906018 AWM ECU."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181A1,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("18CM stock=0x01, uni2=0x00, evap=0x00. "
+                       "Address 0x0181A1 fixed in all 4B0906018 variants."),
+        applies_to  = {"me7.5", "1.8t", "4b0906018"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)",
+        description = ("Disables knock sensor monitoring by setting CDKVS=0 "
+                       "at fixed address 0x0181A2 in 4B0906018 AWM ECU."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181A2,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("18CM stock=0x01, uni2=0x00, evap=0x00."),
+        applies_to  = {"me7.5", "1.8t", "4b0906018"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)",
+        description = ("Disables knock sensor variant monitoring by setting CDKVS2=0 "
+                       "at fixed address 0x0181A3. Stock=0x03 in 4B0906018 (unique -- "
+                       "06A906032 already has 0x00 here so this patch won't fire there)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181A3,
+        stock_bytes = bytes([0x03]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("18CM stock=0x03 (not 0x01), uni2=0x00, evap=0x00. "
+                       "The 0x03 stock value is the discriminator: won't match 06A files."),
+        applies_to  = {"me7.5", "1.8t", "4b0906018"},
+    ),
+
+
+    FixedAddressPatchDef(
+        name        = "EVAP Diagnosis Disable (4B0906018 A6/Passat 1.8T)",
+        description = ("Disables EVAP purge system fault monitoring by setting "
+                       "CDTES=0 at fixed address 0x0181B2 in 4B0906018 AWM ECU. "
+                       "Prevents P0440-P0446 when charcoal canister or purge valve "
+                       "is removed. 4B0906018 codeword layout differs from 06A906032 "
+                       "so the anchor-based EVAP patch does not match."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181B2,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("CDTES at 0x0181B2. 18CM stock=0x01, 18CM_uni2=0x01 (not patched), "
+                       "18CM_dpf_evap=0x00. Only the dpf_EVAP tune removes EVAP on 18CM."),
+        applies_to  = {"me7.5", "1.8t", "4b0906018"},
     ),
 
 ]  # end ALL_PATCHES
