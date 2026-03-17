@@ -1581,6 +1581,41 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── Overrev / Fuel Cut Reset RPM (ME7.5 1.8T MT) ──────────────────────────
+    # A second RPM limit found ~1000 RPM above the hard rev limit.
+    # Consistent needle, 1 hit per file, absent in SL DSG firmware (X505R).
+    # Values: DL/LP/RN MT stock = 8180 RPM, 18CM stock = 7988 RPM.
+    # Unitronic Stage 2 / 20th_180hp / rn_base tuned = 8372 RPM.
+    # Raw: 0x9A2A (LE) stock MT = 10906 → 8180 RPM at 0.75 RPM/bit.
+    # Role uncertain (overrev protection, fuel cut bounce hysteresis, ignition cut).
+
+    ScalarPatchDef(
+        name          = "Overrev Protection RPM (ME7.5 1.8T MT)",
+        description   = ("Upper RPM boundary found ~1000 RPM above the hard rev limit. "
+                         "Present in all MT firmware variants; absent in SL DSG (X505R). "
+                         "DL/LP/RN stock=8180 RPM, 18CM stock=7988 RPM. "
+                         "Raised to 8372 RPM in Unitronic/20th-anniversary tunes. "
+                         "Scale: 0.75 RPM/bit. Role: overrev protection or fuel cut hysteresis."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xF6,0xF4, 0x00,0x00, 0x8A,0x00, 0x02,0x00,
+                               0x00,0x00, 0x16,0x00, 0xF2,0xF4]),
+        mask          = bytes([0xFF,0xFF, 0x00,0x00, 0xFF,0x00, 0xFF,0x00,
+                               0x00,0x00, 0xFF,0x00, 0xFF,0xFF]),
+        offset        = 8,
+        size          = 2,
+        big_endian    = False,
+        scale         = 0.75,
+        unit          = "RPM",
+        min_val       = 5000.0,
+        max_val       = 11000.0,
+        confidence    = "CONFIRMED",
+        notes         = ("1 hit per file in all MT variants. Not present in SL X505R DSG. "
+                         "Always ~1000 RPM above hard rev limit. Low byte 0x9A is constant; "
+                         "high byte: 0x2A=8180RPM(stock DL/RN/LP), 0x29=7988RPM(18CM), "
+                         "0x2B=8372RPM(tuned)."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_SCALAR_PATCHES
 
 # Legacy aliases

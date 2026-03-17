@@ -1605,3 +1605,63 @@ class TestHardRevLimitScalar1p8T(unittest.TestCase):
 
     def test_hn_tuned_two_hits(self):
         self._assert_hits('1773719875938_uni_630HN.bin')
+
+
+# =============================================================================
+# Overrev Protection RPM ScalarPatchDef (ME7.5 1.8T MT)
+# =============================================================================
+class TestOverrevProtectionScalar1p8T(unittest.TestCase):
+    """Overrev protection RPM scalar reads correct values from ME7.5 MT ROMs."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path, 'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_SCALAR_PATCHES
+        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'Overrev' in p.name)
+
+    def _rpm(self, fname):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        s = Searcher(rom)
+        v = self.patch.read(rom, s)
+        self.assertIsNotNone(v, f"None for {fname}")
+        return v
+
+    def test_dl_stock_8180rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'), 8180, delta=2)
+
+    def test_lp_stock_8180rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875934_06A906032LP_0005.bin'), 8180, delta=2)
+
+    def test_rn_stock_8180rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274810_06A906032RN.bin'), 8180, delta=2)
+
+    def test_18cm_stock_7988rpm(self):
+        self.assertAlmostEqual(self._rpm('18CM.Bin'), 7988, delta=2)
+
+    def test_hn_tuned_raised_8372rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875938_uni_630HN.bin'), 8372, delta=2)
+
+    def test_rn_uni870_raised_8372rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274820_uni870_032pl.bin'), 8372, delta=2)
+
+    def test_20th_raised_8372rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274814_20th_180hp_032pl.bin'), 8372, delta=2)
+
+    def test_sl_dsg_absent(self):
+        """SL DSG (X505R) has different code layout — needle returns None."""
+        from meseventool.needle import Searcher
+        rom = self._load('1773719274817_032sl_auto_revo_1.bin')
+        s = Searcher(rom)
+        v = self.patch.read(rom, s)
+        self.assertIsNone(v, "SL DSG should return None (no match)")
