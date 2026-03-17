@@ -643,12 +643,11 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         patch_bytes   = bytes([0xF2,0xF4]),
         warning       = "⚠ DYNO/BENCH USE ONLY. Disables knock protection entirely.",
         confidence    = "CONFIRMED",
-        notes         = ("1 hit per file confirmed in 30/30 ME7.1 variants. "
-                         "68 44 (SUB R4,R4) is the unique discriminator vs other "
-                         "F2 F4/F6 F4 pairs in the ROM. "
-                         "8D/4B/4Z7 early: all confirmed STOCK (F6 F4). "
-                         "No patched reference in corpus — STOCK detection proven. "
-                         "4Z7-late/4D1 ME7.1.1 use different instruction at this site."),
+        notes         = ("1 unique hit per file in 30/57 corpus files (all ME7.1). "
+                         "Coverage: 8D A/B/D/G/H/J/L/M/N, 4B A/F/G/K/L/R/S/T, 4Z7 B-K. "
+                         "MISSING in 4D1 all (ME7.1.1), 4Z7-AA+ (ME7.1.1), 8D AA/T/F/K/Q. "
+                         "F6 F4 = MOV [RAM], R4 (STORE retard); patch F2 F4 = LOAD (NOP for writes). "
+                         "STOCK detection proven; no patched reference in corpus."),
         applies_to    = {"me7.1", "2.7t"},
     ),
 
@@ -1169,46 +1168,64 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
-    # ── SAP Diagnosis Disable (ME7.5 1.8T) ────────────────────────────────
-    # CDSLS at stable codeword block address 0x0181B0.
-    # Confirmed 0x01→0x00 in uni630HN (DL/HN base). SAP pump removed.
-    # Uses the same stable block as ME7.1 — address confirmed same for ME7.5.
+    # ── SAP Diagnosis Disable (ME7.5 1.8T — universal) ─────────────────────────
+    # CDSLS at fixed codeword block address 0x0181B0.
+    # CDSLS=0x01 in ALL ME7.5 1.8T ECU variants (fw4019 DL/HN, fw4013 RN/LP/SL,
+    # fw4012 4B0906018CM). The OffsetPatchDef anchor ("01 00 01 01 01 01 01")
+    # relied on DL's unique 0x00 at CDKVS2 — so missed RN/LP/SL/18CM.
+    # FixedAddressPatchDef covers all ME7.5 1.8T families.
+    # Confirmed PATCHED (0x00) in: uni630HN, uni870, 20th_180hp.
+    # Confirmed STOCK (0x01) in: DL, RN, LP, SL, 18CM stock files.
+    # NOTE: SL_revo (Revo Stage 1) did NOT patch SAP — SAP left enabled.
 
-    OffsetPatchDef(
-        name          = "SAP Diagnosis Disable (ME7.5 1.8T)",
-        description   = ("Disables secondary air injection pump (SAP/J299) fault "
-                         "monitoring by setting CDSLS=0 in the stable codeword block. "
-                         "Prevents P0410/P1411 when SAP pump or relay is removed."),
-        category      = PatchCategory.EMISSIONS,
-        anchor_bytes  = bytes([0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01]),
-        anchor_offset = 6,   # CDSLS is 6 bytes after CDLSA (which is 0x01)
-        stock_bytes   = bytes([0x01]),
-        patch_bytes   = bytes([0x00]),
-        confidence    = "CONFIRMED",
-        notes         = ("CDSLS at 0x0181B0. Confirmed patched in uni630HN. "
-                         "Anchor: CDLSA..CDTANKL run of 0x01 bytes preceding CDSLS."),
-        applies_to    = {"me7.5", "1.8t"},
+    FixedAddressPatchDef(
+        name        = "SAP Diagnosis Disable (ME7.5 1.8T)",
+        description = ("Disables secondary air injection pump (SAP/J299) fault "
+                       "monitoring by setting CDSLS=0 at fixed codeword address "
+                       "0x0181B0. Prevents P0410/P1411 when SAP pump or relay is "
+                       "removed. Covers ALL ME7.5 1.8T ECU variants: fw4019 (DL/HN), "
+                       "fw4013 (RN/LP/SL), fw4012 (4B0906018CM)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181B0,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("Confirmed STOCK: DL/RN/LP/SL/18CM stock files. "
+                       "Confirmed PATCHED: uni630HN, uni870, 20th_180hp. "
+                       "SL_revo (Revo Stage 1) left SAP enabled (STOCK). "
+                       "4B0906018 ECUs also have CDSLS here — "
+                       "the dedicated 4B0906018 SAP patch filters by profile. "
+                       "Without profile, FixedAddress fires on all ECUs with 0x01 here."),
+        applies_to  = {"me7.5", "1.8t"},
     ),
 
-    # ── EVAP Diagnosis Disable (ME7.5 1.8T) ───────────────────────────────
-    # CDTES at stable codeword block address 0x0181B2.
-    # Confirmed 0x01→0x00 in uni630HN. EVAP system removed.
 
-    OffsetPatchDef(
-        name          = "EVAP Purge Diagnosis Disable (ME7.5 1.8T)",
-        description   = ("Disables EVAP purge system fault monitoring by setting "
-                         "CDTES=0 in the stable codeword block. Prevents EVAP-related "
-                         "DTCs (P0440-P0446) when the charcoal canister or purge valve "
-                         "is removed."),
-        category      = PatchCategory.EMISSIONS,
-        anchor_bytes  = bytes([0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]),
-        anchor_offset = 8,   # CDTES is byte 8 of the block
-        stock_bytes   = bytes([0x01]),
-        patch_bytes   = bytes([0x00]),
-        confidence    = "CONFIRMED",
-        notes         = ("CDTES at 0x0181B2. Confirmed patched in uni630HN."),
-        applies_to    = {"me7.5", "1.8t"},
+    # ── EVAP Purge Diagnosis Disable (ME7.5 1.8T — universal) ───────────────────
+    # CDTES at fixed codeword block address 0x0181B2.
+    # Same OffsetPatchDef anchor issue as SAP: anchor was DL-specific.
+    # FixedAddressPatchDef at 0x0181B2 covers ALL ME7.5 1.8T variants.
+    # Confirmed PATCHED (0x00) in: uni630HN (stock=0x01→0x00).
+    # Confirmed STOCK (0x01) in: DL, RN, LP, SL, 18CM stock files.
+
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable (ME7.5 1.8T)",
+        description = ("Disables EVAP purge system fault monitoring by setting "
+                       "CDTES=0 at fixed codeword address 0x0181B2. Prevents "
+                       "P0440-P0446 when charcoal canister or purge valve is removed. "
+                       "Covers ALL ME7.5 1.8T ECU variants: fw4019 (DL/HN), "
+                       "fw4013 (RN/LP/SL), fw4012 (4B0906018CM)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0181B2,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = ("Confirmed STOCK: DL/RN/LP/SL/18CM. "
+                       "Confirmed PATCHED: uni630HN. "
+                       "18CM_evap (dpf_evap tune) also patches this. "
+                       "The 4B0906018 EVAP patch uses the same address."),
+        applies_to  = {"me7.5", "1.8t"},
     ),
+
 
 
     # -- P1681 Immobiliser Databus CEL Disable (ME7.1.1) -------------------
