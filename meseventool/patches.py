@@ -1686,6 +1686,41 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── Fuel Cut Resume / Soft Rev Entry (ME7.5 1.8T — universal) ─────────────
+    # Fourth RPM limit in the rev limiter function cluster (0x030000-0x040000).
+    # Prefix E0 03 24 8F is constant across all firmware variants.
+    # F4 operand byte after value varies by variant — masked in needle.
+    # DL/LP/RN stock=7160RPM, 18CM stock=6776RPM, all tuned=7352RPM.
+    # Same values as primary hard rev limit — likely the FUEL-CUT RESUME point:
+    # RPM must drop to this value before fuelling re-enables after a rev limit event.
+    # 1 hit per file (all variants including SL DSG).
+
+    ScalarPatchDef(
+        name          = "Fuel Cut Resume RPM (ME7.5 1.8T — all variants)",
+        description   = ("RPM must drop to this value for fuelling to re-enable after a rev "
+                         "limit event. 1 hit per file across all ME7.5 1.8T variants. "
+                         "DL/LP/RN stock=7160 RPM, 18CM stock=6776 RPM. "
+                         "All tuned files: 7352 RPM. Scale: 0.75 RPM/bit."),
+        category      = PatchCategory.PERFORMANCE,
+        needle        = bytes([0xE0,0x03, 0x24,0x8F, 0x00,0x00, 0xE1,0x08,
+                               0x00,0x00, 0xF4,0x00, 0x49,0x81, 0x3D,0x09]),
+        mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                               0x00,0x00, 0xFF,0x00, 0xFF,0xFF, 0xFF,0xFF]),
+        offset        = 8,
+        size          = 2,
+        big_endian    = False,
+        scale         = 0.75,
+        unit          = "RPM",
+        min_val       = 4000.0,
+        max_val       = 9000.0,
+        confidence    = "CONFIRMED",
+        notes         = ("1 hit per file — universal (all MT + SL DSG). "
+                         "Prefix E0 03 24 8F constant; F4 operand byte masked. "
+                         "Stock: DL/LP/RN=7160RPM(0x254A), 18CM=6776RPM(0x234A). "
+                         "Tuned: all=7352RPM(0x264A). Same 0x4A low-byte family."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_SCALAR_PATCHES
 
 # Legacy aliases

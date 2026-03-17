@@ -1833,3 +1833,74 @@ class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
             for h in hits:
                 lo = rom.data[h.file_offset + self.patch.offset]
                 self.assertEqual(lo, 0x4A, f"{fname}: low byte at 0x{h.file_offset:06X} = 0x{lo:02X}, expected 0x4A")
+
+
+# =============================================================================
+# Fuel Cut Resume RPM ScalarPatchDef (ME7.5 1.8T — all variants)
+# =============================================================================
+class TestFuelCutResumeScalar1p8T(unittest.TestCase):
+    """Fuel cut resume RPM scalar — universal across all ME7.5 1.8T variants."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f"ROM not available: {fname}")
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path, 'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def setUp(self):
+        from meseventool.patches import ALL_SCALAR_PATCHES
+        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'Fuel Cut Resume' in p.name)
+
+    def _rpm(self, fname):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        v = self.patch.read(rom, Searcher(rom))
+        self.assertIsNotNone(v, f"None for {fname}")
+        return v
+
+    def _hits(self, fname):
+        from meseventool.needle import Searcher
+        rom = self._load(fname)
+        return len(Searcher(rom).search(list(self.patch.needle), list(self.patch.mask)))
+
+    # ── stock values ─────────────────────────────────────────────────────────
+    def test_dl_stock_7160rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'), 7160, delta=2)
+
+    def test_rn_stock_7160rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274810_06A906032RN.bin'), 7160, delta=2)
+
+    def test_lp_stock_7160rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875934_06A906032LP_0005.bin'), 7160, delta=2)
+
+    def test_18cm_stock_6776rpm(self):
+        self.assertAlmostEqual(self._rpm('18CM.Bin'), 6776, delta=2)
+
+    # ── tuned values ─────────────────────────────────────────────────────────
+    def test_hn_tuned_7352rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719875938_uni_630HN.bin'), 7352, delta=2)
+
+    def test_rn_uni870_7352rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274820_uni870_032pl.bin'), 7352, delta=2)
+
+    def test_20th_7352rpm(self):
+        self.assertAlmostEqual(self._rpm('1773719274814_20th_180hp_032pl.bin'), 7352, delta=2)
+
+    # ── universal — 1 hit per file incl DSG ──────────────────────────────────
+    def test_dl_one_hit(self):
+        self.assertEqual(self._hits('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'), 1)
+
+    def test_rn_one_hit(self):
+        self.assertEqual(self._hits('1773719274810_06A906032RN.bin'), 1)
+
+    def test_sl_dsg_one_hit(self):
+        self.assertEqual(self._hits('1773719274817_032sl_auto_revo_1.bin'), 1)
+
+    def test_18cm_one_hit(self):
+        self.assertEqual(self._hits('18CM.Bin'), 1)
