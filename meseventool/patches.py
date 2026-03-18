@@ -1378,6 +1378,97 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to  = {"me7.5", "1.8t", "4b0906018"},
     ),
 
+    # ── Universal codeword block patches (fixed addresses, stable across all ME7) ──
+
+    FixedAddressPatchDef(
+        name          = "Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)",
+        description   = ("Disables the rear (post-cat) O2 sensor heater diagnosis by "
+                         "setting CDLSH=0 at fixed address 0x0181AA. Prevents heater "
+                         "fault codes when rear O2 sensor is removed. Address is stable "
+                         "across all ME7.1, ME7.1.1, and ME7.5 variants."),
+        category      = PatchCategory.EMISSIONS,
+        fixed_addr    = 0x0181AA,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x01 in all 1.8T stock ROMs (DL/RN/LP/SL/18CM). "
+                         "3 of 20 4Z7 allroad stock files already show 0x00 (pre-patched). "
+                         "PATCHED=0x00 confirmed in HN-630hp Unitronic tune. "
+                         "Part of the 3-byte rear O2 full disable at 0x0181AA/AB/AC."),
+        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+    ),
+
+    FixedAddressPatchDef(
+        name          = "Rear O2 Interchange Diagnosis Disable — CDLSHV (universal ME7)",
+        description   = ("Disables the rear O2 sensor interchange / switching "
+                         "diagnosis by setting CDLSHV=0 at 0x0181AB. Prevents "
+                         "P0141/P0161 (heater performance) and interchange faults "
+                         "when rear O2 is removed. Apply together with CDLSH and CDLSV."),
+        category      = PatchCategory.EMISSIONS,
+        fixed_addr    = 0x0181AB,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x01 in all tested ROMs. PATCHED=0x00 confirmed in "
+                         "HN-630hp and 20th Anniversary (PL) tuned files. "
+                         "Apply as part of the CDLSH+CDLSHV+CDLSV triple disable."),
+        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+    ),
+
+    FixedAddressPatchDef(
+        name          = "Rear O2 Voltage Diagnosis Disable — CDLSV (universal ME7)",
+        description   = ("Disables rear O2 sensor voltage / activity diagnosis by "
+                         "setting CDLSV=0 at 0x0181AC. Prevents P0136/P0156 (O2 "
+                         "sensor circuit) faults when rear O2 is removed. "
+                         "Third byte of the standard rear O2 full-delete trio."),
+        category      = PatchCategory.EMISSIONS,
+        fixed_addr    = 0x0181AC,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x01 in all tested ROMs. PATCHED=0x00 confirmed in "
+                         "HN-630hp and 20th Anniversary (PL) tuned files. "
+                         "Full rear O2 delete = CDLSH + CDLSHV + CDLSV (3 FixedAddr patches)."),
+        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+    ),
+
+    FixedAddressPatchDef(
+        name          = "Catalyst Monitor Disable — CDKAT (universal ME7)",
+        description   = ("Disables catalyst efficiency monitoring by setting CDKAT=0 "
+                         "at fixed address 0x0181A2. Prevents P0420/P0430 catalyst "
+                         "efficiency codes when cat is removed or replaced with "
+                         "high-flow unit. Address stable across all ME7 families."),
+        category      = PatchCategory.EMISSIONS,
+        fixed_addr    = 0x0181A2,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x01 across all tested stock ROMs (DL/RN/LP/SL/8D/4B/4Z7). "
+                         "PATCHED=0x00 confirmed in 20th Anniversary (PL) tuned file. "
+                         "Extends the existing 4B0906018-specific CDKAT patch to universal ME7. "
+                         "No effect on engine operation — OBD monitor only."),
+        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+    ),
+
+    FixedAddressPatchDef(
+        name          = "MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)",
+        description   = ("Disables MAF sensor diagnosis by setting CDEHFM=0 at "
+                         "0x01819C. Prevents P0100-P0104 (MAF circuit) faults when "
+                         "MAF Delete / Alpha-N patch is applied and the MAF sensor "
+                         "is physically removed. Apply alongside the MAF Delete patch."),
+        category      = PatchCategory.FUELLING,
+        fixed_addr    = 0x01819C,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x00 (already disabled) in DL/RN/LP stock ROMs — "
+                         "these ECUs do not need this patch. "
+                         "STOCK=0x01 (enabled) in SL DSG and 4B0906018 ROMs — "
+                         "must be patched when applying MAF Delete to these variants. "
+                         "PATCHED=0x00 confirmed in HN-630hp and 20th Anniversary files."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_PATCHES
 
 
