@@ -183,6 +183,27 @@ element itself is the culprit.
 - On cars with a wideband O2 installed, the wideband trace while connected
   vs disconnected is more informative than seat-of-the-pants feel.
 
+### Limp home after a pipe blows
+
+The most common real-world use of this technique is not as a diagnostic
+at all — it is a roadside fix when an intercooler pipe or boost hose
+blows off under load. The symptoms are immediate: power drops flat
+mid-pull, often with a hiss or a pop, and the car bogs or surges because
+the MAF is now measuring air that is venting straight to atmosphere
+rather than reaching the cylinders.
+
+In this situation you already know what happened. Unplugging the MAF
+removes a signal that is actively wrong and lets Alpha-N hold the car
+together for a conservative drive home. Idle and light throttle are
+stable enough; just avoid hard acceleration and keep boost demand low.
+The P0100/P0102 codes are irrelevant — clear them when the pipe is
+refitted.
+
+The pipe itself is usually easy to refit roadside if you carry a hose
+clamp in the car. If you cannot refit it, MAF unplugged is a reliable
+enough state to drive a sensible distance at low load. Plug the MAF
+back in once the car is in the garage and the pipe is sorted.
+
 ### Relationship to MAF Delete patches
 
 The MAF Delete patches in MESevenTool permanently redirect the load
