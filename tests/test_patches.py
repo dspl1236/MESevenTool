@@ -1904,3 +1904,105 @@ class TestFuelCutResumeScalar1p8T(unittest.TestCase):
 
     def test_18cm_one_hit(self):
         self.assertEqual(self._hits('18CM.Bin'), 1)
+
+
+
+# ── Universal FixedAddr codeword patches ──────────────────────────────────────
+
+class TestUniversalFixedAddrPatches(unittest.TestCase):
+    """Tests for CDLSH, CDLSHV, CDLSV, CDKAT (universal), CDEHFM patches
+    using the stable codeword block at 0x018190+."""
+
+    UPLOADS     = '/mnt/user-data/uploads'
+    STOCK_EXTRA = '/home/claude/chiptuning_stock'
+    S4WIKI      = '/home/claude/s4wiki_stock'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        for d in [self.UPLOADS, self.STOCK_EXTRA, self.S4WIKI]:
+            path = f'{d}/{fname}'
+            if os.path.exists(path):
+                with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+                    f.write(open(path, 'rb').read()); tmp = f.name
+                rom = ROMImage.load(tmp)
+                os.unlink(tmp)
+                return rom
+        self.skipTest(f'ROM not available: {fname}')
+
+    def _detect(self, patch_name, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if p.name == patch_name)
+        return p.detect(rom)
+
+    # CDLSH ────────────────────────────────────────────────────────────────
+    def test_cdlsh_stock_dl(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+                         '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdlsh_stock_rn(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+                         '1773719274810_06A906032RN.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdlsh_stock_sl(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+                         '1773719274817_032sl_auto_revo_1.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdlsh_stock_8d(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+                         '8D0907551M-0001.bin')
+        assert r.state == PatchState.STOCK
+
+    # CDKAT universal ──────────────────────────────────────────────────────
+    def test_cdkat_universal_stock_dl(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdkat_universal_stock_rn(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         '1773719274810_06A906032RN.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdkat_universal_stock_8d(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         '8D0907551M-0001.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdkat_universal_patched_in_20th_anni_pl(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         '1773719274814_20th_180hp_032pl.bin')
+        assert r.state == PatchState.PATCHED
+
+    # CDEHFM ───────────────────────────────────────────────────────────────
+    def test_cdehfm_stock_sl_dsg(self):
+        from meseventool.patches import PatchState
+        # SL DSG has CDEHFM=0x01 in stock — needs patching for MAF Delete
+        r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
+                         '1773719274817_032sl_auto_revo_1.bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdehfm_stock_18cm(self):
+        from meseventool.patches import PatchState
+        r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
+                         '18CM.Bin')
+        assert r.state == PatchState.STOCK
+
+    def test_cdehfm_already_off_in_dl(self):
+        from meseventool.patches import PatchState
+        # DL already has CDEHFM=0x00 in stock — shows PATCHED (already disabled)
+        r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
+                         '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        assert r.state == PatchState.PATCHED

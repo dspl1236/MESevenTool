@@ -199,3 +199,30 @@ firmware; you're just changing what sensor feeds it.
 *Analysis generated from corpus of 57 × 2.7T stock ROMs and 13 × 1.8T ROMs.*
 *ADC channel counts based on C167 ADCON write patterns in code area (0x080000+).*
 *Free space = contiguous 0xFF regions ≥ 64 bytes in the 1 MB flash image.*
+
+---
+
+## New ECU variants — chiptuning.pw corpus (March 2026)
+
+12 new ROM files downloaded and analysed. Key additions:
+
+| Part number | Engine | Free CODE | Notes |
+|---|---|---|---|
+| 06A906032HN | AWP 180hp | ~386 KB | fw4019 Bosch. Unitronic tune — 7544 RPM. Same HW as DL. |
+| 06A906032BJ | AUQ 180hp | ~386 KB | fw4019 Bosch. Stock. |
+| 06A906032DR | AUM 150hp | ~308 KB | fw4013 VDO. Stock. |
+| 06A906032DS | 2.0 8V NA | ~308 KB | fw4013 VDO. ME7.5 used for NA 2.0 8V. RPM limit ~6008. |
+| 06A906032GQ | AUQ 150hp Beetle | ~308 KB | fw4013 VDO. Stock. |
+| 06A906032HS | AWP 180hp 2002 | ~386 KB | fw4019 Bosch. 7352 RPM. |
+| 06A906032SL (alt) | 1.8T DSG | ~321 KB | VDO X505R. Second stock SL — fully unpatched. |
+| 4B0906018AR | APU 150hp | ~306 KB | fw4012 Bosch. Heavily tuned (11 PATCHED). |
+| 4B0906018BH | AWM 170hp | ~306 KB | fw4012 Bosch. Partially tuned. |
+| 0261206618 | 2.8 VR6 ME7 | 512KB file | VR6 NA. Some codeword patches share block. |
+| 0261201522 | 3.2 VR6 24v | ~454 KB | **Separate code family.** 0/33 patches hit. New corpus needed. |
+
+### VR6 families — confirmed separate
+
+Both VR6 variants (2.8 and 3.2) confirmed as entirely different firmware from 1.8T ME7.5.
+The 3.2 returns 0 patch hits across all 33 confirmed patches.
+The fixed-address codeword block (`0x018190+`) appears shared with the 2.8 VR6,
+suggesting the emissions codeword structure is common to all ME7 families.

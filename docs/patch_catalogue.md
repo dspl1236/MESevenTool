@@ -205,3 +205,55 @@ All use `scale = 0.75 RPM/bit`, `size = 2`, `big_endian = False`. The constant `
 | 4Z7907551AA (stock) | fw6010 | All 2.7T patches STOCK |
 | 4Z7907551AA-disable-P1681 | fw6010 | P1681 PATCHED |
 | 4D1907558 (RS4 V8) | fw6012 | 2.7T non-SAP coverage |
+
+---
+
+## Universal codeword block patches (5 new — added from chiptuning.pw corpus)
+
+These patches use the stable ME7 codeword block at `0x018190–0x0181C4` via fixed addresses.
+All addresses verified stable across all ME7.1, ME7.1.1, and ME7.5 variants.
+
+### Rear O2 full-disable trio — apply all three together
+
+| Patch | Address | Stock→Patch | Applies |
+|---|---|---|---|
+| Rear O2 Heater Diag Disable (CDLSH) | `0x0181AA` | `0x01→0x00` | Universal ME7 |
+| Rear O2 Interchange Diag Disable (CDLSHV) | `0x0181AB` | `0x01→0x00` | Universal ME7 |
+| Rear O2 Voltage Diag Disable (CDLSV) | `0x0181AC` | `0x01→0x00` | Universal ME7 |
+
+**Confirmed STOCK** in all tested stock ROMs (DL/RN/LP/SL/18CM/8D/4B/4Z7).
+**Confirmed PATCHED** (0x00) in: HN-630hp Unitronic, 20th Anniversary PL.
+3 of 20 allroad 4Z7 corpus files already show 0x00 — pre-patched in that variant.
+
+### Catalyst Monitor Disable (CDKAT) — universal ME7
+
+- `0x0181A2` → `0x01→0x00`. Prevents P0420/P0430. No effect on engine operation.
+- **Extends** the existing `4B0906018`-specific CDKAT to all ME7 families.
+- Confirmed PATCHED in: 20th Anniversary PL tuned file.
+
+### MAF Sensor Diagnosis Disable (CDEHFM) — SL DSG + 4B0906018 only
+
+- `0x01819C` → `0x01→0x00`. Prevents P0100–P0104 when MAF is physically removed.
+- **Only needed** for SL DSG and 4B0906018 — DL/RN/LP/HN already have `0x00` in stock.
+- Apply together with the MAF Delete / Alpha-N patch on affected ECUs.
+
+---
+
+## New ECU families from chiptuning.pw corpus
+
+### 2.0 8V ME7.5 — `06A906032DS` (Bora/Golf 2.0 8V NA)
+
+ME7.5 was used for the NA 2.0 8V engine, not just the 1.8T. Same VDO fw4013 hardware as
+RN/LP. 13 of our patches hit STOCK. Emissions patches (SAP/EVAP) appear pre-patched (5 PATCHED).
+Rev limit reads 6008 RPM via scalar — lower than 1.8T. Confirms the 2.0 8V → Beetle cross-flash
+was plausible at the hardware level.
+
+### VR6 3.2 24v ME7 — `0261201522` (A3 3.2 / TT 3.2)
+
+Zero of our 33 patches hit this family. Confirmed completely separate code structure from 1.8T ME7.5.
+Needs its own needle corpus. This file is preserved as the first entry point for VR6 ME7 support.
+
+### VR6 2.8 ME7 — `0261206618` (Bora VR6)
+
+512KB file. 7 STOCK, 5 PATCHED — likely a pre-tuned file. RPM scalar returns garbage (not 1.8T code).
+Some emissions codeword patches hit (fixed-address codeword block is shared with 2.8 VR6).
