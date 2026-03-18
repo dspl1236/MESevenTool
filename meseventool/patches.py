@@ -1495,6 +1495,32 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.1", "me7.1.1", "2.7t"},
     ),
 
+    FixedAddressPatchDef(
+        name          = "VVT Cam Position Monitor Disable — CDNWS (ME7.5 1.8T AWW/AWP/AUQ/AUM)",
+        description   = ("Disables cam position / Variable Valve Timing fault monitoring "
+                         "on ME7.5 1.8T engines that have a 2-position intake cam phaser. "
+                         "Sets CDNWS=0 at fixed address 0x0181AF (stock value 0x03 on VVT "
+                         "engines). Prevents P0011 (Bank 1 intake cam advance setpoint not "
+                         "reached) when the cam position solenoid is removed, fails, or is "
+                         "bypassed. Apply when deleting the N205 cam adjustment solenoid. "
+                         "Engines WITH VVT (need this patch): AWW, AWP, AUM, AUQ, ARX, "
+                         "AMK, AMU, BAM, BEA. "
+                         "Engines WITHOUT VVT (do not need this): AEB, AGU, AWD, APH, ATW."),
+        category      = PatchCategory.DIAGNOSTICS,
+        fixed_addr    = 0x0181AF,
+        stock_bytes   = bytes([0x03]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x03 confirmed on all VVT-equipped 1.8T stock ROMs: "
+                         "DL (AWW), HS (AWP), DR (AUM), BJ/GQ/HN (AUQ). "
+                         "The value 0x03 signals ME7.5 cam phaser monitoring active. "
+                         "Non-VVT 1.8T engines (AWD/AEB-era) show CDNWS=0x01 — "
+                         "those use the ME7.1/ME7.1.1 patch (0x01→0x00) if relevant, "
+                         "but those ECUs have no cam solenoid so the patch is not needed. "
+                         "DISTINCT from the ME7.1/ME7.1.1 CDNWS patch which targets 0x01."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_PATCHES
 
 

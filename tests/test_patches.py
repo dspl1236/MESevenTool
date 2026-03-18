@@ -2220,3 +2220,65 @@ class TestAFP021906018M(unittest.TestCase):
         self.assertEqual(
             self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)').state,
             PatchState.STOCK)
+
+
+class TestCDNWSME75VVTDisable(unittest.TestCase):
+    """CDNWS 0x03→0x00 — ME7.5 1.8T AWW/AWP/AUM/AUQ VVT disable."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+    EXTRA   = '/home/claude/chiptuning_stock'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        for d in [self.UPLOADS, self.EXTRA]:
+            path = f'{d}/{fname}'
+            if os.path.exists(path):
+                with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+                    f.write(open(path,'rb').read()); tmp = f.name
+                rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+        self.skipTest(f'ROM not available: {fname}')
+
+    def _detect(self, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if 'CDNWS' in p.name and 'ME7.5' in p.name)
+        return p.detect(rom)
+
+    # VVT-equipped: STOCK=0x03 on all these
+    def test_stock_dl_aww(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin').state,
+            PatchState.STOCK)
+
+    def test_stock_hs_awp(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '06A906032HS_Golf_1.8T_2002.bin').state,
+            PatchState.STOCK)
+
+    def test_stock_bj_auq(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '06A906032BJ_A3_AUQ_180hp.bin').state,
+            PatchState.STOCK)
+
+    def test_stock_dr_aum(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '06A906032DR_Bora_AUM_150hp.bin').state,
+            PatchState.STOCK)
+
+    def test_stock_hn_awp(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '06A906032HN_A3_1.8T_fw4019_stock.bin').state,
+            PatchState.STOCK)
+
+    # SL DSG has CDNWS=0x00 — shows PATCHED (already off, no solenoid on DSG variant)
+    def test_sl_already_off(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect(
+            '1773719274817_032sl_auto_revo_1.bin').state,
+            PatchState.PATCHED)
