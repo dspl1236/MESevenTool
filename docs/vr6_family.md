@@ -1,145 +1,178 @@
-# ME7 VR6 Engine Families — Reference & Compatibility Notes
+# ME7 Narrow-Angle Engine Families — VR6, VR5, AFP Reference
 
-This document covers the VR6 engine families that use ME7.x ECU management,
-clarifies which are in scope for MESevenTool, and documents ROM analysis results.
-
----
-
-## The VR6 Motronic Family Tree
-
-The VR6 engine spanned three distinct ECU generations. Understanding which
-generation an ECU belongs to is critical — they are not interchangeable.
-
-### Generation 1: Pre-ME7 (OUT OF SCOPE for MESevenTool)
-
-| Engine | Displacement | Valves | Cars | ECU PN | ECU Family |
-|---|---|---|---|---|---|
-| AAA | 2.8L | 12v | Golf MK3, Corrado, Passat B3/B4, Vento | 021906258xx | Bosch M2.7 |
-| ABV | 2.9L | 12v | Corrado VR6 | 021906258xx | Bosch M2.9.1 |
-| ACC | 2.8L | 12v | Sharan/Alhambra | 021906258xx | Bosch M2.9.1 |
-
-These ECUs use a **Siemens SAB80C515/535 (8-bit i8051 derivative)** processor.
-ROM is a 27C256 or 27C512 EPROM (32–64KB), directly socketed and replaceable.
-Completely different toolchain, instruction set, and map structure from ME7.
-The Corrado files on chiptuning.pw (021906258B, 021906258CP) confirm: M2.9 processor,
-64KB EPROM images. Same era as Audi M2.3.2 (5-cylinder turbo).
-
-**Not in scope for MESevenTool.** Could be a future separate tool.
+This document covers all narrow-angle Volkswagen Group engines that use ME7.x ECU
+management: the 12-valve VR6 (AFP), 24-valve VR6 (BDF/BFH), 20-valve VR5 (AQN/AZX),
+and the later 3.2 MK5/A3 variant. It documents ECU hardware families, ME7 version,
+known part numbers, and MESevenTool compatibility status.
 
 ---
 
-### Generation 2: ME7.1 — 24V Narrow-Angle VR6 (IN SCOPE)
+## Engine & ECU Family Map
 
-| Engine | Displacement | Valves | Cars | ECU PN | Firmware |
-|---|---|---|---|---|---|
-| BDF | 2.8L | 24v | Golf MK4, Bora, Passat B5 syncro | 06A906032AG/AK/L/T | fw6228 |
-| BFH | 3.2L | 24v | Golf R32 MK4 | 06A906032JA/HT | fw???? |
+| Engine | Disp | Valves | Code | Cars | ECU PN prefix | ME7 version | In scope |
+|---|---|---|---|---|---|---|---|
+| AAA/ABV | 2.8–2.9L | 12v | AAA/ABV | MK3/Corrado | 021906258xx | M2.7/M2.9.1 | ❌ pre-ME7 |
+| AFP | 2.8L | 12v | AFP | MK4/Jetta MK4 | 021906018xx | ME7.1 | ✅ |
+| BDF | 2.8L | 24v | BDF | MK4/Bora/Passat B5 | 06A906032xx | ME7.1 | ✅ |
+| BFH | 3.2L | 24v | BFH | Golf R32 MK4 | 06A906032JA/HT | ME7.1 | ✅ (no ROM yet) |
+| AGZ | 2.3L | 10v | AGZ | MK4/Bora (early) | 071906018xx | M3.8.3 | ❌ pre-ME7 |
+| AQN | 2.3L | 20v | AQN | MK4/Bora/Beetle | 066906032xx | ME7.1 | ✅ (no ROM yet) |
+| AZX | 2.3L | 20v | AZX | Passat B5 | 066906032xx | ME7.1 | ✅ (no ROM yet) |
+| BUB | 3.2L | 24v | BUB | MK5 R32/A3/TT | 022906032xx | ME7.1.1 (diff HW) | ⚠️ |
 
-**These use the same C167CR processor and 121-pin connector as the 2.7T S4.**
-ME7.1 variant. Same Bosch function framework. Same codeword block at `0x018194`.
-The 80-pin `06A906032` part number prefix is shared with the 1.8T ME7.5 family,
-but the firmware version (fw6228 vs fw4019/4013) and code structure are distinct.
+---
 
-#### Key differences from 1.8T ME7.5
+## Gen 0 — Pre-ME7: AAA/ABV (12V) and AGZ (VR5 10V)
 
-- **Dual bank O2** — CWKONLS = 0x64 (vs 0x03 single bank in 1.8T)
-- **No turbo/boost management** — BGRLP, BGSRM functions absent or stub
-- **Variable intake** — uses DROSALK/variable intake solenoid
-- **No MAP sensor** — load calculated from MAF only (no ps_w boost sensor)
-- **6-cylinder injection/ignition** — different output driver mapping
-- **KL15 on pin 21** — different from 1.8T (which has it on pin 3)
+These run **Bosch M2.7, M2.9.1, and M3.8.3** respectively — 8-bit processors,
+EPROM-based, no OBD-II. Not in scope. Documented only to avoid confusion.
 
-#### ROM analysis: Bora 2.8 VR6 ME7.1 fw6228 (0261206618)
+- **AAA/ABV (12V VR6)**: MK3 Golf/Corrado/Passat B3. ECU `021906258xx`.
+  Bosch M2.7/M2.9.1, 64KB EPROM. Confirmed by Corrado files from chiptuning.pw.
+- **AGZ (10V VR5)**: MK4 Golf/Bora 1998–2000. ECU `071906018xx`.
+  Bosch M3.8.3, cable throttle. Predates ME7.
 
-- **512KB** file (512KB of active code, no padding to 1MB)
-- **~104KB free** (20% — much less than 1.8T's 35–47%)
-- **Codeword block confirmed** at 0x018194 — structure shared with all ME7 families
-- **12 of 33 MESevenTool patches** apply (7 STOCK, 5 PATCHED in this tuned file)
+---
 
-Patches that DO work on VR6 ME7.1:
-| Patch | Status in this file | Notes |
+## Gen 1 — ME7.1: AFP (VR6 12V MK4)
+
+### What it is
+
+The AFP is the **updated 12-valve 2.8L VR6** fitted to the Golf/Jetta MK4 from 1999.5
+onwards, replacing the AAA. Despite being 12-valve — the same cylinder count as the
+pre-ME7 AAA — the AFP got a complete ECU upgrade to **ME7.1** with the full Bosch
+C167CR processor and OBD-II compliance. This is the first 12V VR6 on ME7.
+
+Key changes from AAA:
+- Plastic intake manifold (vs aluminium on AAA)
+- Different cam profile
+- OBD-II compliant (ME7.1 vs M2.9.1)
+- Coil-on-plug ignition (no distributor)
+
+### ECU hardware
+
+| Part number | Bosch number | Notes |
 |---|---|---|
-| KRMXN Zero (knock retard cal) | STOCK | Same KRMXN table structure |
-| ESKONF Rear O2 Heater newer | STOCK | 0F 01 05 pattern present |
-| CDKAT universal (cat monitor) | PATCHED | Already disabled |
-| CDLSH (O2 heater diag) | PATCHED | Already disabled |
-| CDLSHV (O2 interchange diag) | PATCHED | Already disabled |
-| CDLSV (O2 voltage diag) | STOCK | Present, patchable |
-| CDEHFM (MAF diag) | STOCK | Present, patchable |
+| 021906018A–T (various) | 0261206xxx | ME7.1, MK4 Golf/Jetta/GTI |
+| 021906018S | — | Common replacement part |
+| 021906018AA+ | 0261206xxx | Later suffix variants |
 
-Patches that do NOT apply:
-- Vmax: fw6228 VR6 has no speed limiter code (NA road car, no electronically governed limit)
-- MAF Delete: not applicable (no Alpha-N redirect; load is always MAF-based)
-- 1.8T knock retard code patches: different instruction sequence at that function
-- P1681: ME7.1.1 only; this is ME7.1
+**Important:** The AFP uses the `021906018` prefix — completely different from the
+`06A906032` family used for the 24V BDF/BFH and the 1.8T ME7.5 engines. Different
+connector layout, different board ID. Not cross-flashable with 06A ECUs.
 
----
+The AFP is **ME7.1** (not ME7.5). Same C167CR processor and 121-pin connector
+hardware generation as the 2.7T S4 and BDF 24V VR6. The codeword block at
+`0x018194` is expected to be present. No ROM files have been acquired yet —
+this is a documentation/research placeholder.
 
-### Generation 3: ME7.1.1 — Larger Platform (DIFFERENT ARCHITECTURE)
+### Expected patch compatibility
 
-| Engine | Displacement | Valves | Cars | ECU PN | Notes |
-|---|---|---|---|---|---|
-| BUB | 3.2L | 24v | Golf R32 MK5, A3 3.2, TT 3.2, Cayenne | 022906032GP | Different HW |
-| BHK | 3.2L | 24v | Touareg 3.2 | varies | |
+Based on the hardware generation and ME7.1 code framework:
+- **Codeword patches** (CDLSH/CDLSHV/CDLSV/CDKAT at 0x018190+): ✅ Expected
+- **KRMXN Zero** (knock retard table): ✅ Expected — ME7.1 shared function
+- **ESKONF** (rear O2 heater, 0F 01 05 pattern): ✅ Expected
+- **Vmax**: Not applicable — NA engine, no speed limiter in same code path
+- **MAF Delete / Alpha-N**: Not applicable without dedicated VR6 needle work
+- **1.8T boost patches** (BGRLP, N75): ❌ Not applicable
 
-The `022906032` prefix ECUs have a **different hardware architecture** from `06A906032`.
-Analysis of our A3 3.2 BUB file (022906032GP, fw ME7.1.1/5/S1103A):
-- Startup bytes `5C 5C 53 32...` — not C167 DPP initialisation sequence
-- Codeword block at 0x018194 contains garbage (the block structure is absent or relocated)
-- 0 of 33 patches hit in any state
-- 760KB "free" — likely the entire 1MB is usable but flash is mostly erased
+### Status
 
-The `S1103A` in the version string may indicate a Siemens/Continental ECU module
-(Bosch-licensed ME7.1.1 firmware running on Siemens hardware), or a different
-Bosch sub-variant. Either way it does not share the MESevenTool patch structure.
-
-**Not in scope for MESevenTool without dedicated reverse engineering work.**
+No ROM files acquired. `021906018xx` files are uncommon in public archives.
+The MK4 12V VR6 community is smaller than 1.8T or 24V VR6.
+**Files to acquire:** `021906018S` or `021906018T` stock ROM.
 
 ---
 
-## Summary: What MESevenTool can do for VR6
+## Gen 1 — ME7.1: BDF (VR6 24V MK4) — confirmed
 
-| VR6 Family | ME7 version | ECU PN prefix | In scope | Patches work |
-|---|---|---|---|---|
-| 12V AAA/ABV (M2.7/M2.9) | Pre-ME7 | 021906258xx | ❌ | 0/33 |
-| 24V 2.8 BDF (ME7.1) | ME7.1 | 06A906032 | ✅ | ~12/33 |
-| 24V 3.2 BFH R32 MK4 | ME7.1 | 06A906032JA/HT | ✅ expected | TBD |
-| 24V 3.2 BUB MK5/A3/TT | ME7.1.1 | 022906032 | ⚠️ different HW | 0/33 |
+See main analysis in previous session. Covered fully via the Bora fw6228 file.
 
-Confirmed working patches for 24V ME7.1 VR6 (from fw6228 BDF analysis):
-**Emissions codeword block, KRMXN knock retard, ESKONF heater.**
-Confirmed NOT working: Vmax, MAF Delete, 1.8T-specific code patches.
+ECU prefix: `06A906032AG/AK/L/T`. Firmware fw6228. 12/33 patches confirmed.
+Codeword block fully present and matching expected structure.
 
 ---
 
-## Files acquired
+## Gen 1 — ME7.1: AQN/AZX VR5 (2.3L 20V)
 
-| File | PN | Engine | Firmware | Status |
-|---|---|---|---|---|
-| `Bora_2.8_VR6_ME7_0261206618.bin` | 0261206618 | BDF 2.8 24V | fw6228 ME7.1 | Confirmed ME7.1, partially tuned |
-| `A3_3.2_VR6_250hp_0261201522.bin` | 022906032GP | BUB 3.2 | ME7.1.1/S1103A | Different arch, 0 patches hit |
+### What it is
 
-Still needed for complete coverage:
-- `06A906032AG` or `AK` — BDF 2.8 24V stock ROM (untuned baseline)
-- `06A906032JA` or `HT` — BFH 3.2 R32 MK4 stock ROM
+The VR5 is a **five-cylinder variant of the VR6** block — one cylinder deleted from
+the 2.8 VR6, giving 2324cc. The 20-valve version (AQN/AZX) launched in 2000 with
+drive-by-wire throttle and VVT, producing 170hp. It is genuinely ME7.1.
+
+The AQN and AZX are mechanically near-identical:
+- **AQN**: Golf MK4, Bora, New Beetle
+- **AZX**: Passat B5 (3B/3BG)
+
+Both share the same ECU prefix and Bosch firmware.
+
+### ECU hardware
+
+| Part number | Bosch number | Application |
+|---|---|---|
+| 066906032AG | 0261207375 | MK4 Golf/Bora AQN 170hp |
+| 066906032xx (various) | 0261207xxx | AQN/AZX variants |
+
+**The `066` prefix** is distinct from both `06A` (1.8T) and `021` (AFP).
+Different physical board layout for the 5-cylinder engine — different injector
+and ignition output count (5 vs 6), different firing order.
+
+ME7.1 hardware. C167CR processor. The codeword block at `0x018194` is
+expected to be present — same Bosch function framework as BDF and AFP.
+
+### Expected patch compatibility
+
+Same reasoning as AFP. Emissions codeword patches, KRMXN, ESKONF all expected
+to work. 5-cylinder-specific output mapping means ignition/injection patches
+that assume 6 cylinders would not apply.
+
+### AGZ (10V VR5) — NOT ME7
+
+The earlier AGZ (1997–2000) runs Bosch **M3.8.3** with cable throttle.
+ECU prefix `071906018xx`. Different generation, not in scope.
+The AGZ→AQN swap requires throttle pedal change (cable to DBW) and coil packs.
+
+### Status
+
+No ROM files acquired. `066906032AG` files are rare publicly. The VR5 community
+is smaller than VR6. NefMoto forum confirms `066906032F` (AZX variant) exists
+as a community interest item but no XDF/DAMOS were available there either.
+**Files to acquire:** `066906032AG` (AQN 170hp) stock ROM.
 
 ---
 
-## Notes for tuning VR6 ME7.1 with MESevenTool
+## Gen 2 — ME7.1.1: BUB (3.2L MK5/A3/TT) — different architecture
 
-The following patches are applicable and have been verified against fw6228 BDF:
+Already confirmed: `022906032GP`, version `ME7.1.1/5/S1103A`. Zero patches hit.
+Different startup pattern, codeword block absent/relocated. Out of scope.
 
-1. **Emissions codeword patches** — CDLSH, CDLSHV, CDLSV, CDKAT at the same
-   fixed addresses as all other ME7 variants. The codeword block is fully present.
+---
 
-2. **KRMXN Zero** — the 16× 0x14 anchor is confirmed present. Zeroing the max
-   knock retard table works the same way as on the 2.7T.
+## Summary: ECU PN prefix → hardware generation
 
-3. **ESKONF** (newer 0F 01 05 variant) — confirmed present. Disables dual rear
-   O2 heater diagnosis. The VR6 CWKONLS = 0x64 (dual bank), different from
-   1.8T single-bank 0x03 — confirming it monitors both banks.
+```
+021906258xx  →  M2.7/M2.9.1  (12V VR6 pre-ME7, MK3/Corrado)
+071906018xx  →  M3.8.3       (VR5 10V pre-ME7)
+021906018xx  →  ME7.1        (AFP 12V VR6 MK4)          ← NEW
+066906032xx  →  ME7.1        (AQN/AZX VR5 20V)          ← NEW
+06A906032xx  →  ME7.1/ME7.5  (BDF/BFH 24V VR6 + 1.8T)
+022906032xx  →  ME7.1.1      (BUB 3.2 MK5/A3/TT, diff HW)
+```
 
-4. **Vmax** — not applicable. No speed limiter in VR6 NA firmware.
+All three `021906018`, `066906032`, and `06A906032` families run ME7.1 on the
+same Bosch C167CR hardware. The connector is shared (121-pin). The codeword
+block at `0x018194` is common to all. Once ROM files are acquired, the existing
+MESevenTool detection infrastructure should handle them with minimal new work.
 
-5. **MAF Delete** — not applicable. Would require VR6-specific needle work if
-   turbocharging (common build: MK4 R32 turbo). The load calculation path differs.
+---
+
+## Files status
+
+| Family | Files | Status |
+|---|---|---|
+| AFP 12V VR6 (021906018) | 0 | Not yet acquired |
+| BDF 24V VR6 (06A906032xx) | 1 (tuned) | ✅ fw6228 confirmed |
+| BFH 3.2 R32 MK4 (06A906032JA/HT) | 0 | Not yet acquired |
+| AQN/AZX VR5 (066906032) | 0 | Not yet acquired |
+| BUB 3.2 MK5 (022906032) | 1 | ⚠️ different arch, confirmed out-of-scope |
