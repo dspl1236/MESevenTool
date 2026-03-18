@@ -11,17 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: |
           pip install pytest
           pip install -e .
-
       - name: Run tests
         run: pytest tests/ -v
 
@@ -34,3 +30,45 @@ jobs:
           python-version: "3.11"
       - run: pip install pyflakes
       - run: python -m pyflakes meseventool/
+
+  build-windows:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -e .
+
+      - name: Build Windows EXE
+        run: |
+          pyinstaller --onefile --windowed --name MESevenTool `
+            --hidden-import meseventool `
+            --hidden-import meseventool.rom `
+            --hidden-import meseventool.needle `
+            --hidden-import meseventool.dpp `
+            --hidden-import meseventool.checksum `
+            --hidden-import meseventool.maps `
+            --hidden-import meseventool.patches `
+            --hidden-import meseventool.profiles `
+            --hidden-import meseventool.ecu_id `
+            --hidden-import meseventool.xdf `
+            --hidden-import meseventool.kwp `
+            --hidden-import meseventool.version `
+            --exclude-module tkinter `
+            --exclude-module matplotlib `
+            --exclude-module numpy `
+            app/main.py
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MESevenTool-windows-exe
+          path: dist/MESevenTool.exe
+          retention-days: 90
