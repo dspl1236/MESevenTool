@@ -2070,3 +2070,104 @@ class TestCDNWSVVTDisable(unittest.TestCase):
     def test_stock_tt32_022ge(self):
         from meseventool.patches import PatchState
         self.assertEqual(self._detect('022906032GE_TT_3.2_fw6432.bin').state, PatchState.STOCK)
+
+
+class TestAFPVR6Family(unittest.TestCase):
+    """AFP 12V VR6 (021906018xx) — ME7.1 fw6228, confirmed stock corpus."""
+
+    EXTRA = '/home/claude/chiptuning_stock'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.EXTRA}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f'ROM not available: {fname}')
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom
+
+    def _detect(self, patch_name, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if p.name == patch_name)
+        return p.detect(rom)
+
+    # KRMXN confirmed STOCK on AFP
+    def test_krmxn_stock_afp_golf_r(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)',
+                         '021906018R_Golf_AFP_12V_fw6228.bin')
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_krmxn_stock_afp_jetta_q(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)',
+                         '021906018Q_Jetta_AFP_12V_fw6228.bin')
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    # CDNWS=0x00 factory on AFP (no VVT on 12V engine) → shows as PATCHED
+    def test_cdnws_already_off_afp_golf(self):
+        from meseventool.patches import PatchState
+        r = self._detect('VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)',
+                         '021906018R_Golf_AFP_12V_fw6228.bin')
+        self.assertEqual(r.state, PatchState.PATCHED)
+
+    def test_cdnws_already_off_afp_jetta(self):
+        from meseventool.patches import PatchState
+        r = self._detect('VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)',
+                         '021906018Q_Jetta_AFP_12V_fw6228.bin')
+        self.assertEqual(r.state, PatchState.PATCHED)
+
+    # CDKAT on AFP Jetta (Q) — already patched in this file
+    def test_cdkat_patched_afp_jetta(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         '021906018Q_Jetta_AFP_12V_fw6228.bin')
+        self.assertEqual(r.state, PatchState.PATCHED)
+
+
+class Test022906032CSFamily(unittest.TestCase):
+    """022906032CS fw6428 — ME7.1.1 Passat B5.5 2.8V6 / VVT-equipped."""
+
+    EXTRA = '/home/claude/chiptuning_stock'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.EXTRA}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f'ROM not available: {fname}')
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom
+
+    def _detect(self, patch_name, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if p.name == patch_name)
+        return p.detect(rom)
+
+    # CDNWS=0x01 on 022CS — VVT monitored, patchable
+    def test_cdnws_stock_022cs_0006(self):
+        from meseventool.patches import PatchState
+        r = self._detect('VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)',
+                         '022906032CS_0006_fw6428.bin')
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    def test_cdnws_stock_022cs_0005(self):
+        from meseventool.patches import PatchState
+        r = self._detect('VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)',
+                         '022906032CS_0005_fw6428.bin')
+        self.assertEqual(r.state, PatchState.STOCK)
+
+    # Vmax STOCK on 022CS
+    def test_vmax_stock_022cs(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)',
+                         '022906032CS_0006_fw6428.bin')
+        self.assertEqual(r.state, PatchState.STOCK)
