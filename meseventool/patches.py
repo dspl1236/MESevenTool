@@ -704,11 +704,12 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         stock_bytes = bytes([0xA8, 0x61]),  # 0x61A8 LE = 25000 = 250.00 km/h
         patch_bytes = bytes([0xFF, 0xFF]),  # 0xFFFF LE = 65535 = 655.35 km/h
         confidence  = "CONFIRMED",
-        notes       = ("Validated on all 18 8D0907551 (S4 B5), all 12 4B0907551 "
-                       "(A6 C5), and 10/20 4Z7907551 (early Allroad ME7.1) ROMs. "
-                       "4Z7907551 R/S/T/AA/N/Q (ME7.1.1) and all 4D1907558 (RS4 V8) "
-                       "use a different code structure and are NOT covered — "
-                       "for those use the ME7.1.1 Vmax patch."),
+        notes       = ("47/57 corpus files (all ME7.1): all 18 × 8D0907551, "
+                       "all 12 × 4B0907551, 17/20 × 4Z7907551 early. "
+                       "Together with ME7.1.1 patch: 57/57 complete coverage. "
+                       "Engine-swap use case: 2.7T into MK3/MK4/older A4 where "
+                       "ABS/VSS ratio differs — ECU misreads speed and triggers "
+                       "silent fuel cut at normal road speeds. No DTC."),
         applies_to  = {"me7.1", "2.7t"},
     ),
 
@@ -730,11 +731,11 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         stock_bytes = bytes([0xA8, 0x61]),  # 25000 = 250.00 km/h
         patch_bytes = bytes([0xFF, 0xFF]),
         confidence  = "CONFIRMED",
-        notes       = ("Validated on 7 × 4D1907558 (RS4 B5 / S8 D2 V8) and "
-                       "10 × 4Z7907551 N/Q/R/S/T/AA (ME7.1.1 Allroad). "
-                       "Does NOT hit ME7.1 files (confirmed zero false positives). "
-                       "Together with the ME7.1 VMAX patch this gives 57/57 1MB "
-                       "corpus coverage (100%)."),
+        notes       = ("10/57 corpus files (all ME7.1.1): 7 × 4D1907558 RS4/S8 V8, "
+                       "10 × 4Z7907551 N/Q/R/S/T/AA late allroad. "
+                       "Zero false positives on ME7.1 files. "
+                       "With ME7.1 patch: 57/57 complete 2.7T coverage. "
+                       "Same swap use case applies — see ME7.1 patch notes."),
         applies_to  = {"me7.1.1", "2.7t"},
     ),
 
