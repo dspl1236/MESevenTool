@@ -120,3 +120,81 @@ additional coverage on the same files (two pattern sites patched = more robust).
 | 4B (8/12)  | ✓ | Later variants differ |
 | 4Z7 (20/20)| ✓ | allroad always has SAP |
 | 4D1 (0/7)  | — | V8 never had SAP — table absent |
+
+---
+
+## Field Diagnostics: MAF Disconnect Test (1.8T ME7.5)
+
+### What happens when you unplug the MAF
+
+On ME7.5 1.8T, physically disconnecting the MAF sensor causes the ECU to
+throw **P0100/P0102** and switch its load calculation from MAF-based to the
+**Alpha-N fallback map** — a throttle-position × RPM lookup stored in ROM.
+The MAP sensor is **not** used as a load source in this fallback; on ME7.5
+the MAP sensor feeds boost control (N75 target and boost cut logic), not
+the primary load path.
+
+The Alpha-N fallback map on 1.8T is at the address documented in
+patch_catalogue.md under "Alpha/N MAF Error Filling" (12×6 RPM×TPS grid).
+It is intentionally conservative — the ECU will run but not make full power
+or correct fuelling across the rev range.
+
+### Why this is a useful diagnostic
+
+If the engine runs **noticeably better** with the MAF unplugged than with
+it connected, the MAF signal is corrupted and its measured value is worse
+than no signal at all. Two common causes:
+
+**Boost leak upstream of the MAF (most common on modified cars):**
+The MAF measures real airflow entering the intake — but some of that air
+escapes through a split hose, loose intercooler pipe, or cracked boost
+pipe before reaching the cylinders. The ECU commands fuelling for the
+measured air mass, but the engine only burns a fraction of it. Result:
+the car runs rich and makes less boost than commanded (pressure bleeds
+off through the leak). Boost control starts hunting trying to compensate.
+Disconnecting the MAF removes the corrupted signal — Alpha-N fuelling,
+while imprecise, is at least consistent and not actively wrong.
+
+**Failing MAF element:**
+A degraded hot-wire or hot-film element can produce a plausible but
+incorrect signal — too low at idle, too high at part throttle, or
+non-linear across the sweep — without triggering a range fault. The
+engine runs poorly throughout the rev range rather than just under boost.
+Disconnecting forces Alpha-N and if the behaviour improves, the MAF
+element itself is the culprit.
+
+**How to use this test:**
+1. Cold start and let idle stabilise
+2. Note idle quality, part-throttle response, and boost behaviour
+3. With engine off, unplug MAF connector
+4. Restart — ECU will set P0100/P0102 immediately (expected)
+5. Drive conservatively; compare feel to step 2
+6. If better → follow up with boost leak test (pressurised intake) or
+   substitute-test a known-good MAF element
+7. If no change or worse → MAF is probably fine; look elsewhere
+
+**What this test does NOT tell you:**
+- It cannot distinguish a failing MAF from a boost leak — both produce
+  the same qualitative result. A pressurised boost leak test is required
+  to separate them.
+- Alpha-N fuelling is not accurate enough for meaningful lambda or power
+  comparison — do not draw conclusions from WOT runs in MAF-disconnected
+  state.
+- On cars with a wideband O2 installed, the wideband trace while connected
+  vs disconnected is more informative than seat-of-the-pants feel.
+
+### Relationship to MAF Delete patches
+
+The MAF Delete patches in MESevenTool permanently redirect the load
+calculation to Alpha-N (FA18/FA19→FA22/FA23 etc.) and require retuning
+the Alpha-N map for the actual engine. The MAF disconnect test is the
+untuned, stock-map version of the same thing — useful precisely because
+it is temporary and reversible, not as a permanent fix.
+
+### Platform note
+
+This behaviour is specific to ME7.5 1.8T. On 2.7T ME7.1/ME7.1.1 (biturbo),
+MAF disconnect behaviour is architecturally similar but the fallback map
+addresses and DTC codes differ. The VR6 and V8 variants have their own
+MAF fault handling paths — do not generalise this test across platforms
+without verifying the firmware behaviour for that specific ECU family.
