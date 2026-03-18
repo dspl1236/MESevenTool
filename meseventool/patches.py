@@ -1469,6 +1469,32 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    FixedAddressPatchDef(
+        name          = "VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)",
+        description   = ("Disables Variable Valve Timing (VVT) / cam position sensor "
+                         "fault monitoring by setting CDNWS=0 at fixed address 0x0181AF. "
+                         "Prevents P0010/P0011 (intake cam over-retarded/advanced, bank 1/2) "
+                         "and P0020/P0021 (exhaust cam equivalent) when cam position solenoids "
+                         "are deleted, bypassed, or have failed. "
+                         "Applies to all ME7.1/ME7.1.1 engines with cam phasing: "
+                         "2.7T biturbo, 24V VR6 (BDF/BFH/022EG/022GE), VR5 20V (AQN), "
+                         "and V8 4.2L. Note: early 2.7T (8D0907551A-F) and "
+                         "4D1907558xx RS4 V8 already have CDNWS=0x00 from factory "
+                         "and do not need this patch."),
+        category      = PatchCategory.DIAGNOSTICS,
+        fixed_addr    = 0x0181AF,
+        stock_bytes   = bytes([0x01]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x01 confirmed in: 39/57 2.7T corpus files (late 8D/4B/4Z7), "
+                         "VR6 R32 022EG/022GE fw6432, Touareg 022FT C1103A, V8 fw8000 (4D0907558/559G). "
+                         "Already 0x00 in: early 8D0907551A-F (pre-VVT), 4D1907558xx RS4, "
+                         "V8 fw8001 559E, S4 B7 C1105B. "
+                         "VR5 AQN shows 0x07 (multi-mode cam ctrl) — different semantics, "
+                         "not a simple binary disable on that variant."),
+        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
+    ),
+
 ]  # end ALL_PATCHES
 
 

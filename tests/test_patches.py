@@ -2006,3 +2006,67 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
         r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
                          '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
         assert r.state == PatchState.PATCHED
+
+
+class TestCDNWSVVTDisable(unittest.TestCase):
+    """CDNWS cam position monitor disable at 0x0181AF."""
+
+    UPLOADS  = '/mnt/user-data/uploads'
+    S4WIKI   = '/home/claude/s4wiki_stock'
+    EXTRA    = '/home/claude/chiptuning_stock'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        for d in [self.UPLOADS, self.S4WIKI, self.EXTRA]:
+            path = f'{d}/{fname}'
+            if os.path.exists(path):
+                with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+                    f.write(open(path,'rb').read()); tmp = f.name
+                rom = ROMImage.load(tmp)
+                os.unlink(tmp)
+                return rom
+        self.skipTest(f'ROM not available: {fname}')
+
+    def _detect(self, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if 'CDNWS' in p.name)
+        return p.detect(rom)
+
+    # 2.7T late — CDNWS=0x01, patchable
+    def test_stock_4b0907551aa(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('4B0907551AA.bin').state, PatchState.STOCK)
+
+    def test_stock_4z7(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('4Z7907551AA.bin').state, PatchState.STOCK)
+
+    # Early 2.7T — CDNWS=0x00, already disabled
+    def test_early_8d_already_off(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('8D0907551A-0002.bin').state, PatchState.PATCHED)
+
+    # V8 fw8000 — CDNWS=0x01, patchable
+    def test_stock_s8_4d559g_fw8000(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('4D0907559G_S8_fw8000.bin').state, PatchState.STOCK)
+
+    def test_stock_s6_4d558_fw8000(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('4D0907558_S6_fw8000.bin').state, PatchState.STOCK)
+
+    # V8 fw8001 — already 0x00
+    def test_fw8001_already_off(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('4D0907559E_S6_fw8001.bin').state, PatchState.PATCHED)
+
+    # R32/TT 3.2 fw6432 — CDNWS=0x01, patchable
+    def test_stock_r32_022eg(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('022906032EG_Golf4_R32_3.2_fw6432.bin').state, PatchState.STOCK)
+
+    def test_stock_tt32_022ge(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('022906032GE_TT_3.2_fw6432.bin').state, PatchState.STOCK)
