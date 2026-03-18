@@ -153,3 +153,67 @@ A MK4 2.0 8V Golf normally runs Simos 3.3 or Magneti Marelli — not ME7. If a M
 | `06A906032HT` | 3.2 VR6 (R32 Golf MK4) | Pending ROM | As above |
 | `06A906032BH` | AGU/AEB 150hp (older Golf/A3) | Easy add | VDO fw4013, same family as RN/LP |
 
+
+---
+
+## VR6, VR5, AFP, and V8 families
+
+### AFP 12V VR6 (021906018xx) — ME7.1 fw6228
+
+All AFP files use the same `021906018` prefix. Not cross-flashable with `06A906032` family.
+
+| From | To | Result |
+|---|---|---|
+| 021906018M (1999) | 021906018Q/R | ✅ Same fw6228 base, only cal difference |
+| 021906018x | 06A906032xx | ❌ Wrong PCB — different connector, ADC mapping |
+
+The AFP 12V has no VVT (CDNWS=0x00 from factory). CDSLS varies by market — some had SAP, some didn't.
+
+### VR6 24V BDF (06A906032AG/AK/L/T) — ME7.1 fw6228
+
+Shares the `06A906032` prefix with the 1.8T ME7.5 family but runs ME7.1 fw6228.
+**Not cross-flashable with 1.8T ECUs** — different firmware version, different injection/ignition mapping.
+
+KL15 on pin 21 (1.8T uses pin 3) — harness pinout differs.
+
+### VR5 20V AQN/AZX (066906032xx) — ME7.1 fw5423
+
+Separate `066` prefix, 5-cylinder output mapping. Not interchangeable with 6-cylinder VR6 or 4-cylinder 1.8T.
+
+### 022906032 cross-flash matrix
+
+The `022906032` prefix covers five different hardware sub-families — **do not cross-flash between them.**
+
+| Sub-family | Firmware | Startup | Examples | Cross-flash |
+|---|---|---|---|---|
+| fw6428 C167 | ME7.1.1 | `fa 00 10 7e` | CS (Passat 2.8V6) | ⚠️ only within fw6428 |
+| fw6432 C167 | ME7.1.1 | `fa 00 10 7e` | EG (R32), GE (TT 3.2) | ⚠️ only within fw6432 |
+| C1103A | ME7.1.1 | `0e 03 3e 01` | FT (Touareg 3.2) | ❌ different hw |
+| S1103A | ME7.1.1 | `5c 5c 53 32` | GP (A3 3.2 late) | ❌ different arch |
+
+Golf R32 (022906032EG) and Audi TT 3.2 (022906032GE) share fw6432 and are cross-flashable with cal calibration differences only.
+
+### V8 4.2L cross-flash
+
+| From | To | Result |
+|---|---|---|
+| 4D0907558 (S6 fw8000) | 4D0907559G (S8 fw8000) | ✅ Same fw8000, dataset only differs |
+| fw8000 | fw8001 | ⚠️ Same C167 hardware, different fw revision — verify codeword layout |
+| 4D1907558xx (RS6 fw8542) | 4D0907558/9 | ❌ Different firmware branch |
+| Any 4D | 8E0907560 (S4 B7 C1105B) | ❌ Different firmware generation |
+
+---
+
+## CDNWS VVT codeword — platform notes
+
+On ME7.1/ME7.1.1 engines, CDNWS at `0x0181AF` is a binary VVT monitoring flag (0x01 = active).
+
+On ME7.5 1.8T, the same address holds a **multi-mode configuration byte** with different semantics:
+- `0x03` = standard mode, most VDO fw4013/fw4019 1.8T ECUs
+- `0x02` = 4B0906018CM A6/Passat variant
+- `0x01` = older Bosch fw4019/fw4013 early builds (CL, CM, AR)
+- `0x00` = SL DSG, 2.0 8V
+
+The 1.8T AWW/AWP/AUM engines have no cam position solenoid hardware — CDNWS on
+1.8T ME7.5 does **not** control VVT monitoring and the CDNWS patch is not applicable
+to the 1.8T platform.
