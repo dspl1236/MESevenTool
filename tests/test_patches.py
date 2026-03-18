@@ -2171,3 +2171,52 @@ class Test022906032CSFamily(unittest.TestCase):
         r = self._detect('Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)',
                          '022906032CS_0006_fw6428.bin')
         self.assertEqual(r.state, PatchState.STOCK)
+
+
+class TestAFP021906018M(unittest.TestCase):
+    """AFP 021906018M — earliest known AFP stock file, August 1999."""
+
+    EXTRA = '/home/claude/chiptuning_stock'
+    ROM   = '021906018M_Jetta_AFP_12V_fw6228_1999.bin'
+
+    def _load(self):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.EXTRA}/{self.ROM}'
+        if not os.path.exists(path):
+            self.skipTest('ROM not available')
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def _detect(self, name):
+        from meseventool.patches import ALL_PATCHES
+        p = next(p for p in ALL_PATCHES if p.name == name)
+        return p.detect(self._load())
+
+    def test_krmxn_stock(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(
+            self._detect('Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)').state,
+            PatchState.STOCK)
+
+    def test_cdnws_already_off(self):
+        from meseventool.patches import PatchState
+        # AFP 12V — no VVT — CDNWS=0x00 factory
+        self.assertEqual(
+            self._detect('VVT Cam Position Monitor Disable — CDNWS (ME7.1/ME7.1.1)').state,
+            PatchState.PATCHED)
+
+    def test_cdkat_already_off(self):
+        from meseventool.patches import PatchState
+        # Very early AFP (1999) — cat monitor was factory-disabled on this variant
+        self.assertEqual(
+            self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)').state,
+            PatchState.PATCHED)
+
+    def test_cdlsh_stock(self):
+        from meseventool.patches import PatchState
+        # Rear O2 heater diag — stock on M (unlike Q which has it pre-patched)
+        self.assertEqual(
+            self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)').state,
+            PatchState.STOCK)
