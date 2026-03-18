@@ -2282,3 +2282,34 @@ class TestCDNWSME75VVTDisable(unittest.TestCase):
         self.assertEqual(self._detect(
             '1773719274817_032sl_auto_revo_1.bin').state,
             PatchState.PATCHED)
+
+
+class TestCDNWS4B0906018CM(unittest.TestCase):
+    """CDNWS 0x02→0x00 — 4B0906018CM Passat/A6 AWM VVT disable."""
+
+    UPLOADS = '/mnt/user-data/uploads'
+
+    def _load(self, fname):
+        import os, tempfile
+        from meseventool.rom import ROMImage
+        path = f'{self.UPLOADS}/{fname}'
+        if not os.path.exists(path):
+            self.skipTest(f'ROM not available: {fname}')
+        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
+            f.write(open(path,'rb').read()); tmp = f.name
+        rom = ROMImage.load(tmp); os.unlink(tmp); return rom
+
+    def _detect(self, fname):
+        from meseventool.patches import ALL_PATCHES
+        rom = self._load(fname)
+        p = next(p for p in ALL_PATCHES if '4B0906018CM' in p.name)
+        return p.detect(rom)
+
+    def test_stock_18cm(self):
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('18CM.Bin').state, PatchState.STOCK)
+
+    def test_stock_18cm_uni2_still_stock(self):
+        # Tuned file but CDNWS 0x02 still intact
+        from meseventool.patches import PatchState
+        self.assertEqual(self._detect('170hp_018cm_PassatUNI2.bin').state, PatchState.STOCK)

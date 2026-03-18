@@ -1521,6 +1521,30 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    FixedAddressPatchDef(
+        name          = "VVT Cam Position Monitor Disable — CDNWS (4B0906018CM Passat/A6 AWM)",
+        description   = ("Disables cam position / VVT fault monitoring on 4B0906018CM "
+                         "ECUs (Passat B5 / A6 C5 AWM 170hp) by setting CDNWS=0 at "
+                         "0x0181AF. Stock value is 0x02 on this ECU variant — a different "
+                         "mode byte from the 0x03 used on 06A906032 AWW/AWP ECUs. "
+                         "Prevents P0011 when the N205 cam adjustment solenoid is "
+                         "removed or bypassed. Apply alongside MAF Delete when deleting "
+                         "emissions hardware on this platform."),
+        category      = PatchCategory.DIAGNOSTICS,
+        fixed_addr    = 0x0181AF,
+        stock_bytes   = bytes([0x02]),
+        patch_bytes   = bytes([0x00]),
+        confidence    = "CONFIRMED",
+        notes         = ("STOCK=0x02 confirmed across all 4B0906018CM corpus files: "
+                         "18CM stock, 18CM auto, 170hp UNI2 tuned, dpffiles stock. "
+                         "4B0906018AR and 4B0906018BH show 0x01 — earlier 4B variants "
+                         "without cam phasing, different semantics. "
+                         "NefMoto community confirmation: 'CDNWS set to 2 on the AK file' "
+                         "corroborates the 0x02 value on Passat/A6 4B platform. "
+                         "Setting to 0x00 = keine Diagnose (no diagnostic) per Golf DAMOS."),
+        applies_to    = {"me7.5", "1.8t"},
+    ),
+
 ]  # end ALL_PATCHES
 
 

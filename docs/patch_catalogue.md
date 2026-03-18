@@ -167,28 +167,48 @@ See Emissions section above. Required companion to MAF Delete on SL/4B variants.
 - Allows used ECU installation without cluster re-coding (the IMMO light may
   still flash but the CEL does not set).
 
-### VVT Cam Position Monitor Disable — CDNWS (fixed `0x0181AF`)
+### VVT Cam Position Monitor Disable — CDNWS (fixed `0x0181AF`) — 3 variants
 
-**Who needs this:** Any ME7.1/ME7.1.1 engine with variable cam timing where
-the cam position solenoids have been deleted, bypassed, or have failed.
+**DTCs prevented:** P0011 (Bank 1 intake cam advance setpoint not reached) / P0010.
+Apply when removing or bypassing the N205 cam adjustment solenoid.
 
-**DTCs prevented:** P0010/P0011 (intake cam timing over-retarded/advanced, bank 1/2)
-and P0020/P0021 (exhaust cam equivalent).
+The CDNWS codeword uses **different stock values on different platforms**,
+requiring three separate patches for complete coverage:
 
-**Stock value = `0x01` (monitoring active) on:**
-- 2.7T S4/A6/allroad — late variants (8D0907551M+, 4B0907551AA+, 4Z7907551x)
-- VR6 24V BDF (06A906032AG/AK) — fw6228
-- VR6 R32/TT 3.2 fw6432 (022906032EG/GE)
-- Passat 2.8V6 AMX fw6428 (022906032CS)
-- Touareg 3.2 C1103A (022906032FT)
-- V8 4.2L fw8000 (4D0907558/559G)
+#### Variant 1 — ME7.1/ME7.1.1: `0x01 → 0x00`
 
-**Already `0x00` from factory (patch not needed) on:**
-- AFP 12V VR6 (021906018xx) — no cam phasing on the 12V head
-- Early 2.7T (8D0907551A–F) — pre-VVT firmware calibration
-- RS4 4.2 V8 (4D1907558xx) — different cam monitoring strategy
-- V8 fw8001 (4D0907559E) and S4 B7 4.2 C1105B (8E0907560x) — already disabled
-- RS6 4.2TT (4D1907558F fw8542) — fixed cam timing, no phasing hardware
+Engines with continuously-variable cam phasing (2.7T, 24V VR6, V8 4.2):
+
+| Stock = `0x01` (needs patch) | Already `0x00` factory (no patch needed) |
+|---|---|
+| 2.7T late (8D0907551M+, 4B0907551AA+, 4Z7907551x) | AFP 12V VR6 (021906018xx) — no VVT |
+| VR6 24V BDF (06A906032AG/AK) fw6228 | Early 2.7T (8D0907551A–F) — pre-VVT cal |
+| Golf R32/TT 3.2 fw6432 (022906032EG/GE) | RS4 4.2 (4D1907558xx) |
+| Passat 2.8V6 AMX fw6428 (022906032CS) | V8 fw8001 (4D0907559E) |
+| Touareg 3.2 C1103A (022906032FT) | S4 B7 C1105B (8E0907560x) |
+| V8 4.2 fw8000 (4D0907558/559G) | RS6 4.2TT fw8542 — fixed cam timing |
+
+#### Variant 2 — ME7.5 1.8T AWW/AWP/AUM/AUQ: `0x03 → 0x00`
+
+The 2-position intake cam phaser (N205 solenoid) on later 1.8T engines:
+
+| Has VVT — stock = `0x03` | No VVT — value varies, no patch needed |
+|---|---|
+| AWW (06A906032DL) | AEB, AGU pre-2000 |
+| AWP (06A906032HS, HN) | AWD (06A906032CL/CM) — CDNWS=0x01 |
+| AUM (06A906032DR) | APH, ATW |
+| AUQ (06A906032BJ, GQ, HN) | SL DSG — already 0x00 |
+| AMU/BAM 225hp TT/S3 | |
+
+Confirmed from NefMoto DAMOS: "Codewort DNWS abschalten (EURO-Kodierung), CD..=0 → keine Diagnose."
+
+#### Variant 3 — 4B0906018CM Passat B5/A6 AWM: `0x02 → 0x00`
+
+The Passat B5 / A6 C5 AWM 170hp platform uses `0x02` for VVT monitoring:
+
+- 4B0906018CM — confirmed `0x02` across all 4 corpus files
+- 4B0906018AR and BH use `0x01` — older variants without cam phasing, not needed
+- NefMoto community reference: "CDNWS set to 2 on the AK file" corroborates
 
 ---
 
