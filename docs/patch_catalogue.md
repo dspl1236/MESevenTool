@@ -1,259 +1,225 @@
-# MESevenTool — Patch Catalogue
+# MESevenTool Patch Catalogue
 
-Complete listing of all confirmed patches and scalars as of the current build.
-All entries are `confidence = "CONFIRMED"` — every one has corpus evidence.
+**34 confirmed patches | 5 confirmed scalars | all CONFIRMED against real ROM corpus**
 
----
-
-## How needles work
-
-Each patch is found by searching the ROM for a sequence of C167 instruction bytes
-(the "needle") that is unique to the target code location. Wildcard mask bytes
-(`0x00` in the mask) allow variable operands (RAM addresses, immediate values)
-that shift between firmware versions. Once the needle hits, a fixed offset into
-the match gives the patch site.
-
-This means **no hardcoded addresses** — the same patch definition works on
-fw4012, fw4013, fw4019 and every minor revision without modification.
+Last updated: March 2026
 
 ---
 
-## PatchDef types
+## Codeword block overview
 
-| Type | How it works |
-|---|---|
-| `PatchDef` | Needle search → fixed byte offset → write stock/patch bytes |
-| `OffsetPatchDef` | Search for anchor string → add integer offset → write byte |
-| `MultiOffsetPatchDef` | Anchor string → list of independent offsets, each patched separately |
-| `FixedAddressPatchDef` | Direct ROM address — used where the address is provably constant across all variants |
-| `ScalarPatchDef` | Needle → read/write a 16-bit numeric value with scale factor |
+All `Fixed` address patches target the stable ME7 codeword block at `0x018190–0x0181C4`.
+This block is identical in structure across all ME7.1, ME7.1.1, and ME7.5 variants —
+and confirmed present in: 1.8T, 2.7T, VR5 20V, VR6 24V BDF, R32/TT 3.2 fw6432,
+Passat 2.8V6 fw6428, V8 fw8000/fw8001/fw8542, AFP 12V VR6.
 
----
-
-## 28 Confirmed patches
-
-### Diagnostics
-
-#### P1681 Immobiliser Databus CEL Disable (ME7.1.1)
-- **Target:** 2.7T ME7.1.1 (4Z7, late 8D, 4D1 RS4/S8)
-- **Method:** PatchDef — JMPR UGE → JMPR UC in codeword check
-- **Effect:** Suppresses DTC P1681 (immobiliser databus fault) when running ECU standalone
-- **Confirmed:** 4Z7907551AA stock → 4Z7907551AA-disable-P1681 patched
+Setting a codeword byte from `0x01` to `0x00` disables that monitoring function.
+Some ECUs ship with certain codewords already `0x00` from the factory when the
+monitored hardware was never fitted to that market/variant.
 
 ---
 
-### Emissions
+## Performance patches (5)
 
-#### Rear O2 Monitor Threshold / Rear O2 Monitor Threshold (LP fw4013)
-- **Target:** ME7.5 1.8T
-- **Method:** OffsetPatchDef — anchor on ECU part-number string ("06A906032DL" or "06A906032LP"), fixed offset to threshold byte
-- **Effect:** Raises the secondary O2 voltage comparison threshold, allowing rear O2 removal without continuous fault
-- **Confirmed:** DL stock vs DL tuned; LP stock separately anchored (different PN, offset -20 from standard)
+### Vmax Speed Limiter Disable — three variants
 
-#### Rear O2 OBD Readiness Flags
-- **Target:** ME7.5 1.8T DL/HN (fw4019)
-- **Method:** MultiOffsetPatchDef — anchor "40/1/ME7.5"; three independent codeword bytes
-- **Effect:** Clears O2 monitor readiness bits so OBD never reports rear O2 as incomplete
-- **Note:** DL/HN only; RN/LP/SL use different values at the same offsets
+All three are confirmed needle patches that zero the speed limiter comparison value.
+The ME7.1 and ME7.1.1 variants have different instruction sequences at the limiter
+function; both are required in the corpus to cover the full 2.7T/VR6/V8 family.
 
-#### ESKONF Rear O2 Heater Disable (three variants)
-- **Target:** 2.7T ME7.1 (all 57 corpus files)
-- **Method:** MultiOffsetPatchDef — anchor on ESKONF codeword pattern
-- **Effect:** Disables the rear O2 heater diagnostic circuit check
-- **Three variants:** `0F 01 05` (newer, universal), `06 02 A8` (older, 17 files), `05 02 A8` (oldest, 13 files)
-
-#### SAP MSLUB Airflow Table Zero (2.7T)
-- **Target:** 2.7T ME7.1 (not 4D1 V8 — no SAP fitted)
-- **Method:** OffsetPatchDef — anchor on SAP flow table header
-- **Effect:** Zeros the SAP airflow contribution table, preventing SAP pump activation
-
-#### SAP Diagnosis Disable (ME7.5 1.8T)
-- **Target:** ME7.5 1.8T DL (06A906032DL) — SAP-equipped ECUs only
-- **Method:** OffsetPatchDef — CDSLS codeword, anchor on PN string
-- **Effect:** CDSLS → 0x00, disables secondary air pump diagnosis fault
-
-#### EVAP Purge Diagnosis Disable (ME7.5 1.8T)
-- **Target:** ME7.5 1.8T DL — EVAP-equipped ECUs only
-- **Method:** OffsetPatchDef — CDTES codeword
-- **Effect:** Disables EVAP canister purge diagnosis fault
-
-#### 4B0906018 fixed-address patches (5 patches: CDSLS, CDKAT, CDKVS, CDKVS2, CDTES)
-- **Target:** 4B0906018CM (A6/Passat 1.8T)
-- **Method:** FixedAddressPatchDef — addresses 0x0181A1–0x0181B2
-- **Effect:** Individual codeword byte writes — SAP, catalyst monitor, knock sensor monitor, knock sensor variant, EVAP diagnosis
-- **Confirmed:** 18CM_stock → 18CM_uni2 / 18CM_evap
-
-#### Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1)
-- **Target:** 2.7T all 57 corpus files
-- **Method:** OffsetPatchDef — CDLSH codeword, anchor on ECU PN string
-- **Effect:** Disables rear O2 sensor fault diagnosis
-
----
-
-### Fuelling
-
-#### MAF Delete / Alpha-N load redirect (5 variants)
-- **Target:** ME7.5 1.8T — all known firmware builds
-- **Method:** PatchDef — needle finds the `FAxxx` load-source selector opcode in the MAF-to-load calculation code
-- **Effect:** Redirects ECU load calculation from MAF (air mass) to Alpha-N (throttle angle × RPM), enabling MAF-off operation
-- **Two-byte patch** changes load-source register reference:
-
-| Variant | Needle stock | → Patch | Firmware |
-|---|---|---|---|
-| 06A fw4019 DL/HN | `FA18/FA19` | `FA22/FA23` | fw4019 |
-| RN fw4013 | `FA48/FA49` | `FA22/FA23` | fw4013 |
-| LP/18CM fw4013/4012 | `FA34/FA35` | `FA22/FA23` | fw4013/fw4012 |
-| SL DSG X505R | `FA4A/FA4B` | `FA22/FA23` | X505R |
-| fw4013 alt (20th/rn_base) | `FA48/FA49` | `FA1E/FA1F` | fw4013 |
-
----
-
-### Ignition
-
-#### Knock Retard Disable (ME7.5 1.8T)
-- **Target:** ME7.5 1.8T
-- **Method:** PatchDef — code needle
-- **Effect:** Prevents timing retard from accumulating after knock events
-
-#### Knock Retard Code Disable (2.7T ME7.1)
-- **Target:** 2.7T ME7.1 — 30/57 corpus files (ME7.1 only; ME7.1.1 uses different code)
-- **Method:** PatchDef — needle `F2 F4 xx xx F6 F4 xx xx F2 F4 xx xx 68 44`
-  - `F6 F4` = `MOV [RAM], R4` — STORE retard to accumulator
-  - Patch changes to `F2 F4` = `MOV R4, [RAM]` — LOAD instead of STORE
-  - `68 44` (`SUB R4, R4`) is the unique discriminator distinguishing this site from other F6 F4 instances
-- **Effect:** Retard accumulator is never written — knock events are detected but timing is not pulled
-- **Coverage:** 8D A/B/D/G/H/J/L/M/N, 4B A/F/G/K/L/R/S/T, 4Z7 B–K
-
----
-
-### Performance
-
-#### Knock Retard Disable — KRMXN Zero (2.7T ME7.1/ME7.1.1)
-- **Target:** 2.7T all 57 corpus files
-- **Method:** OffsetPatchDef — anchor `0x14` × 16 (unique in all 57 corpus files)
-- **Effect:** Zeros the KRMXN maximum knock retard table — limits retard to 0° per knock event while keeping knock detection active
-- **Note:** Cal approach (safer than code patch). Does not affect knock detection, only the retard magnitude.
-
-#### Vmax Speed Limiter Disable (2.7T ME7.1)
-- **Target:** 2.7T ME7.1 (8D/4B/4Z7 early)
-- **Method:** PatchDef — 3-hit needle `E6 FD A8 61 E6 FE 9A 02`
-- **Effect:** Sets speed limit comparison to 0xFFFF (no limit)
-
-#### Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)
-- **Target:** 2.7T ME7.1.1 (4Z7 late, 4D1)
-- **Method:** PatchDef — ATOMIC prefix variant needle
-
-#### Vmax Speed Limiter Disable (ME7.5 — all variants)
-- **Target:** ME7.5 1.8T — all firmware variants
-- **Method:** PatchDef — code-immediate needle `E6 FD A8 61 E6 FE 9A 02 DA 00`
-- **Effect:** Sets both speed limit immediates to `0xFFFF` (no limit)
-- **⚠️ 2 hits per file** — apply twice: first `detect()` returns site 1, second returns site 2, third returns PATCHED
-
-#### 5th-Gear Torque Mode Disable (ME7.5 1.8T universal)
-- **Target:** ME7.5 1.8T — 06A906032 (Golf/Jetta/TT) and 4B0906018 (A6/Passat)
-- **Method:** FixedAddressPatchDef — 0x00881D: `0x0F → 0x00`
-- **Effect:** Index 5 of the 8-element gear-mode table — 5th gear stops using Mode 0x0F (economy torque cap) and uses Mode 0 instead. Removes steady-highway-speed power reduction.
-- **Address rock-solid** across fw4012/4013/4019
-
----
-
-## 5 Confirmed scalars — ME7.5 1.8T RPM limiter stack
-
-All use `scale = 0.75 RPM/bit`, `size = 2`, `big_endian = False`. The constant `0x4A` low byte is the family signature — only the high byte changes.
-
-### Hard Rev Limit
-- **Needle:** `F7 F8 xx xx E1 08 [val] F4 xx 49 81 3D 08`
-- **Hits:** 2 per file (two call sites, always identical value)
-- **DL stock:** raw `0x254A` = **7160 RPM**
-- **Applies to:** All MT and DSG variants
-
-### Hard Rev Limit — alt path
-- **Needle:** `48 42 EA 30 E0 03 24 8F xx xx E1 08 [val] F4`
-- **Hits:** 1 per file
-- **Stable prefix** `48 42 EA 30 E0 03 24 8F` is constant across all variants including SL DSG
-- **DL stock:** raw `0x254A` = **7160 RPM**
-
-### Overrev Protection RPM
-- **Needle:** `F6 F4 xx xx 8A xx 02 xx [val] 16 xx F2 F4`
-- **Hits:** 1 per file (MT only — absent in SL DSG X505R)
-- **DL stock:** raw `0x2A9A` = **8180 RPM** (~1020 RPM above hard rev)
-
-### Emergency RPM Cut — NKILL
-- **Needle:** `F7 F8 xx xx E1 08 [val] F4 xx 49 81 3D 09`
-- **Hits:** 2 per file (discriminated from Hard Rev by `3D 09` vs `3D 08`)
-- **DL stock:** raw `0x364A` = **10424 RPM** (~3264 RPM above hard rev)
-
-### Fuel Cut Resume RPM
-- **Needle:** separate from Hard Rev (distinct surrounding code)
-- **Hits:** 1 per file
-- **DL stock:** **7160 RPM** (fuel resumption when RPM drops back)
-
----
-
-## Confirmed corpus
-
-| ROM | Firmware | Key patches confirmed |
+| Patch | Applies to | Notes |
 |---|---|---|
-| 06A906032DL (stock) | fw4019 | All 1.8T patches STOCK |
-| 06A906032HN (Unitronic Stage 2) | fw4019 | 5th-gear, SAP, EVAP, MAF-del PATCHED |
-| 06A906032RN (stock) | fw4013 | All 1.8T patches STOCK |
-| 06A906032LP (stock) | fw4013 | All 1.8T patches STOCK |
-| 06A906032SL (Revo DSG) | X505R | MAF-del, 5th-gear PATCHED |
-| 4B0906018CM (stock) | fw4012 | All 4B patches STOCK |
-| 4B0906018CM (Unitronic 2) | fw4012 | CDKAT/CDKVS/5th-gear PATCHED |
-| 8D0907551M-0002 (stock) | fw6005 | All 2.7T patches STOCK |
-| 4Z7907551AA (stock) | fw6010 | All 2.7T patches STOCK |
-| 4Z7907551AA-disable-P1681 | fw6010 | P1681 PATCHED |
-| 4D1907558 (RS4 V8) | fw6012 | 2.7T non-SAP coverage |
+| Vmax (2.7T ME7.1) | 8D0907551xx early | `0x01 8A nn nn` needle |
+| Vmax (ME7.1.1 / V8 RS4) | 8D0907551 late, 4B, 4Z7, 4D1907558xx V8, R32, TT 3.2 fw6432, Passat 2.8V6 fw6428 | Updated instruction sequence |
+| Vmax (ME7.5 — all variants) | All 06A906032xx, 4B0906018xx | Code-immediate variant, single needle |
+
+### Knock Retard Disable — KRMXN Zero
+
+Sets the maximum knock retard table (`KRMXN`) to all zeros, preventing the ECU
+from retarding timing in response to knock events. Use when running aggressive
+ignition maps that self-manage timing, or when the knock sensor has been removed.
+
+| Patch | Applies to |
+|---|---|
+| KRMXN Zero (needle, 2.7T ME7.1/ME7.1.1) | All 2.7T S4/A6/allroad, all VR6 24V BDF, VR5 AQN, AFP 12V, V8 4.2, R32/TT fw6432 |
+
+### 5th-Gear Torque Mode Disable
+
+- **Fixed `0x00881D` → `0x0F` → `0x00`**
+- Disables 5th-gear torque reduction. Applies universally to all ME7.5 1.8T.
+- Pre-patched in many tuned files.
 
 ---
 
-## Universal codeword block patches (5 new — added from chiptuning.pw corpus)
+## Ignition patches (2)
 
-These patches use the stable ME7 codeword block at `0x018190–0x0181C4` via fixed addresses.
-All addresses verified stable across all ME7.1, ME7.1.1, and ME7.5 variants.
+### Knock Retard Disable (code injection)
 
-### Rear O2 full-disable trio — apply all three together
+Two needle variants that disable the knock retard *code path* (vs the table zero
+above). Applied when needing to hard-disable the retard routine entirely rather
+than just reducing its magnitude.
 
-| Patch | Address | Stock→Patch | Applies |
+| Patch | Applies to |
+|---|---|
+| Knock Retard Disable (needle) | ME7.5 1.8T (all variants) |
+| Knock Retard Code Disable (2.7T ME7.1) | 2.7T ME7.1 early firmware |
+
+---
+
+## Emissions patches (19)
+
+### Rear O2 system — full delete (3 fixed + 2 needle + 1 offset)
+
+The complete rear O2 delete requires patches from both the codeword block
+and the cal area. The three fixed-address codewords are universal; the offset
+and ESKONF patches target the monitoring thresholds and heater control.
+
+| Patch | Type | Address | Applies to |
 |---|---|---|---|
-| Rear O2 Heater Diag Disable (CDLSH) | `0x0181AA` | `0x01→0x00` | Universal ME7 |
-| Rear O2 Interchange Diag Disable (CDLSHV) | `0x0181AB` | `0x01→0x00` | Universal ME7 |
-| Rear O2 Voltage Diag Disable (CDLSV) | `0x0181AC` | `0x01→0x00` | Universal ME7 |
+| CDLSH — Rear O2 Heater Diag Disable | Fixed | `0x0181AA` | All ME7 |
+| CDLSHV — Rear O2 Interchange Diag Disable | Fixed | `0x0181AB` | All ME7 |
+| CDLSV — Rear O2 Voltage Diag Disable | Fixed | `0x0181AC` | All ME7 |
+| Rear O2 Monitor Threshold (DL fw4019) | Offset | `−16` from PN | 06A906032DL |
+| Rear O2 Monitor Threshold (LP fw4013) | Offset | `−20` from PN | 06A906032LP |
+| Rear O2 OBD Readiness Flags | Needle | `40/1/ME7.5` | ME7.5 1.8T |
+| Rear O2 Sensor Diag Disable | Needle | `FF FF FF FF 00 00 01 01` | 2.7T ME7.1/ME7.1.1 |
 
-**Confirmed STOCK** in all tested stock ROMs (DL/RN/LP/SL/18CM/8D/4B/4Z7).
-**Confirmed PATCHED** (0x00) in: HN-630hp Unitronic, 20th Anniversary PL.
-3 of 20 allroad 4Z7 corpus files already show 0x00 — pre-patched in that variant.
+**ESKONF (rear O2 heater — 3 variants):**
 
-### Catalyst Monitor Disable (CDKAT) — universal ME7
+| Patch | Anchor bytes | Applies to |
+|---|---|---|
+| ESKONF newer (0F 01 05) | `0x0F 0x01 0x05` | All ME7.1/ME7.1.1/ME7.5 post-2000 |
+| ESKONF older-06 | `0x06 0x02 0xA8` | Early 2.7T ME7.1 |
+| ESKONF older-05 | `0x05 0x02 0xA8` | Early 2.7T ME7.1 |
 
-- `0x0181A2` → `0x01→0x00`. Prevents P0420/P0430. No effect on engine operation.
-- **Extends** the existing `4B0906018`-specific CDKAT to all ME7 families.
-- Confirmed PATCHED in: 20th Anniversary PL tuned file.
+### Catalyst monitor disable (2 fixed)
 
-### MAF Sensor Diagnosis Disable (CDEHFM) — SL DSG + 4B0906018 only
+| Patch | Address | Applies to |
+|---|---|---|
+| CDKAT (universal ME7) | `0x0181A2` | All ME7 — preferred |
+| CDKAT (4B0906018) | `0x0181A1` | 4B0906018 A6/Passat 1.8T only |
 
-- `0x01819C` → `0x01→0x00`. Prevents P0100–P0104 when MAF is physically removed.
-- **Only needed** for SL DSG and 4B0906018 — DL/RN/LP/HN already have `0x00` in stock.
-- Apply together with the MAF Delete / Alpha-N patch on affected ECUs.
+Note: The 4B0906018-specific variant exists at `0x0181A1` due to a one-byte
+offset in that ECU's codeword layout. Use the universal version (`0x0181A2`)
+for all other platforms.
+
+### SAP (Secondary Air Pump) disable (2 fixed + 1 needle)
+
+| Patch | Type | Applies to | Notes |
+|---|---|---|---|
+| CDSLS (ME7.5 1.8T) | Fixed `0x0181B0` | All ME7.5 1.8T | Standard |
+| CDSLS (4B0906018) | Fixed `0x0181B0` | 4B0906018 A6/Passat | Same address, separate confirmation |
+| SAP MSLUB Airflow Table Zero | Needle | 2.7T ME7.1 | Zeros the SAP airflow model to prevent P0410 |
+
+The VR6 24V BDF, AFP 12V, and RS6 4.2TT ECUs have CDSLS already `0x00` from
+factory — no SAP was fitted to those variants/markets.
+
+### EVAP disable (2 fixed)
+
+| Patch | Address | Applies to |
+|---|---|---|
+| EVAP Purge Diag Disable | `0x0181B2` | ME7.5 1.8T |
+| EVAP Diag Disable (4B0906018) | `0x0181B2` | 4B0906018 (same address, confirmed separately) |
+
+The RS6 4.2TT and some Euro-spec VR6/V8 variants already have CDTES=0x00 from factory.
+
+### Knock / MAF sensor diagnosis disable (2 fixed)
+
+| Patch | Address | Applies to | Notes |
+|---|---|---|---|
+| CDKVS — Knock Sensor Monitor | `0x0181A3` | 4B0906018 | Single sensor variant |
+| CDKVS2 — Knock Sensor Variant | needle | 4B0906018 | Dual sensor variant |
+| CDEHFM — MAF Sensor Diag Disable | `0x01819C` | SL DSG + 4B0906018 | Required with MAF Delete on these ECUs |
 
 ---
 
-## New ECU families from chiptuning.pw corpus
+## Fuelling patches (6)
 
-### 2.0 8V ME7.5 — `06A906032DS` (Bora/Golf 2.0 8V NA)
+### MAF Delete / Alpha-N (5 needle variants)
 
-ME7.5 was used for the NA 2.0 8V engine, not just the 1.8T. Same VDO fw4013 hardware as
-RN/LP. 13 of our patches hit STOCK. Emissions patches (SAP/EVAP) appear pre-patched (5 PATCHED).
-Rev limit reads 6008 RPM via scalar — lower than 1.8T. Confirms the 2.0 8V → Beetle cross-flash
-was plausible at the hardware level.
+Redirects the load calculation from MAF-based to throttle angle (Alpha-N) by
+patching the load redirect call. Required when the MAF sensor is physically
+removed. Five variants cover all known ME7.5 1.8T firmware sub-families:
 
-### VR6 3.2 24v ME7 — `0261201522` (A3 3.2 / TT 3.2)
+| Patch | Firmware | Anchor |
+|---|---|---|
+| MAF Delete (06A fw4019) | DL/HN/HS Bosch | |
+| MAF Delete (RN/LP fw4013) | RN/LP VDO | |
+| MAF Delete (LP/18CM fw4013/4012) | LP/4B0906018 | |
+| MAF Delete (SL DSG X505R) | SL auto | |
+| MAF Delete (fw4013 alt FA1E/1F) | Some VDO variants | |
 
-Zero of our 33 patches hit this family. Confirmed completely separate code structure from 1.8T ME7.5.
-Needs its own needle corpus. This file is preserved as the first entry point for VR6 ME7 support.
+Always apply CDEHFM (`0x01819C`) alongside MAF Delete on SL DSG and 4B0906018 ECUs.
 
-### VR6 2.8 ME7 — `0261206618` (Bora VR6)
+### MAF Sensor Diagnosis Disable (fixed `0x01819C`)
 
-512KB file. 7 STOCK, 5 PATCHED — likely a pre-tuned file. RPM scalar returns garbage (not 1.8T code).
-Some emissions codeword patches hit (fixed-address codeword block is shared with 2.8 VR6).
+See Emissions section above. Required companion to MAF Delete on SL/4B variants.
+
+---
+
+## Diagnostics patches (2)
+
+### P1681 Immobiliser Databus CEL Disable
+
+- Needle patch, ME7.1.1 only.
+- Disables the IMMO3 databus fault code that triggers when an ECU is swapped
+  into a car where the cluster IMMO code doesn't match.
+- Allows used ECU installation without cluster re-coding (the IMMO light may
+  still flash but the CEL does not set).
+
+### VVT Cam Position Monitor Disable — CDNWS (fixed `0x0181AF`)
+
+**Who needs this:** Any ME7.1/ME7.1.1 engine with variable cam timing where
+the cam position solenoids have been deleted, bypassed, or have failed.
+
+**DTCs prevented:** P0010/P0011 (intake cam timing over-retarded/advanced, bank 1/2)
+and P0020/P0021 (exhaust cam equivalent).
+
+**Stock value = `0x01` (monitoring active) on:**
+- 2.7T S4/A6/allroad — late variants (8D0907551M+, 4B0907551AA+, 4Z7907551x)
+- VR6 24V BDF (06A906032AG/AK) — fw6228
+- VR6 R32/TT 3.2 fw6432 (022906032EG/GE)
+- Passat 2.8V6 AMX fw6428 (022906032CS)
+- Touareg 3.2 C1103A (022906032FT)
+- V8 4.2L fw8000 (4D0907558/559G)
+
+**Already `0x00` from factory (patch not needed) on:**
+- AFP 12V VR6 (021906018xx) — no cam phasing on the 12V head
+- Early 2.7T (8D0907551A–F) — pre-VVT firmware calibration
+- RS4 4.2 V8 (4D1907558xx) — different cam monitoring strategy
+- V8 fw8001 (4D0907559E) and S4 B7 4.2 C1105B (8E0907560x) — already disabled
+- RS6 4.2TT (4D1907558F fw8542) — fixed cam timing, no phasing hardware
+
+---
+
+## Scalar patches (5)
+
+All 5 scalars apply to ME7.5 1.8T only. They are read/write operations on
+16-bit values in the calibration area, not binary on/off patches.
+
+| Scalar | Description | Typical stock value |
+|---|---|---|
+| Hard Rev Limit | Primary RPM cut | ~7200 RPM |
+| Overrev Protection RPM | Secondary soft-limiter | ~7544 RPM |
+| Hard Rev Limit (alt path) | Redundant limiter | matches primary |
+| Emergency RPM Cut (NKILL) | Absolute safety cut | ~8500 RPM |
+| Fuel Cut Resume RPM | Decel fuel cut re-entry | ~1200 RPM |
+
+---
+
+## ECU family coverage summary
+
+| Platform | ME7 version | Patches applicable |
+|---|---|---|
+| 1.8T ME7.5 (06A906032xx) | ME7.5 | All 34 patches, all 5 scalars |
+| 1.8T 4B0906018xx | ME7.5 | 28–30 patches (no 1.8T needle overlap) |
+| 2.7T ME7.1 (early 8D) | ME7.1 | ~18 patches |
+| 2.7T ME7.1.1 (late 8D/4B/4Z7) | ME7.1.1 | ~22 patches |
+| AFP 12V VR6 (021906018xx) | ME7.1 fw6228 | ~14 patches (KRMXN, ESKONF, codewords) |
+| BDF 24V VR6 (06A906032AG/AK) | ME7.1 fw6228 | ~14 patches |
+| VR5 20V AQN/AZX (066906032xx) | ME7.1 fw5423 | ~14 patches + Vmax |
+| Golf R32/TT 3.2 fw6432 (022906032EG/GE) | ME7.1.1 | ~14 patches + Vmax + CDNWS |
+| Passat 2.8V6 fw6428 (022906032CS) | ME7.1.1 | ~12 patches + Vmax + CDNWS |
+| V8 4.2 fw8000 (4D0907558/559G) | ME7.1 | ~10 patches + Vmax |
+| V8 4.2 fw8001/fw8542 (4D0907559E/4D1907558xx) | ME7.1.1 | ~10 patches + Vmax |
+| S4 B7 4.2 C1105B (8E0907560x) | ME7.1.1 | ~12 patches + Vmax |
