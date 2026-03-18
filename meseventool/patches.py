@@ -1223,11 +1223,13 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         stock_bytes   = bytes([0x2D]),
         patch_bytes   = bytes([0x0D]),
         confidence    = "CONFIRMED",
-        notes         = ("Confirmed: 4Z7907551AA-disable-P1681, 4Z7907551S-disable-P1681. "
-                         "ME7.1.1 only - no P1681 in ME7.1 firmware. "
-                         "Needle context F0 BE 66 F4 80 00 is stable across all ME7.1.1 variants. "
-                         "Stock 0x2D = JMPR cc=2 (unsigned >=). Patch 0x0D = JMPR cc=0 (always)."),
-        applies_to    = {"me7.1.1", "2.7t"},
+        notes         = ("Confirmed ONLY on 4Z7907551AA and 4Z7907551S (allroad fw6030). "
+                         "Full corpus sweep (60+ ROM files) found the needle F0 BE 66 F4 80 "
+                         "in ONLY these two allroad part numbers. NOT present in any 8D0907551, "
+                         "4B0907551, 4D1907558, 06A906032, 022906032, or any other ME7 family. "
+                         "The P1681 code path is unique to the fw6030 allroad IMMO3 build. "
+                         "Stock 0x2D = JMPR cc=2 (unsigned >=); patch 0x0D = JMPR cc=0 (always)."),
+        applies_to    = {"4z7907551"},
     ),
 
     # -- Rear O2 Sensor Diagnosis Disable (2.7T ME7.1/ME7.1.1) ------------

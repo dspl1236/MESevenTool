@@ -242,7 +242,7 @@ class TestCataloguePatches:
             "bosch_hfm5", "hitachi",
             "dual_bank",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
-            "4b0906018", "me7.1.1", "2.7t",
+            "4b0906018", "me7.1.1", "2.7t", "4z7907551",
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
             for tag in p.applies_to:
