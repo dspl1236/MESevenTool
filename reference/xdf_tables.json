@@ -2423,5 +2423,197 @@
         "units": ""
       }
     }
+  },
+  {
+    "name": "KFZW",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 72818,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": 1,
+        "math": ".75*x",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "KFZW2",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 73010,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": 1,
+        "math": ".75*x",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "KFZWMS",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 72624,
+        "elemsize": 1,
+        "cols": 12,
+        "rows": 16,
+        "signed": 1,
+        "math": ".75*x",
+        "units": "grad KW"
+      }
+    }
+  },
+  {
+    "name": "MLHFM",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 82516,
+        "elemsize": 2,
+        "cols": 512,
+        "rows": 1,
+        "signed": 0,
+        "math": "0.000000+X*0.100000",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFMIRL",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 84974,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 16,
+        "signed": 0,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "KFMIOP",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 90502,
+        "elemsize": 2,
+        "cols": 11,
+        "rows": 16,
+        "signed": 0,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "KFLBTS_0_A",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 102919,
+        "elemsize": 2,
+        "cols": 12,
+        "rows": 16,
+        "signed": 0,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "KFDLULS",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 104709,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": 0,
+        "math": "5.000000 * X",
+        "units": "hPa"
+      }
+    }
+  },
+  {
+    "name": "KFMLDMX",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 113286,
+        "elemsize": 2,
+        "cols": 8,
+        "rows": 8,
+        "signed": 0,
+        "math": "0.100000 * X",
+        "units": "kg/h"
+      }
+    }
+  },
+  {
+    "name": "LAMFA",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 115598,
+        "elemsize": 2,
+        "cols": 6,
+        "rows": 15,
+        "signed": 0,
+        "math": "0.000000+X*0.007813",
+        "units": ""
+      }
+    }
+  },
+  {
+    "name": "LDRXN_1_A",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 122100,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": 0,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
+  },
+  {
+    "name": "LDRXNZK",
+    "desc": "",
+    "pn": "8D0907551M",
+    "axes": {
+      "z": {
+        "addr": 122166,
+        "elemsize": 2,
+        "cols": 16,
+        "rows": 1,
+        "signed": 0,
+        "math": "0.023438 * X",
+        "units": "%"
+      }
+    }
   }
 ]

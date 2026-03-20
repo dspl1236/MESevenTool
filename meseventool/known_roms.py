@@ -284,6 +284,53 @@ _CATALOG: list[KnownROM] = [
     KnownROM(0x42633d75, "8L0906018K",  "0261206442", "42/1/ME7.5/5/4018.20//F19x4/Dst01t/100699",
              "ME7.5", 512,  "Audi S3 8L 1.8T APY/BAM 210hp — 8L fw4018 512KB rev2"),
 
+    # ── ME7.1 / ME7.1.1 — VR6 T4/Phaeton ────────────────────────────────────
+    # T4 California uses the 022906032 VR6 family but with different trim level
+    KnownROM(0x00e5a2e6, "022906032B",  "0261206239", "42/1/ME7.1/3/6428.AA//X22i9/Dstm1g/071099",
+             "ME7.1",   1024, "VW T4 California 2.8 VR6 AMV 204hp — fw6428 ME7.1"),
+    # Phaeton 3.2 VR6 — version string shows ME7.1.1 fw6432
+    KnownROM(0xa525b453, "022906032BN", "0261207688", "42/1/ME7.1.1/3/6432.D1//24F/Dst0oo/100204",
+             "ME7.1.1", 1024, "VW Phaeton 3.2 VR6 AYT 241hp — fw6432 ME7.1.1"),
+
+    # ── ME7.1.1 — Touareg 4.2 V8 ─────────────────────────────────────────────
+    KnownROM(0x5adb84f3, "4D0907560BR", "0261208009", "42/1/ME7.1.1/3/8542.01//25D/DstA4o/060503",
+             "ME7.1.1", 1024, "VW Touareg 4.2 V8 AXQ 310hp — 4D0 fw8542 ME7.1.1"),
+
+    # ── ME7.5 — 06A late production (fw4013/fw4518/X505R DSG) ─────────────────
+    # fw4518 is Motronic ME7.5 for automatic/CVT applications (Beetle auto, Sharan)
+    # X505R is the DSG (Direct Shift Gearbox) firmware variant
+    KnownROM(0x58f96103, "06A906032CL", "0261206552", "42/1/ME7.5/3/4019.20//F22ic/Dst01o/050600",
+             "ME7.5",   512,  "VW Jetta 1.8T AWD 150hp — 06A906032CL fw4019 VDO 512KB rev2"),
+    KnownROM(0xe96baffe, "06A906032FT", "0261207341", "42/1/ME7.5/120/4518.KE//24b/DstE3o/010403",
+             "ME7.5",  1024, "VW New Beetle 1.8T AWP 180hp — fw4518 auto"),
+    KnownROM(0x7b5d481f, "06A906032GQ", "0261207349", "42/1/ME7.5/120/4518.KE//24b/Dst53o/010403",
+             "ME7.5",  1024, "VW New Beetle 1.8T AWW/AUM 150hp — fw4518 auto"),
+    KnownROM(0x269bf66a, "06A906032LP", "0261207955", "42/1/ME7.5/120/4013.00//24D/Dst03o/100103",
+             "ME7.5",  1024, "VW Jetta 1.8T AWP 180hp — fw4013 Bosch late 1MB"),
+    KnownROM(0xbc658efd, "06A906032LQ", "0261207956", "42/1/ME7.5/120/4013.00//24D/Dst03o/100103",
+             "ME7.5",  1024, "VW Golf4 1.8T AWW/AWD 150hp — fw4013 Bosch late 1MB"),
+    KnownROM(0x39292d94, "06A906032LT", "0261207957", "40/1/ME7.5/3/4013.00//24B/Dst01o/250103",
+             "ME7.5",  1024, "VW Golf4 1.8T AWP 180hp — fw4013 Bosch LT"),
+    KnownROM(0x4749483d, "06A906032QJ", "0261208686", "42/1/ME7.5/381/4518.SA//22L/DstA2o/010804",
+             "ME7.5",  1024, "VW Sharan 1.8T AWC 150hp — fw4518 auto (Sharan-specific)"),
+    # X505R = DSG Direct Shift Gearbox firmware — twin-clutch automatic
+    KnownROM(0xb1bcd707, "06A906032SK", "0261208528", "40/1/ME7.5/120/X505R//24D/Dst03o/020603",
+             "ME7.5",  1024, "VW Golf4/Bora 1.8T AWP/AUM — fw X505R DSG"),
+    KnownROM(0xf7253a01, "06A906032SL", "0261208529", "40/1/ME7.5/120/X505R//24D/Dst03o/020603",
+             "ME7.5",  1024, "VW Bora 1.8T AWP/AWW — fw X505R DSG rev2"),
+
+    # ── ME7.5 — 4B0 Passat B5/B5.5 additional ────────────────────────────────
+    KnownROM(0xcdf3841b, "4B0906018CC", "0261206871", "40/1/ME7.5/5/4016.31//24b/Dst01o/280201",
+             "ME7.5",  1024, "VW Passat B5 1.8T AWT 163hp — 4B0 fw4016"),
+    KnownROM(0x2612cf54, "4B0906018DA", "0261207931", "40/1/ME7.5/3/4016.31//24E/Dst06o/120302",
+             "ME7.5",  1024, "VW Passat B5.5 1.8T AWM 170hp — 4B0 fw4016"),
+    KnownROM(0xa641b12c, "4B0906018DF", "0261207639", "40/1/ME7.5/5/4016.31//24b/Dst01o/070202",
+             "ME7.5",  1024, "VW Passat B5.5 1.8T AWT 163hp — 4B0 fw4016 DF"),
+    KnownROM(0x3fd5ed14, "4B0906018DH", "0261207928", "40/1/ME7.5/3/4016.31//24G/Dst04o/130602",
+             "ME7.5",  1024, "VW Passat B5.5 1.8T 163hp — 4B0 fw4016 DH"),
+    KnownROM(0x20e8a04e, "4B0906018DP", "0261208291", "40/1/ME7.5/3/4012.31//24H/Dst02o/121002",
+             "ME7.5",  1024, "VW Passat B5.5 1.8T AWM 170hp — 4B0 fw4012 DP late"),
+
 ]
 
 # ── Public interface ───────────────────────────────────────────────────────────
