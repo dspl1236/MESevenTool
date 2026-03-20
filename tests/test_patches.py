@@ -1032,20 +1032,20 @@ class TestRealROM27T(unittest.TestCase):
     # ── VMAX ME7.1.1 on late 4Z7 + 4D1 ───────────────────────────────────
     def test_vmax_me711_4z7_aa_stock(self):
         from meseventool.patches import PatchState
-        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+        r = self._detect("Vmax Speed Limiter Disable (ME7.1.1 — all variants)",
                          "4Z7907551AA.bin")
         assert r.state == PatchState.STOCK
 
     def test_vmax_me711_4d1_stock(self):
         from meseventool.patches import PatchState
-        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+        r = self._detect("Vmax Speed Limiter Disable (ME7.1.1 — all variants)",
                          "4D1907558-0002.bin")
         assert r.state == PatchState.STOCK
 
     def test_vmax_me711_not_in_early_4z7(self):
         """ME7.1.1 needle should be MISSING in early ME7.1 4Z7 (different code)."""
         from meseventool.patches import PatchState
-        r = self._detect("Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+        r = self._detect("Vmax Speed Limiter Disable (ME7.1.1 — all variants)",
                          "4Z7907551B.bin")
         assert r.state == PatchState.MISSING, \
             f"ME7.1.1 needle should be MISSING in early ME7.1 4Z7, got {r.state}"
@@ -2168,7 +2168,7 @@ class Test022906032CSFamily(unittest.TestCase):
     # Vmax STOCK on 022CS
     def test_vmax_stock_022cs(self):
         from meseventool.patches import PatchState
-        r = self._detect('Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)',
+        r = self._detect('Vmax Speed Limiter Disable (ME7.1.1 — all variants)',
                          '022906032CS_0006_fw6428.bin')
         self.assertEqual(r.state, PatchState.STOCK)
 

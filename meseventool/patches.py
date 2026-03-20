@@ -714,29 +714,25 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     ),
 
     PatchDef(
-        name        = "Vmax Speed Limiter Disable (2.7T ME7.1.1 / V8 RS4)",
+        name        = "Vmax Speed Limiter Disable (ME7.1.1 — all variants)",
         description = ("Raises the top speed limiter from 250 km/h to ~655 km/h "
-                       "for the later ME7.1.1 Allroad (4Z7907551 N/Q/R/S/T/AA) "
-                       "and all V8 RS4 / S8 variants (4D1907558).  "
+                       "for ME7.1.1 variants: Allroad (4Z7907551 N/Q/R/S/T/AA), "
+                       "V8 RS4/S8 (4D1907558), and VR6 Golf4/R32 (022906032CS/CP/EG).  "
                        "Same mechanism as the ME7.1 patch but the code uses a "
                        "different suffix instruction sequence (DA 00 9A 10) "
                        "instead of the ME7.1 form (E6 FE xx xx DA 00 9C 6C)."),
         category    = PatchCategory.PERFORMANCE,
-        # C167: MOV R13, #25000  +  CLR Rx  +  DA 00 9A 10  +  (varies)
-        # The post-VMAX bytes DA 00 9A 10 are stable across ME7.1.1 variants.
-        # Bytes 8-11 vary (the instruction after the 9A 10 branch target) → masked.
         needle      = [0xE0, 0x1C, 0xE6, 0xFD, 0xA8, 0x61, 0xDA, 0x00, 0x9A, 0x10],
         mask        = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
         offset      = 4,
         stock_bytes = bytes([0xA8, 0x61]),  # 25000 = 250.00 km/h
         patch_bytes = bytes([0xFF, 0xFF]),
         confidence  = "CONFIRMED",
-        notes       = ("10/57 corpus files (all ME7.1.1): 7 × 4D1907558 RS4/S8 V8, "
-                       "10 × 4Z7907551 N/Q/R/S/T/AA late allroad. "
-                       "Zero false positives on ME7.1 files. "
-                       "With ME7.1 patch: 57/57 complete 2.7T coverage. "
-                       "Same swap use case applies — see ME7.1 patch notes."),
-        applies_to  = {"me7.1.1", "2.7t"},
+        notes       = ("Confirmed on ME7.1.1: 4D1 V8 RS4/S8, 4Z7 Allroad, "
+                       "022906032CS Jetta VR6, 022906032EG R32 (all detect STOCK). "
+                       "applies_to now empty — the ME7.1.1 needle never hits ME7.1 or ME7.5. "
+                       "Safe to apply universally within ME7.1.1 code family."),
+        applies_to  = {"me7.1.1"},   # ME7.1.1 codebase only — needle doesn't hit ME7.1/ME7.5
     ),
 
     # ── Confirmed offset-based patches (DL / 06A906032DL verified) ──────────
@@ -1397,7 +1393,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "3 of 20 4Z7 allroad stock files already show 0x00 (pre-patched). "
                          "PATCHED=0x00 confirmed in HN-630hp Unitronic tune. "
                          "Part of the 3-byte rear O2 full disable at 0x0181AA/AB/AC."),
-        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+        applies_to    = set()  # universal — applies to all ME7 profiles,
     ),
 
     FixedAddressPatchDef(
@@ -1414,7 +1410,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         notes         = ("STOCK=0x01 in all tested ROMs. PATCHED=0x00 confirmed in "
                          "HN-630hp and 20th Anniversary (PL) tuned files. "
                          "Apply as part of the CDLSH+CDLSHV+CDLSV triple disable."),
-        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+        applies_to    = set()  # universal — applies to all ME7 profiles,
     ),
 
     FixedAddressPatchDef(
@@ -1431,7 +1427,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         notes         = ("STOCK=0x01 in all tested ROMs. PATCHED=0x00 confirmed in "
                          "HN-630hp and 20th Anniversary (PL) tuned files. "
                          "Full rear O2 delete = CDLSH + CDLSHV + CDLSV (3 FixedAddr patches)."),
-        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+        applies_to    = set()  # universal — applies to all ME7 profiles,
     ),
 
     FixedAddressPatchDef(
@@ -1449,7 +1445,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "PATCHED=0x00 confirmed in 20th Anniversary (PL) tuned file. "
                          "Extends the existing 4B0906018-specific CDKAT patch to universal ME7. "
                          "No effect on engine operation — OBD monitor only."),
-        applies_to    = {"me7.5", "me7.1", "me7.1.1", "1.8t", "2.7t"},
+        applies_to    = set()  # universal — applies to all ME7 profiles,
     ),
 
     FixedAddressPatchDef(
