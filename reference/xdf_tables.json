@@ -2543,7 +2543,7 @@
     "axes": {
       "z": {
         "addr": 104709,
-        "elemsize": 2,
+        "elemsize": 1,
         "cols": 8,
         "rows": 8,
         "signed": 0,
