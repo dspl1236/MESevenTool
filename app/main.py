@@ -733,6 +733,33 @@ class MapsWidget(QWidget):
         self._table.setRowCount(rows)
         self._table.setColumnCount(cols)
 
+        # ── Axis labels as headers ─────────────────────────────────────────────
+        if m.x_values and len(m.x_values) == cols:
+            x_ax = m.x_axis
+            self._table.setHorizontalHeaderLabels(
+                [f"{v:{x_ax.fmt.replace('{:.', '').replace('}','')}}" 
+                 if hasattr(x_ax, 'fmt') else f"{v:.1f}"
+                 for v in m.x_values])
+        else:
+            self._table.setHorizontalHeaderLabels([str(c) for c in range(cols)])
+
+        if m.y_values and len(m.y_values) == rows:
+            y_ax = m.y_axis
+            self._table.setVerticalHeaderLabels(
+                [f"{v:{y_ax.fmt.replace('{:.', '').replace('}','')}}"
+                 if hasattr(y_ax, 'fmt') else f"{v:.1f}"
+                 for v in m.y_values])
+        else:
+            self._table.setVerticalHeaderLabels([str(r) for r in range(rows)])
+
+        self._table.horizontalHeader().setStyleSheet(
+            f"QHeaderView::section {{ background:{C_BG3}; color:{C_DIM}; "
+            f"font-size:9px; padding:2px; border:1px solid {C_BORDER}; }}")
+        self._table.verticalHeader().setStyleSheet(
+            f"QHeaderView::section {{ background:{C_BG3}; color:{C_DIM}; "
+            f"font-size:9px; padding:2px; border:1px solid {C_BORDER}; }}")
+        self._table.verticalHeader().setFixedWidth(48)
+
         for r, row in enumerate(data):
             for c, val in enumerate(row):
                 item = QTableWidgetItem(f"{val:.2f}")

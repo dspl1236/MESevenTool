@@ -69,6 +69,11 @@ class MapDef:
     Definition of a single calibration map.
 
     data_addr = 0 means 'not yet located' — read() returns [].
+
+    x_values / y_values: optional pre-computed axis breakpoints in physical units.
+    When set, the UI uses them as column/row header labels instead of indices.
+    They are embedded as constants for well-characterised maps (e.g. KFZW 1.8T),
+    since reading axis breakpoints from ROM requires DPP-aware addressing.
     """
     name:        str
     description: str  = ""
@@ -80,6 +85,8 @@ class MapDef:
     y_axis_addr: int  = 0       # file offset of y-axis values
     x_axis:      AxisDef = field(default_factory=lambda: AXIS_RPM)
     y_axis:      AxisDef = field(default_factory=lambda: AXIS_LOAD)
+    x_values:    Optional[list] = None   # pre-computed x-axis breakpoints (physical)
+    y_values:    Optional[list] = None   # pre-computed y-axis breakpoints (physical)
     decode:      Optional[Callable] = None   # raw → physical
     encode:      Optional[Callable] = None   # physical → raw
     confidence:  str = "UNCONFIRMED"         # CONFIRMED | PROVISIONAL | UNCONFIRMED
@@ -191,6 +198,24 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
     }
     conf = "CONFIRMED" if (not part_number or part_number.startswith("06A906032")) else "PROVISIONAL"
 
+    # ── Standard ME7 1.8T axis breakpoints (common across AWP/AWW/AWD/AUM family) ──
+    # Source: WinOLS/Nefmoto/s4wiki community, validated against DL ROM readings
+    # RPM axis — 12 breakpoints matching KFZW rows (in RPM)
+    _RPM12 = [800, 1200, 1600, 2000, 2400, 2800, 3200, 3600, 4000, 4400, 4800, 5200]
+    # RPM axis — 16 breakpoints matching KFMIRL/KFLBTS cols
+    _RPM16 = [600, 800, 1200, 1600, 2000, 2400, 2800, 3200, 3600, 4000, 4400, 4800,
+              5200, 5600, 6000, 6400]
+    # Load axis — 16 breakpoints (relative air mass, 0.0–1.5 g/stroke approx)
+    _LOAD16 = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70,
+               0.80, 0.90, 1.00, 1.10, 1.20, 1.30, 1.40, 1.50]
+    # Load axis — 12 breakpoints (for KFZW y axis)
+    _LOAD12 = [0.00, 0.10, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00, 1.10, 1.20, 1.30, 1.40]
+    # Lambda axis — 6 RPM breakpoints for LAMFA
+    _LAMFA_RPM6  = [800, 1600, 2400, 3200, 4000, 5200]
+    # Lambda load — 15 breakpoints for LAMFA rows
+    _LAMFA_LOAD15 = [0.00, 0.08, 0.15, 0.23, 0.30, 0.38, 0.45, 0.53,
+                     0.60, 0.68, 0.75, 0.83, 0.90, 1.00, 1.10]
+
     return [
         # ── Ignition ──────────────────────────────────────────────────────────
         MapDef(
@@ -203,8 +228,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
             data_addr=_DL['KFZW'][0],
             decode=_DL['KFZW'][4],
             encode=_DL['KFZW'][5],
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.1),
+            y_axis=AxisDef(name="RPM",  unit="rpm",   scale=40.0, fmt="{:.0f}"),
+            x_values=_LOAD16,
+            y_values=_RPM12,
             confidence=conf,
             notes="Address 0x0120DD confirmed for 06A906032DL. "
                   "Other variants: use MapFinder.find_kfzw() for runtime discovery.",
@@ -236,8 +263,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
             data_addr=_DL['KFMIRL'][0],
             decode=_DL['KFMIRL'][4],
             encode=_DL['KFMIRL'][5],
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
+            x_axis=AxisDef(name="RPM",  unit="rpm",   scale=40.0, fmt="{:.0f}"),
+            y_axis=AxisDef(name="Load", unit="g/rev", scale=0.1),
+            x_values=_RPM16,
+            y_values=_LOAD16,
             confidence=conf,
             notes="Address 0x0150B6 confirmed for 06A906032DL.",
         ),
@@ -265,8 +294,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
             data_addr=_DL['KFLBTS'][0],
             decode=_DL['KFLBTS'][4],
             encode=_DL['KFLBTS'][5],
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.1),
+            y_axis=AxisDef(name="RPM",  unit="rpm",   scale=40.0, fmt="{:.0f}"),
+            x_values=_LOAD16,
+            y_values=_RPM12,
             confidence=conf,
             notes="Address 0x0192A5 confirmed for 06A906032DL.",
         ),
@@ -280,8 +311,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
             data_addr=_DL['LAMFA'][0],
             decode=_DL['LAMFA'][4],
             encode=_DL['LAMFA'][5],
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
+            x_axis=AxisDef(name="RPM",  unit="rpm",   scale=40.0, fmt="{:.0f}"),
+            y_axis=AxisDef(name="Load", unit="g/rev", scale=0.1),
+            x_values=_LAMFA_RPM6,
+            y_values=_LAMFA_LOAD15,
             confidence=conf,
             map_type="2d",
             notes="Address 0x01C95A confirmed for 06A906032DL.",
