@@ -166,18 +166,15 @@ class ROMProfile:
         """
         Return MapDef list for this profile.
 
-        Routing:
-          - Biturbo V6/V8 (me7.1, dual_bank)  → make_v6_biturbo_maps
-          - N/A profiles (na)                  → make_awp_maps (shared base, no boost)
-          - 1.8T/2.0T turbo (me7.5/me7.1 mpi) → XDF-confirmed make_awp_maps
-        If xdf_pn is given and matches a known XDF part number, uses confirmed
-        offsets from reference/xdf_tables.json.
-        """
-        # V6/V8 biturbo — different calibration structure
-        if self.dual_bank or "2.7t" in self.platforms or "v8" in self.platforms:
-            return make_v6_biturbo_maps(xdf_pn or "")
+        Routing (priority order):
+          1. XDF loader match (exact PN) — most specific, most confirmed
+          2. Biturbo V6/V8 (dual_bank) fallback → make_v6_biturbo_maps
+          3. AWP map set fallback → make_awp_maps
 
-        # Try XDF confirmed offsets first (for exact PN match)
+        XDF loader covers: 06A906032CL/CM/DL/RN (1.8T), 8D0907557P (2.7T S4),
+        8D0907551M (2.7T S4 full 12-map set).  XDF always wins when PN matches.
+        """
+        # Try XDF confirmed offsets first — works for both 1.8T and 2.7T PNs
         if xdf_pn:
             try:
                 from .xdf import XDFLoader
@@ -186,6 +183,10 @@ class ROMProfile:
                     return loader.make_maps(xdf_pn)
             except Exception:
                 pass
+
+        # V6/V8 biturbo fallback — different calibration structure from 1.8T
+        if self.dual_bank or "2.7t" in self.platforms:
+            return make_v6_biturbo_maps(xdf_pn or "")
 
         # Fall back to AWP map set (confirmed for 06A906032DL, provisional for others)
         return make_awp_maps(xdf_pn or "")

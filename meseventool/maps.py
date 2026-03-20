@@ -361,20 +361,29 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
     All addresses are flat file offsets into the 1MB ROM.
     """
     _M = {
-        'KFZW':    0x011C72,   # 16×12 S8  — Main ignition (confirmed)
-        'KFZW2':   0x011D32,   # 16×12 S8  — Second ignition map
-        'KFZWMS':  0x011BB0,   # 16×12 S8  — Manifold switchover ignition
-        'MLHFM':   0x014254,   # 512×1 U16 — MAF linearisation
-        'KFMIRL':  0x014BEE,   # 16×12 U16 — Torque model (driver demand)
-        'KFMIOP':  0x016186,   # 16×11 U16 — Optimal torque
-        'KFLBTS':  0x019207,   # 16×12 U16 — Lambda target
-        'KFDLULS': 0x019905,   # 8×8   U16 — Boost limit
-        'KFMLDMX': 0x01BA86,   # 8×8   U16 — MAF load max
-        'LAMFA':   0x01C38E,   # 15×6  U16 — Long-term lambda trim
-        'LDRXN_1_A': 0x01DCF4, # 1×16  U16 — Max load during boost
-        'LDRXNZK': 0x01DD36,   # 1×16  U16 — Max load during knock
+        'KFZW':    0x011C72,
+        'KFZW2':   0x011D32,
+        'KFZWMS':  0x011BB0,
+        'MLHFM':   0x014254,
+        'KFMIRL':  0x014BEE,
+        'KFMIOP':  0x016186,
+        'KFLBTS':  0x019207,
+        'KFDLULS': 0x019905,
+        'KFMLDMX': 0x01BA86,
+        'LAMFA':   0x01C38E,
+        'LDRXN_1_A': 0x01DCF4,
+        'LDRXNZK': 0x01DD36,
     }
     conf = "CONFIRMED"
+
+    # 2.7T axis breakpoints — 16 RPM rows, 12 load cols (transposed from 1.8T)
+    # Source: WinOLS/Nefmoto community, consistent with 8D0907551M XDF
+    _RPM16 = [600, 800, 1200, 1600, 2000, 2400, 2800, 3200,
+              3600, 4000, 4400, 4800, 5200, 5600, 6000, 6400]
+    _LOAD12 = [0.00, 0.10, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00, 1.15, 1.30, 1.45, 1.60]
+    _LAMFA_RPM6  = [800, 1600, 2400, 3200, 4000, 5600]
+    _LAMFA_LOAD15 = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70,
+                     0.80, 0.90, 1.00, 1.10, 1.20, 1.35, 1.50]
 
     return [
         # ── Ignition ──────────────────────────────────────────────────────────
@@ -390,6 +399,8 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
             encode=lambda x: int(round(x / 0.75)),
             x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
             y_axis=AXIS_RPM,
+            x_values=_LOAD12,
+            y_values=_RPM16,
             confidence=conf,
             notes="Address 0x011C72 confirmed from 8D0907551M XDF (Nefmoto/DDillenger).",
         ),
@@ -403,6 +414,8 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
             encode=lambda x: int(round(x / 0.75)),
             x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
             y_axis=AXIS_RPM,
+            x_values=_LOAD12,
+            y_values=_RPM16,
             confidence=conf,
             notes="Address 0x011D32 confirmed from 8D0907551M XDF.",
         ),
@@ -434,6 +447,8 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
             encode=lambda x: int(round(x / 0.023438)),
             x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
             y_axis=AXIS_RPM,
+            x_values=_LOAD12,
+            y_values=_RPM16,
             confidence=conf,
             notes="Address 0x014BEE confirmed from 8D0907551M XDF.",
         ),
@@ -450,6 +465,8 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
             encode=lambda x: int(round(x / 0.007813)),
             x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
             y_axis=AXIS_RPM,
+            x_values=_LOAD12,
+            y_values=_RPM16,
             confidence=conf,
             notes="Address 0x019207 confirmed from 8D0907551M XDF.",
         ),
@@ -463,6 +480,8 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
             encode=lambda x: int(round(x / 0.007813)),
             x_axis=AXIS_RPM,
             y_axis=AXIS_LOAD,
+            x_values=_LAMFA_RPM6,
+            y_values=_LAMFA_LOAD15,
             confidence=conf,
             map_type="2d",
             notes="Address 0x01C38E confirmed from 8D0907551M XDF.",
