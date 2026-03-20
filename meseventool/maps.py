@@ -322,47 +322,131 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
 def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
     """
     Return MapDef list for ME7.1 2.7T biturbo (S4 B5, A6 C5, Allroad, RS4).
-    Placeholder — addresses to be confirmed from 8D0907551M XDF.
+
+    Addresses confirmed from reference/8D0907551M_L_5.18.13.xdf (Nefmoto/DDillenger).
+    Note: 2.7T KFZW is 16×12 (not 12×16 as on 1.8T) — RPM is the row axis.
+    All addresses are flat file offsets into the 1MB ROM.
     """
+    _M = {
+        'KFZW':    0x011C72,   # 16×12 S8  — Main ignition (confirmed)
+        'KFZW2':   0x011D32,   # 16×12 S8  — Second ignition map
+        'KFZWMS':  0x011BB0,   # 16×12 S8  — Manifold switchover ignition
+        'MLHFM':   0x014254,   # 512×1 U16 — MAF linearisation
+        'KFMIRL':  0x014BEE,   # 16×12 U16 — Torque model (driver demand)
+        'KFMIOP':  0x016186,   # 16×11 U16 — Optimal torque
+        'KFLBTS':  0x019207,   # 16×12 U16 — Lambda target
+        'KFDLULS': 0x019905,   # 8×8   U16 — Boost limit
+        'KFMLDMX': 0x01BA86,   # 8×8   U16 — MAF load max
+        'LAMFA':   0x01C38E,   # 15×6  U16 — Long-term lambda trim
+        'LDRXN_1_A': 0x01DCF4, # 1×16  U16 — Max load during boost
+        'LDRXNZK': 0x01DD36,   # 1×16  U16 — Max load during knock
+    }
+    conf = "CONFIRMED"
+
     return [
+        # ── Ignition ──────────────────────────────────────────────────────────
         MapDef(
             name="KFZW",
-            description="Ignition timing — °BTDC vs RPM×load. Scale: raw × 0.75.",
-            rows=12, cols=16,
+            description="Main ignition timing — °BTDC vs RPM×load. 16×12 S8. "
+                        "Scale: raw × 0.75 = °BTDC. Note: 2.7T uses 16 RPM rows × 12 load cols "
+                        "(transposed vs 1.8T 12×16 layout).",
+            rows=16, cols=12,
             data_width=S8,
-            data_addr=0,
+            data_addr=_M['KFZW'],
             decode=lambda x: x * 0.75,
             encode=lambda x: int(round(x / 0.75)),
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
-            confidence="PROVISIONAL",
-            notes="Address not yet confirmed for 2.7T. XDF from 8D0907551M pending.",
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
+            y_axis=AXIS_RPM,
+            confidence=conf,
+            notes="Address 0x011C72 confirmed from 8D0907551M XDF (Nefmoto/DDillenger).",
         ),
         MapDef(
+            name="KFZW2",
+            description="Second ignition map — manifold pressure switchover. 16×12 S8.",
+            rows=16, cols=12,
+            data_width=S8,
+            data_addr=_M['KFZW2'],
+            decode=lambda x: x * 0.75,
+            encode=lambda x: int(round(x / 0.75)),
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
+            y_axis=AXIS_RPM,
+            confidence=conf,
+            notes="Address 0x011D32 confirmed from 8D0907551M XDF.",
+        ),
+        # ── MAF ───────────────────────────────────────────────────────────────
+        MapDef(
             name="MLHFM",
-            description="MAF linearisation — 512-element curve.",
+            description="MAF linearisation — HFM voltage counts to kg/h. "
+                        "512×1 U16, scale × 0.1. "
+                        "Different offset from 1.8T (0x014254 vs 0x014574).",
             rows=1, cols=512,
             data_width=U16,
-            data_addr=0,
+            data_addr=_M['MLHFM'],
             decode=lambda x: x * 0.1,
             encode=lambda x: int(round(x / 0.1)),
             x_axis=AxisDef(name="HFM count", unit="counts", scale=1.0),
             y_axis=AxisDef(name="Air flow",  unit="kg/h",   scale=0.1),
-            confidence="PROVISIONAL",
+            confidence=conf,
             map_type="1d",
-            notes="Address not yet confirmed for 2.7T.",
+            notes="Address 0x014254 confirmed from 8D0907551M XDF.",
+        ),
+        # ── Torque model ──────────────────────────────────────────────────────
+        MapDef(
+            name="KFMIRL",
+            description="Requested torque — maps driver demand to % load. 16×12 U16.",
+            rows=16, cols=12,
+            data_width=U16,
+            data_addr=_M['KFMIRL'],
+            decode=lambda x: x * 0.023438,
+            encode=lambda x: int(round(x / 0.023438)),
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
+            y_axis=AXIS_RPM,
+            confidence=conf,
+            notes="Address 0x014BEE confirmed from 8D0907551M XDF.",
+        ),
+        # ── Lambda ────────────────────────────────────────────────────────────
+        MapDef(
+            name="KFLBTS",
+            description="Lambda target — closed-loop setpoint vs RPM×load. "
+                        "16×12 U16, scale × 0.007813. "
+                        "Per-bank (B1+B2) on biturbo.",
+            rows=16, cols=12,
+            data_width=U16,
+            data_addr=_M['KFLBTS'],
+            decode=lambda x: x * 0.007813,
+            encode=lambda x: int(round(x / 0.007813)),
+            x_axis=AxisDef(name="Load", unit="g/rev", scale=0.001),
+            y_axis=AXIS_RPM,
+            confidence=conf,
+            notes="Address 0x019207 confirmed from 8D0907551M XDF.",
         ),
         MapDef(
-            name="LDRXN",
-            description="N75 duty cycle — twin turbo boost control.",
-            rows=9, cols=8,
-            data_width=U8,
-            data_addr=0,
-            decode=lambda x: x / 2.55,
-            encode=lambda x: int(round(x * 2.55)),
-            x_axis=AxisDef(name="Boost req", unit="bar",  scale=0.005),
-            y_axis=AXIS_RPM,
-            confidence="PROVISIONAL",
-            notes="Applies per-bank (B1/B2) on biturbo. Address TBD.",
+            name="LAMFA",
+            description="Lambda adaptation — long-term trim. 15×6 U16, scale × 0.007813.",
+            rows=15, cols=6,
+            data_width=U16,
+            data_addr=_M['LAMFA'],
+            decode=lambda x: x * 0.007813,
+            encode=lambda x: int(round(x / 0.007813)),
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            map_type="2d",
+            notes="Address 0x01C38E confirmed from 8D0907551M XDF.",
+        ),
+        # ── Boost ─────────────────────────────────────────────────────────────
+        MapDef(
+            name="KFDLULS",
+            description="N75 boost limit — maximum duty cycle vs RPM×boost. "
+                        "8×8 U16, scale × 5.0 = hPa. Twin turbos K03/K04.",
+            rows=8, cols=8,
+            data_width=U16,
+            data_addr=_M['KFDLULS'],
+            decode=lambda x: x * 5.0,
+            encode=lambda x: int(round(x / 5.0)),
+            x_axis=AXIS_RPM,
+            y_axis=AxisDef(name="Boost req", unit="hPa", scale=5.0),
+            confidence=conf,
+            notes="Address 0x019905 confirmed from 8D0907551M XDF.",
         ),
     ]

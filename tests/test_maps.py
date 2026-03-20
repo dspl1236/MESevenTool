@@ -172,9 +172,28 @@ class TestRealROM:
 # ── V6 biturbo maps ───────────────────────────────────────────────────────────
 
 class TestV6Maps:
-    def test_not_empty(self):         assert len(make_v6_biturbo_maps()) >= 3
-    def test_kfzw_provisional(self):
-        kfzw = next(m for m in make_v6_biturbo_maps() if m.name=="KFZW")
-        assert kfzw.confidence == "PROVISIONAL" and kfzw.data_addr == 0
-    def test_ldrxn_present(self):
-        assert any(m.name=="LDRXN" for m in make_v6_biturbo_maps())
+    def test_not_empty(self):
+        assert len(make_v6_biturbo_maps()) >= 5
+
+    def test_kfzw_confirmed(self):
+        kfzw = next(m for m in make_v6_biturbo_maps() if m.name == "KFZW")
+        assert kfzw.confidence == "CONFIRMED"
+        assert kfzw.data_addr == 0x011C72
+
+    def test_kfzw_dims_transposed(self):
+        """2.7T KFZW is 16 rows × 12 cols — transposed vs 1.8T 12×16."""
+        kfzw = next(m for m in make_v6_biturbo_maps() if m.name == "KFZW")
+        assert kfzw.rows == 16 and kfzw.cols == 12
+
+    def test_mlhfm_confirmed(self):
+        mlhfm = next(m for m in make_v6_biturbo_maps() if m.name == "MLHFM")
+        assert mlhfm.confidence == "CONFIRMED"
+        assert mlhfm.data_addr == 0x014254
+
+    def test_kflbts_confirmed(self):
+        kflbts = next(m for m in make_v6_biturbo_maps() if m.name == "KFLBTS")
+        assert kflbts.confidence == "CONFIRMED"
+        assert kflbts.data_addr == 0x019207
+
+    def test_boost_map_present(self):
+        assert any(m.name == "KFDLULS" for m in make_v6_biturbo_maps())
