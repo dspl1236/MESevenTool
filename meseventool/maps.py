@@ -86,6 +86,11 @@ class MapDef:
     map_type:    str = "2d"                  # "2d" | "1d" | "raw"
     notes:       str = ""
 
+    @property
+    def size(self) -> int:
+        """Total byte size of cell data: rows × cols × |data_width|."""
+        return self.rows * self.cols * abs(self.data_width)
+
     def read(self, rom: ROMImage) -> List[List[float]]:
         """Read and decode cell data. Returns [] if data_addr == 0."""
         if self.data_addr == 0 or self.rows == 0 or self.cols == 0:
@@ -111,14 +116,20 @@ class MapDef:
         """Encode and write physical values back to the ROM."""
         if self.data_addr == 0:
             return
-        width = abs(self.data_width)
-        enc   = self.encode or (lambda x: int(round(x)))
+        width  = abs(self.data_width)
+        signed = self.data_width < 0
+        enc    = self.encode or (lambda x: int(round(x)))
+        bits   = width * 8
+        if signed:
+            lo, hi = -(1 << (bits - 1)), (1 << (bits - 1)) - 1
+        else:
+            lo, hi = 0, (1 << bits) - 1
         for r, row in enumerate(values):
             for c, v in enumerate(row):
                 off = self.data_addr + (r * self.cols + c) * width
-                raw = enc(v)
-                raw = max(0, min((1 << (width * 8)) - 1, raw))
-                rom.data[off:off+width] = raw.to_bytes(width, 'big')
+                raw = max(lo, min(hi, enc(v)))
+                rom.data[off:off+width] = raw.to_bytes(width, byteorder='big',
+                                                        signed=signed)
 
 
 class MapFinder:
