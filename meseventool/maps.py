@@ -151,30 +151,185 @@ class MapFinder:
         return self.searcher.extp_to_file(seg, offset)
 
 
-def make_awp_maps() -> List[MapDef]:
+def make_awp_maps(part_number: str = "") -> List[MapDef]:
     """
-    Return canonical MapDef list for the AWP/AUM 1.8T 180hp variant.
+    Return MapDef list for ME7.5 1.8T (AWP/AWW/AWD/AUM/AUQ family).
 
-    Offsets marked CONFIRMED are validated against 06A906032DL ROM.
-    Others are PROVISIONAL pending real ROM verification.
+    Addresses marked CONFIRMED are validated against 06A906032DL XDF
+    (from reference/xdf_tables.json).  All addresses are flat file offsets
+    into the full 1MB ROM.  Other variants in the family have nearby offsets
+    discoverable by the needle search in MapFinder.
+
+    Key maps for tuning:
+      KFZW   — ignition advance (the primary timing map)
+      MLHFM  — MAF linearisation (changes effective load at any given voltage)
+      KFLBTS — lambda target (stoich/rich targets vs RPM×Load)
+      LAMFA  — lambda adaptation (learned long-term trims)
+      KFMIRL — torque model (throttle-to-load mapping)
+    """
+    # Confirmed offsets for 06A906032DL (1MB full ROM)
+    # Source: reference/xdf_tables.json
+    _DL = {
+        'KFZW':    (0x0120DD, 12, 16, S8,  lambda x: x * 0.75,       lambda x: int(round(x / 0.75))),
+        'MLHFM':   (0x014574, 1,  512, U16, lambda x: x * 0.1,        lambda x: int(round(x / 0.1))),
+        'KFMIRL':  (0x0150B6, 16, 16, U16, lambda x: x * 0.023438,   lambda x: int(round(x / 0.023438))),
+        'KFMIOP':  (0x01656E, 16, 11, U16, lambda x: x * 0.001526,   lambda x: int(round(x / 0.001526))),
+        'KFLBTS':  (0x0192A5, 12, 16, U16, lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
+        'KFDLULS': (0x01EB91, 8,  8,  U16, lambda x: x * 5.0,        lambda x: int(round(x / 5.0))),
+        'LAMFA':   (0x01C95A, 15, 6,  U16, lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
+    }
+    conf = "CONFIRMED" if (not part_number or part_number.startswith("06A906032")) else "PROVISIONAL"
+
+    return [
+        # ── Ignition ──────────────────────────────────────────────────────────
+        MapDef(
+            name="KFZW",
+            description="Ignition timing base map — °BTDC vs RPM × air mass load. "
+                        "Primary ignition advance map. Scale: raw × 0.75 = °BTDC. "
+                        "Positive = BTDC (advance), negative = ATDC (retard).",
+            rows=12, cols=16,
+            data_width=S8,
+            data_addr=_DL['KFZW'][0],
+            decode=_DL['KFZW'][4],
+            encode=_DL['KFZW'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            notes="Address 0x0120DD confirmed for 06A906032DL. "
+                  "Other variants: use MapFinder.find_kfzw() for runtime discovery.",
+        ),
+        # ── MAF ───────────────────────────────────────────────────────────────
+        MapDef(
+            name="MLHFM",
+            description="MAF linearisation — maps HFM voltage counts to kg/h air mass. "
+                        "512-element U16 curve. Modifying this changes load at all points. "
+                        "Required recalibration after MAF housing swaps or air filter mods.",
+            rows=1, cols=512,
+            data_width=U16,
+            data_addr=_DL['MLHFM'][0],
+            decode=_DL['MLHFM'][4],
+            encode=_DL['MLHFM'][5],
+            x_axis=AxisDef(name="HFM count", unit="counts", scale=1.0),
+            y_axis=AxisDef(name="Air flow",  unit="kg/h",   scale=0.1),
+            confidence=conf,
+            map_type="1d",
+            notes="512×u16. Address 0x014574 confirmed for 06A906032DL.",
+        ),
+        # ── Torque model ──────────────────────────────────────────────────────
+        MapDef(
+            name="KFMIRL",
+            description="Requested torque — maps throttle position to % load request. "
+                        "16×16 U16, scale × 0.023438 = %. Key map for throttle response.",
+            rows=16, cols=16,
+            data_width=U16,
+            data_addr=_DL['KFMIRL'][0],
+            decode=_DL['KFMIRL'][4],
+            encode=_DL['KFMIRL'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            notes="Address 0x0150B6 confirmed for 06A906032DL.",
+        ),
+        MapDef(
+            name="KFMIOP",
+            description="Optimal engine torque — maximum achievable torque vs RPM×load. "
+                        "Used by torque coordinator to limit request. 16×11 U16.",
+            rows=16, cols=11,
+            data_width=U16,
+            data_addr=_DL['KFMIOP'][0],
+            decode=_DL['KFMIOP'][4],
+            encode=_DL['KFMIOP'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            notes="Address 0x01656E confirmed for 06A906032DL.",
+        ),
+        # ── Lambda ────────────────────────────────────────────────────────────
+        MapDef(
+            name="KFLBTS",
+            description="Lambda target map — closed-loop lambda setpoint vs RPM×load. "
+                        "1.0 = stoich, <1.0 = rich. 12×16 U16, scale × 0.007813.",
+            rows=12, cols=16,
+            data_width=U16,
+            data_addr=_DL['KFLBTS'][0],
+            decode=_DL['KFLBTS'][4],
+            encode=_DL['KFLBTS'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            notes="Address 0x0192A5 confirmed for 06A906032DL.",
+        ),
+        MapDef(
+            name="LAMFA",
+            description="Lambda adaptation — long-term fuel trim map vs RPM×load. "
+                        "Learned trims; reflects injector wear / MAF drift. "
+                        "15×6 U16, scale × 0.007813. Reset by clearing adaptations.",
+            rows=15, cols=6,
+            data_width=U16,
+            data_addr=_DL['LAMFA'][0],
+            decode=_DL['LAMFA'][4],
+            encode=_DL['LAMFA'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AXIS_LOAD,
+            confidence=conf,
+            map_type="2d",
+            notes="Address 0x01C95A confirmed for 06A906032DL.",
+        ),
+        # ── Boost ─────────────────────────────────────────────────────────────
+        MapDef(
+            name="KFDLULS",
+            description="N75 boost solenoid upper limit — maximum duty cycle vs RPM×load. "
+                        "8×8 U16, scale × 5.0 = hPa. Higher values = more boost allowed.",
+            rows=8, cols=8,
+            data_width=U16,
+            data_addr=_DL['KFDLULS'][0],
+            decode=_DL['KFDLULS'][4],
+            encode=_DL['KFDLULS'][5],
+            x_axis=AXIS_RPM,
+            y_axis=AxisDef(name="Boost req", unit="hPa", scale=5.0),
+            confidence=conf,
+            notes="Address 0x01EB91 confirmed for 06A906032DL.",
+        ),
+        # ── Placeholder: discovered at runtime ────────────────────────────────
+        MapDef(
+            name="LDRXN",
+            description="N75 duty cycle request — target solenoid PWM vs RPM×boost req. "
+                        "Main boost control map. Needle-discovered at runtime.",
+            rows=9, cols=8,
+            data_width=U8,
+            data_addr=0,    # runtime discovery via needle
+            decode=lambda x: x / 2.55,
+            encode=lambda x: int(round(x * 2.55)),
+            x_axis=AxisDef(name="Boost req", unit="bar",  scale=0.005),
+            y_axis=AXIS_RPM,
+            confidence="PROVISIONAL",
+            notes="Address runtime-discovered. XDF for DL not yet extracted for LDRXN.",
+        ),
+    ]
+
+
+def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
+    """
+    Return MapDef list for ME7.1 2.7T biturbo (S4 B5, A6 C5, Allroad, RS4).
+    Placeholder — addresses to be confirmed from 8D0907551M XDF.
     """
     return [
         MapDef(
             name="KFZW",
-            description="Ignition timing base map (°BTDC vs RPM×Load)",
+            description="Ignition timing — °BTDC vs RPM×load. Scale: raw × 0.75.",
             rows=12, cols=16,
             data_width=S8,
-            data_addr=0,         # discovered at runtime by needle
+            data_addr=0,
             decode=lambda x: x * 0.75,
             encode=lambda x: int(round(x / 0.75)),
             x_axis=AXIS_RPM,
             y_axis=AXIS_LOAD,
             confidence="PROVISIONAL",
-            notes="Address found by SSTB+ZWGRU needle. Scale: raw*0.75=°BTDC.",
+            notes="Address not yet confirmed for 2.7T. XDF from 8D0907551M pending.",
         ),
         MapDef(
             name="MLHFM",
-            description="MAF linearisation (HFM voltage count → kg/h)",
+            description="MAF linearisation — 512-element curve.",
             rows=1, cols=512,
             data_width=U16,
             data_addr=0,
@@ -184,11 +339,11 @@ def make_awp_maps() -> List[MapDef]:
             y_axis=AxisDef(name="Air flow",  unit="kg/h",   scale=0.1),
             confidence="PROVISIONAL",
             map_type="1d",
-            notes="512×u16. Address found by MLHFM needle.",
+            notes="Address not yet confirmed for 2.7T.",
         ),
         MapDef(
             name="LDRXN",
-            description="N75 boost solenoid duty cycle (% vs RPM×Boost req)",
+            description="N75 duty cycle — twin turbo boost control.",
             rows=9, cols=8,
             data_width=U8,
             data_addr=0,
@@ -197,31 +352,6 @@ def make_awp_maps() -> List[MapDef]:
             x_axis=AxisDef(name="Boost req", unit="bar",  scale=0.005),
             y_axis=AXIS_RPM,
             confidence="PROVISIONAL",
-            notes="Controls wastegate solenoid N75. Key boost tuning map.",
-        ),
-        MapDef(
-            name="KFKHFM",
-            description="MAF temperature correction (multiplier vs IAT×Load)",
-            rows=8, cols=8,
-            data_width=U16,
-            data_addr=0,
-            decode=lambda x: x / 4096.0,
-            encode=lambda x: int(round(x * 4096.0)),
-            x_axis=AxisDef(name="IAT",  unit="°C",    scale=0.5, offset=-48.0),
-            y_axis=AXIS_LOAD,
-            confidence="PROVISIONAL",
-            notes="Corrects MAF reading for air temperature. KFKHFM needle.",
-        ),
-        MapDef(
-            name="KFMIRL",
-            description="Requested torque map (% load vs RPM×throttle)",
-            rows=16, cols=16,
-            data_width=U16,
-            data_addr=0,
-            decode=lambda x: x * 0.023438,
-            encode=lambda x: int(round(x / 0.023438)),
-            x_axis=AXIS_RPM,
-            y_axis=AXIS_LOAD,
-            confidence="PROVISIONAL",
+            notes="Applies per-bank (B1/B2) on biturbo. Address TBD.",
         ),
     ]

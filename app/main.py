@@ -43,6 +43,7 @@ from meseventool.patches import (
     PatchDef, ScalarPatchDef, PatchState, PatchCategory,
 )
 from meseventool.profiles import detect_profile
+from meseventool.known_roms import lookup_rom, is_known_stock
 from meseventool import __version__
 
 
@@ -248,6 +249,19 @@ class ROMInfoWidget(QWidget):
         # Description
         desc_parts = [s for s in [ident.erotan, ident.epk] if s]
         self._txt_epk.setPlainText("\n".join(desc_parts) if desc_parts else "(none)")
+
+        # Known ROM stock check
+        import zlib
+        crc = zlib.crc32(rom.data) & 0xFFFFFFFF
+        known = lookup_rom(crc)
+        if known:
+            self._lbl_profile.setText(
+                f"{profile.name if profile else ''}  ·  "
+                f"<span style='color:#3ddc84'>✓ KNOWN STOCK</span>  ·  "
+                f"{known.label}"
+            )
+        elif profile:
+            self._lbl_profile.setText(profile.name)
 
         # Validation status
         if profile:
@@ -629,6 +643,11 @@ class MapsWidget(QWidget):
         rows = len(data)
         cols = len(data[0]) if data else 0
 
+        # Compute range for heatmap normalisation
+        flat = [v for row in data for v in row]
+        lo, hi = min(flat), max(flat)
+        span = max(hi - lo, 1e-6)
+
         self._table.blockSignals(True)
         self._table.setRowCount(rows)
         self._table.setColumnCount(cols)
@@ -637,6 +656,25 @@ class MapsWidget(QWidget):
             for c, val in enumerate(row):
                 item = QTableWidgetItem(f"{val:.2f}")
                 item.setTextAlignment(Qt.AlignCenter)
+                # Heatmap: blue (low) → green (mid) → red (high)
+                t = (val - lo) / span   # 0→1
+                if t < 0.5:
+                    # blue → green
+                    bg = QColor(
+                        int(20 + 10 * t),
+                        int(40 + 160 * (t * 2)),
+                        int(80 - 60 * (t * 2)),
+                    )
+                else:
+                    # green → red
+                    bg = QColor(
+                        int(20 + 200 * ((t - 0.5) * 2)),
+                        int(200 - 160 * ((t - 0.5) * 2)),
+                        20,
+                    )
+                item.setBackground(bg)
+                lum = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
+                item.setForeground(QColor("#e8eaf0" if lum < 100 else "#0d0d0f"))
                 self._table.setItem(r, c, item)
 
         self._table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -645,7 +683,8 @@ class MapsWidget(QWidget):
         conf_colour = {"CONFIRMED": C_GREEN, "PROVISIONAL": C_AMBER}.get(
             m.confidence, C_RED)
         self._lbl_map_info.setText(
-            f"{m.name}  ·  {m.description}  ·  "
+            f"{m.name}  ·  {rows}×{cols}  ·  "
+            f"range: {lo:.2f} – {hi:.2f}  ·  "
             f"addr: <span style='color:{C_BLUE}'>0x{m.data_addr:06X}</span>  ·  "
             f"<span style='color:{conf_colour}'>{m.confidence}</span>")
 

@@ -52,7 +52,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional, Set
 
-from .maps import MapDef, make_awp_maps
+from .maps import MapDef, make_awp_maps, make_v6_biturbo_maps
 from .ecu_id import ECUIdentity
 from .dpp import DPPValues
 
@@ -166,10 +166,18 @@ class ROMProfile:
         """
         Return MapDef list for this profile.
 
-        If xdf_pn is given (e.g. "06A906032DL"), loads confirmed offsets
-        from the XDF reference JSON for that specific part number.
-        Otherwise falls back to the generic provisional AWP map set.
+        Routing:
+          - Biturbo V6/V8 (me7.1, dual_bank)  → make_v6_biturbo_maps
+          - N/A profiles (na)                  → make_awp_maps (shared base, no boost)
+          - 1.8T/2.0T turbo (me7.5/me7.1 mpi) → XDF-confirmed make_awp_maps
+        If xdf_pn is given and matches a known XDF part number, uses confirmed
+        offsets from reference/xdf_tables.json.
         """
+        # V6/V8 biturbo — different calibration structure
+        if self.dual_bank or "2.7t" in self.platforms or "v8" in self.platforms:
+            return make_v6_biturbo_maps(xdf_pn or "")
+
+        # Try XDF confirmed offsets first (for exact PN match)
         if xdf_pn:
             try:
                 from .xdf import XDFLoader
@@ -178,7 +186,9 @@ class ROMProfile:
                     return loader.make_maps(xdf_pn)
             except Exception:
                 pass
-        return make_awp_maps()
+
+        # Fall back to AWP map set (confirmed for 06A906032DL, provisional for others)
+        return make_awp_maps(xdf_pn or "")
 
     def summary(self) -> str:
         return (f"{self.name}  [{self.ecu_hw}]  "

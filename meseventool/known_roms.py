@@ -108,6 +108,46 @@ _CATALOG: list[KnownROM] = [
     KnownROM(0x01106d6c, "021906018R",  "0261206814", "42/1/ME7.1/120/6228.A5//19l/Dst03o/071100",
              "ME7.1", 512,  "VW Golf4 2.8L VR6 174hp — 021906018R fw6228 512KB"),
 
+    # ── ME7.1 — 2.7T biturbo S4/A6/RS4/Allroad additional ───────────────────
+    KnownROM(0xbd800d41, "8D0907551A",  "0261206110", "42/1/ME7.1/5/6005.01//X22ka/Dstc3g/300899",
+             "ME7.1", 1024, "Audi S4 B5 ARE 265hp — fw6005 rev2"),
+    KnownROM(0x73a2804b, "8D0907551L",  "0261207004", "40/1/ME7.1/5/6005.01//22m/DstD1o/110700",
+             "ME7.1", 1024, "Audi S4 B5 2.7T 265hp — fw6005"),
+    KnownROM(0xb88da125, "8D0907551F",  "0261206635", "40/1/ME7.1/5/6024.02//23g/DstW1o/160300",
+             "ME7.1", 1024, "Audi RS4 B5 / S4 B5 2.7T 380/265hp — fw6024"),
+    KnownROM(0x4553ebf9, "8D0907551K",  "0261207001", "40/1/ME7.1/5/6024.02//23g/DstW1o/051000",
+             "ME7.1", 1024, "Audi RS4 B5 2001 2.7T 380hp — fw6024"),
+    KnownROM(0x2b4a08eb, "4B0907551F",  "0261206378", "42/1/ME7.1/5/6010.01//X22k6/Dsta1g/270599",
+             "ME7.1", 1024, "Audi A6 C5 2.7T ARE/AGB 265hp — 4B0 fw6010"),
+    KnownROM(0xf384696d, "4Z7907551D",  "0261207137", "40/1/ME7.1/5/6025.02//22m/DstJ1o/110700",
+             "ME7.1", 1024, "Audi A6 Allroad 2.7T ARE/AGB 265hp — 4Z7 fw6025 ME7.1"),
+    KnownROM(0x509e389d, "4D0907558S",  "0261206204", "42/1/ME7.1/5/8000.01//X22fj/Dstaeg/040899",
+             "ME7.1", 1024, "Audi A6 D2 4.2 V8 ACQ/AKH 299hp — 4D0 fw8000"),
+
+    # ── ME7.1.1 — Allroad additional ─────────────────────────────────────────
+    KnownROM(0xd6dafb3f, "4Z7907551N",  "0261207766", "42/1/ME7.1.1/5/6030.03//25A/DstP2o/200602",
+             "ME7.1.1", 1024, "Audi A6 Allroad 2.7T AGB/ARE — 4Z7 fw6030 ME7.1.1"),
+
+    # ── ME7.5 — 06A 1.8T additional ──────────────────────────────────────────
+    KnownROM(0x5db81d16, "06A906032AC", "0261206580", "42/1/ME7.5/5/4013.00//F21dz/Dst04o/260899",
+             "ME7.5", 512,  "Audi A3 8L 1.8T AWD 150hp — fw4013 VDO 512KB"),
+    KnownROM(0x291eab26, "06A906032S",  "0261206197", "42/1/ME7.5/5/4019.02//F21dw/Dst01t/030599",
+             "ME7.5", 512,  "Audi A3 8L 1.8T AWD 150hp — fw4019 VDO 512KB"),
+    KnownROM(0x32c335f2, "06A906032DR", "0261206887", "40/1/ME7.5/3/4013.00//24b/Dst03o/190900",
+             "ME7.5", 1024, "VW Bora 1.8T AUM 150hp — fw4013 Bosch 1MB"),
+
+    # ── ME7.5 — 4B0/8L/8N additional ─────────────────────────────────────────
+    KnownROM(0x04e60f05, "4B0906018AR", "0261206524", "42/1/ME7.5/5/4016.00//F22g9/Dst01g/310599",
+             "ME7.5", 512,  "Audi A4 B5 1.8T APU 150hp — 4B0 fw4016 512KB"),
+    KnownROM(0xadaa81b5, "8L0906018K",  "0261206442", "42/1/ME7.5/5/4018.20//F19x4/Dst03g/100699",
+             "ME7.5", 512,  "Audi S3 8L 1.8T APY/BAM 210hp — 8L fw4018 512KB"),
+    KnownROM(0x68d4e49c, "8N0906018F",  "0261206105", "",
+             "ME7.5", 512,  "Audi TT 8N 1.8T AMU/APX 225hp — 8N"),
+    KnownROM(0xadeda34c, "8N0906018AB", "0261207027", "",
+             "ME7.5", 512,  "Audi TT 8N 1.8T AUQ 180hp — 8N"),
+    KnownROM(0x419ad007, "8N0906018J",  "0261206794", "40/1/ME7.5/5/4018.20//24b/Dst03o/210900",
+             "ME7.5", 1024, "Audi S3 8N / TT 8N 1.8T AMK/BAM 210hp — fw4018 1MB"),
+
 ]
 
 # ── Public interface ───────────────────────────────────────────────────────────
