@@ -465,6 +465,81 @@ PROFILE_NA_V6 = ROMProfile(
     notes         = "N/A V6.  Boost patches irrelevant.  No content yet.",
 )
 
+PROFILE_V8_D2 = ROMProfile(
+    name          = "ME7.1 — 4.2 V8 N/A (4D0907558/559 — S6/S8/A8 D2)",
+    description   = "Naturally aspirated 4.2 V8: S6 C4, S8 D2, A8 D2.  "
+                    "4D0-907-558 and 4D0-907-559 prefixes.  NB O2.  MPI.  "
+                    "fw8000 (ME7.1) and fw8001 (ME7.1.1).  "
+                    "No boost maps — N/A engine.  PLACEHOLDER.",
+    part_prefixes = ["4D0907558", "4D0907559"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1",
+    variants      = ["ACQ 4.2 290hp", "AKH 4.2 340hp", "ABZ 4.2 300hp",
+                     "AUW 4.2 310hp", "ART 4.2 360hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,    # V8 has B1+B2 lambda system
+    notes         = "V8 N/A.  Boost patches irrelevant.  DPP1=0x0205.  "
+                    "fw8000 = ME7.1, fw8001 = ME7.1.1.  No maps yet.",
+)
+
+PROFILE_V8_RS6 = ROMProfile(
+    name          = "ME7.1.1 — 4.2T V8 biturbo RS6 (4D1907558F — C5)",
+    description   = "RS6 C5 4.2 biturbo 450hp.  4D1-907-558 prefix.  "
+                    "ME7.1.1 fw8542.  Twin KKK turbos.  NB O2.  MPI.  "
+                    "Same C167 architecture as RS4/Allroad.  PLACEHOLDER.",
+    part_prefixes = ["4D1907558"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BCY 4.2T 450hp", "AZR 4.2T 450hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "turbo",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,
+    notes         = "RS6 C5 biturbo.  fw8542 ME7.1.1.  No maps yet.",
+)
+
+PROFILE_W12 = ROMProfile(
+    name          = "ME7.1.1 — 6.0 W12 (4E0910018 — A8 D3)",
+    description   = "Audi A8 D3 6.0L W12 450hp.  4E0-910-018 prefix.  "
+                    "ME7.1.1 fw12460.  Unique W12 engine architecture.  "
+                    "N/A but 12-cylinder.  NB O2.  MPI.  PLACEHOLDER.",
+    part_prefixes = ["4E0910018", "4E0906018"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BHT 6.0 W12 450hp", "BSB 6.0 W12 450hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,
+    notes         = "W12 6.0 unique engine.  fw12460 ME7.1.1.  No maps yet.",
+)
+
+PROFILE_V6_24_NA = ROMProfile(
+    name          = "ME7.1 — 2.4 V6 N/A (3B0907552 — Passat/A6)",
+    description   = "VW Passat B5 / Audi A6 C5 2.4 V6 170hp.  "
+                    "3B0-907-552 prefix.  ME7.1 fw6009.  NB O2.  MPI.  "
+                    "No boost maps — N/A engine.  PLACEHOLDER.",
+    part_prefixes = ["3B0907552"],
+    rom_size      = 0x080000,   # 512KB
+    ecu_hw        = "ME7.1",
+    variants      = ["ACK 2.4 V6 170hp", "ALF 2.4 V6 170hp", "APS 2.4 V6 170hp"],
+    dpp1_min      = 0x0190,
+    dpp1_max      = 0x01C0,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    notes         = "2.4 V6 N/A Passat/A6.  512KB ROM.  No maps yet.",
+)
+
+
 PROFILE_UNKNOWN = ROMProfile(
     name          = "Unknown ME7.x",
     description   = "ROM not matched to any known profile.  "
@@ -472,6 +547,64 @@ PROFILE_UNKNOWN = ROMProfile(
     part_prefixes = [],
     rom_size      = 0x100000,
     notes         = "Drop a known ROM to improve detection.",
+)
+
+PROFILE_V8_D2 = ROMProfile(
+    name          = "ME7.1 — 4.2 V8 N/A (4D0907558/559 — S6/S8 D2)",
+    description   = "Naturally aspirated 4.2 V8: S6 D2, S8 D2. "
+                    "4D0907558 / 4D0907559 prefixes. NB O2. MPI. "
+                    "No boost maps. DPP1=0x0205. fw8000.",
+    part_prefixes = ["4D0907558", "4D0907559"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1",
+    variants      = ["ACQ 4.2 299hp", "AKH 4.2 300hp", "AHC 4.2 300hp"],
+    dpp1_min      = 0x0205, dpp1_max = 0x0205,
+    induction     = "na", o2_system = "narrowband", fuel_system = "mpi",
+    dual_bank     = True,
+    notes         = "V8 N/A. fw8000. 4D0907558S confirmed (CRC 0x509e389d).",
+)
+
+PROFILE_V8_RS6 = ROMProfile(
+    name          = "ME7.1.1 — RS6 C5 4.2TT biturbo (4D1907558F)",
+    description   = "RS6 C5 4.2 V8 biturbo 450hp. "
+                    "4D1907558F prefix. NB O2. MPI. Dual-bank lambda. "
+                    "fw8542. ME7.1.1.",
+    part_prefixes = ["4D1907558"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BCY 4.2TT 450hp"],
+    dpp1_min      = 0x0205, dpp1_max = 0x0205,
+    induction     = "turbo", o2_system = "narrowband", fuel_system = "mpi",
+    dual_bank     = True,
+    notes         = "RS6 C5. fw8542 ME7.1.1. 4D1907558F confirmed.",
+)
+
+PROFILE_W12 = ROMProfile(
+    name          = "ME7.1.1 — A8 D3 6.0 W12 (4E0910018)",
+    description   = "Audi A8 D3 6.0L W12 450hp. "
+                    "4E0910018 prefix. NB O2. MPI. fw12460. ME7.1.1.",
+    part_prefixes = ["4E0910018", "4E0906018"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BHT 6.0 W12 450hp"],
+    dpp1_min      = 0x0205, dpp1_max = 0x0210,
+    induction     = "na", o2_system = "narrowband", fuel_system = "mpi",
+    dual_bank     = True,
+    notes         = "A8 D3 W12. fw12460. 4E0910018 confirmed (CRC 0x5f33eaa6).",
+)
+
+PROFILE_V6_24_NA = ROMProfile(
+    name          = "ME7.1 — 2.4 V6 N/A (3B0907552J — Passat/A6)",
+    description   = "Naturally aspirated 2.4 V6: Passat B5, A6 C5. "
+                    "3B0907552 prefix. NB O2. MPI. fw6009. "
+                    "PLACEHOLDER — no patches or maps yet.",
+    part_prefixes = ["3B0907552"],
+    rom_size      = 0x080000,
+    ecu_hw        = "ME7.1",
+    variants      = ["AGA 2.4 165hp", "ALF 2.4 165hp", "AML 2.4 165hp"],
+    dpp1_min      = 0x0190, dpp1_max = 0x01B0,
+    induction     = "na", o2_system = "narrowband", fuel_system = "mpi",
+    notes         = "V6 2.4 N/A. 512KB extract. No content yet.",
 )
 
 
@@ -488,6 +621,10 @@ ALL_PROFILES: List[ROMProfile] = [
     PROFILE_V6_27T_ME711,
     PROFILE_V8_RS4,
     PROFILE_NA_V6,
+    PROFILE_V8_D2,         # S6/S8 D2 4.2 V8 NA (4D0907558/559)
+    PROFILE_V8_RS6,        # RS6 C5 4.2TT biturbo (4D1907558F)
+    PROFILE_W12,           # A8 D3 6.0 W12 (4E0910018)
+    PROFILE_V6_24_NA,      # Passat/A6 2.4 V6 NA (3B0907552J)
 ]
 
 PROFILES = ALL_PROFILES   # legacy alias

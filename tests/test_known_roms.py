@@ -18,7 +18,7 @@ from meseventool.dpp import DPPValues
 class TestKnownROMsCatalog:
 
     def test_catalog_not_empty(self):
-        assert len(KNOWN_ROMS) >= 45
+        assert len(KNOWN_ROMS) >= 70
 
     def test_all_crcs_unique(self):
         crcs = [r.crc32 for r in _CATALOG]
