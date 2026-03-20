@@ -1070,16 +1070,14 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # than the cal-area approach), but mechanism is established.
 
     PatchDef(
-        name          = "Vmax Speed Limiter Disable (ME7.5 — all variants — code-immediate)",
-        description   = ("Disables the electronic speed limiter on ME7.5 fw4013 "
-                         "(06A906032 RN/LP/SL) and fw4012 (4B0906018) ECUs by "
+        name          = "Vmax Speed Limiter Disable (universal ME7 — code-immediate)",
+        description   = ("Disables the electronic speed limiter on all ME7.x ECUs by "
                          "changing the hard-coded 250 km/h limit constant from "
                          "0x61A8 (25000 × 0.01 km/h) to 0xFFFF (655.35 km/h). "
+                         "Needle E6FD A861 E6FE 9A02 DA00 is stable across ME7.5, ME7.1, "
+                         "and ME7.1 VR6 (022906032 Golf4/Jetta).  "
                          "The value is stored as an immediate in two paired "
-                         "MOV R13, #0x61A8 instructions at two call sites. "
-                         "Both sites use E6 FD A8 61 E6 FE 9A 02 DA 00 9C 6C context. "
-                         "PatchDef applies to the FIRST hit — run detect/apply twice "
-                         "or use detect_all to cover both sites."),
+                         "MOV R13, #0x61A8 instructions at two call sites."),
         category      = PatchCategory.PERFORMANCE,
         needle        = bytes([0xE6,0xFD, 0xA8,0x61, 0xE6,0xFE, 0x9A,0x02, 0xDA,0x00]),
         mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF]),
@@ -1087,15 +1085,13 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         stock_bytes   = bytes([0xA8,0x61]),   # 25000 = 250 km/h (LE)
         patch_bytes   = bytes([0xFF,0xFF]),   # 65535 = 655.35 km/h = unlimited
         confidence    = "CONFIRMED",
-        notes         = ("Confirmed STOCK in: DL/RN/LP/SL/18CM and all tuned files "
-                         "tested — no corpus file has patched this yet. "
-                         "Both call sites share identical context "
-                         "E6 FD A8 61 E6 FE 9A 02 DA 00 9C 6C. "
-                         "IMPORTANT: needle hits exactly 2 sites per file. "
-                         "Apply TWICE: detect() site1 → apply; detect() site2 → apply; "
-                         "third detect() returns PATCHED via patched-needle fallback. "
-                         "fw4019 files also contain this sequence (preferred: cal-area def)."),
-        applies_to    = {"me7.5", "1.8t"},
+        notes         = ("Confirmed STOCK on: all ME7.5 1.8T variants (DL/RN/LP/SL/18CM), "
+                         "ME7.1 2.7T S4/A6/Allroad, ME7.1 VR6 Golf4 (022906032E). "
+                         "2 hits per file — needle hits both call sites. "
+                         "applies_to=set() because the needle is C167-code-specific "
+                         "and fires reliably on all 1MB ME7 files tested (no false positives). "
+                         "Note: ME7.1.1 uses different suffix — see ME7.1.1 Vmax patch."),
+        applies_to    = set(),   # universal — confirmed across ME7.5, ME7.1, ME7.1 VR6
     ),
 
     # ── SAP Diagnosis Disable CDSLS (4B0906018 A6/Passat 1.8T) ──────────────────
