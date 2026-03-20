@@ -331,6 +331,47 @@ _CATALOG: list[KnownROM] = [
     KnownROM(0x20e8a04e, "4B0906018DP", "0261208291", "40/1/ME7.5/3/4012.31//24H/Dst02o/121002",
              "ME7.5",  1024, "VW Passat B5.5 1.8T AWM 170hp — 4B0 fw4012 DP late"),
 
+    # ── ME7.1 — A6 C5 2.7T additional 4B0 variant ────────────────────────────
+    KnownROM(0xbd291747, "4B0907551N",  "0261206637", "40/1/ME7.1/5/6010.02//22N/DstL2o/291000",
+             "ME7.1", 1024, "Audi A6 C5 2.7T ARE/AGB 265hp — 4B0907551N fw6010"),
+
+    # ── ME7.1.1 — S4 B6/RS4 B7 4.2 V8 N/A (8H0910560 family) ───────────────
+    # 8H0 = S4 Cabriolet / RS4 B7 body.  4.2L V8/5V N/A engine (BBK/BHF/BNS).
+    # fw C1105B is specific to the B6/B7 platform — completely different from
+    # RS4 B5 fw8542.  DPP1=0x0205.  ME7.1.1.
+    KnownROM(0x4517d56e, "8H0910560A",  "0261208462", "42/1/ME7.1.1/5/C1105B//25F/E5f9ka1/020205",
+             "ME7.1.1", 1024, "Audi S4 B6 Cabriolet 4.2 V8 BBK 344hp — 8H0 fw C1105B"),
+    KnownROM(0x2c2ec95a, "8H0910560H",  "0261208776", "42/1/ME7.1.1/5/C1105B//25F/E5f8lh3/071004",
+             "ME7.1.1", 1024, "Audi RS4 B7 4.2 V8 BNS 420hp — 8H0 fw C1105B rev2"),
+    KnownROM(0x68cee08c, "8H0910560J",  "0261208777", "42/1/ME7.1.1/5/C1105B//25F/E5f8la3/071004",
+             "ME7.1.1", 1024, "Audi RS4 B7 4.2 V8 BNS 420hp — 8H0 fw C1105B rev3"),
+
+    # ── ME7.1.1 — TT 3.2 VR6 additional (022906032GE) ────────────────────────
+    KnownROM(0x0d3f657e, "022906032GE", "0261208651", "42/1/ME7.1.1/5/6432.06//24F/Dst4ao/100104",
+             "ME7.1.1", 1024, "Audi TT 8N 3.2 VR6 250hp — fw6432 ME7.1.1 late"),
+
+    # ── ME7.5 — A3 8L additional variants ────────────────────────────────────
+    KnownROM(0x6f4778f9, "06A906032AF", "0261206269", "40/1/ME7.5/5/4013.00//PST_SER/DST_SER2",
+             "ME7.5", 512,  "Audi A3 8L 1.8T AWD 150hp — 06A906032AF fw4013 Bosch 512KB"),
+    KnownROM(0x9c3ced82, "06A906032R",  "0261206438", "42/1/ME7.5/5/4019.02//F21dx/Dst01o/",
+             "ME7.5", 512,  "Audi A3 8L 1.8T AWD/AUM 150hp — 06A906032R fw4019 512KB"),
+
+    # ── ME7.5 — A4 B6/B7 8E additional suffix ────────────────────────────────
+    KnownROM(0x86381242, "8E0909518AL", "0261208228", "40/1/ME7.5/5/4016.32//24H/Dst03o/",
+             "ME7.5", 1024, "Audi A4 B6/B7 1.8T BFB 163hp — 8E fw4016 AL"),
+
+    # ── ME7.5 — S3 8N / TT 8N additional ────────────────────────────────────
+    KnownROM(0x4d09cde6, "8N0906018BP", "0261208054", "40/1/ME7.5/5/4018.20//24B/Dst02o/",
+             "ME7.5", 1024, "Audi S3 8N 1.8T AMK/BAM 225hp — 8N fw4018 BP"),
+    KnownROM(0xbf493e72, "8N0906018CA", "0261208086", "",
+             "ME7.5", 1024, "Audi TT quattro sport 240hp — 8N0906018CA"),
+    KnownROM(0x2d78a9eb, "8N0906018CG", "0261208268", "40/1/ME7.5/5/4018.10//24B/Dst05o/",
+             "ME7.5", 1024, "Audi TT 8N 1.8T BAM 225hp — 8N fw4018 CG"),
+    KnownROM(0x3bb12a92, "8N0906018K",  "0261206894", "40/1/ME7.5/5/4018.00//22i/Dst03o/",
+             "ME7.5", 512,  "Audi TT 8N 1.8T AMU/APX 225hp — 8N fw4018 K 512KB"),
+    KnownROM(0x6bf0b9ee, "8N0906018T",  "0261206228", "42/1/ME7.5/5/4018.00//F22id/Dst01o/",
+             "ME7.5", 512,  "Audi TT 8N 1.8T AMU 225hp — 8N fw4018 T 512KB"),
+
 ]
 
 # ── Public interface ───────────────────────────────────────────────────────────

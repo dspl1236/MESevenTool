@@ -607,6 +607,31 @@ PROFILE_V6_24_NA = ROMProfile(
     notes         = "V6 2.4 N/A. 512KB extract. No content yet.",
 )
 
+PROFILE_V8_S4_B6 = ROMProfile(
+    name          = "ME7.1.1 — 4.2 V8 N/A S4 B6/RS4 B7 (8H0910560 / 8E0907560)",
+    description   = "Naturally aspirated 4.2 V8: S4 B6 Cabriolet, RS4 B7 Avant/Sedan.  "
+                    "8H0-910-560 (Cabriolet) and 8E0-907-560 (Sedan/Avant) prefixes.  "
+                    "Engine codes BBK (344hp S4) / BNS (420hp RS4 B7).  "
+                    "fw codebase C1105B — distinct from RS4 B5 (fw8542).  "
+                    "ME7.1.1.  DPP1=0x0205.  PLACEHOLDER — no maps yet.",
+    part_prefixes = ["8H0910560", "8E0907560"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["BBK 4.2 344hp",   # S4 B6 Cabriolet
+                     "BNS 4.2 420hp",   # RS4 B7 Avant/Sedan/Cabriolet
+                     "BHF 4.2 344hp",   # S4 B6 Sedan/Avant
+                     "BAT 4.2 339hp"],  # A8 D3 4.2 (some overlap)
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = True,
+    notes         = "4.2 V8 N/A B6/B7.  fw C1105B confirmed on 8H0910560A/H/J. "
+                    "Different from RS4 B5 (4D1907558/fw8542). "
+                    "DPP1=0x0205.  No maps or patches implemented yet.",
+)
+
 
 ALL_PROFILES: List[ROMProfile] = [
     PROFILE_AWP,
@@ -623,6 +648,7 @@ ALL_PROFILES: List[ROMProfile] = [
     PROFILE_NA_V6,
     PROFILE_V8_D2,         # S6/S8 D2 4.2 V8 NA (4D0907558/559)
     PROFILE_V8_RS6,        # RS6 C5 4.2TT biturbo (4D1907558F)
+    PROFILE_V8_S4_B6,      # S4 B6 Cab / RS4 B7 4.2 V8 NA (8H0910560)
     PROFILE_W12,           # A8 D3 6.0 W12 (4E0910018)
     PROFILE_V6_24_NA,      # Passat/A6 2.4 V6 NA (3B0907552J)
 ]
