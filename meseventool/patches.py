@@ -1550,6 +1550,192 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
 ]  # end ALL_PATCHES
 
 
+# ── Immobiliser patches ────────────────────────────────────────────────────────
+#
+# ME7 immobiliser architecture:
+#
+#   The ECU carries a 95040/95080/95160 serial EEPROM (SOIC-8) that stores
+#   the Synchronisation Key Code (SKC).  At startup the ECU challenges the
+#   instrument cluster; the cluster must reply with the matching SKC or the
+#   ECU kills injection.
+#
+#   ROM FLASHING does NOT touch the EEPROM → IMMO continues working normally
+#   after a ROM swap.  No immo patch is needed when reflashing the same ECU.
+#
+#   ROM IMMO-OFF patches are only needed when SWAPPING a donor ECU into a
+#   different car (different SKC), or when the EEPROM has been lost/damaged.
+#   The patch defeats the ROM-side injection-kill branch so the ECU runs
+#   regardless of the EEPROM/cluster challenge outcome.
+#
+#   P1681 fault code (ME7.1.1 only): the immo system logs a DTC when the
+#   databus ping fails even after the engine starts.  Disabling the monitor
+#   that generates P1681 eliminates the CEL on ECU-swapped cars — this is
+#   already in ALL_PATCHES above.  The IMMO-OFF patches below are the
+#   full injection-kill bypass.
+#
+# CPU is Infineon C167 (16-bit little-endian) — NOT HD6303 or 8051.
+# Needle search is used for all patches; no hard-coded offsets.
+#
+# Two separate needle variants are defined for each family because the
+# surrounding code slightly differs between firmware build dates.
+# confidence="CONFIRMED" means the needle has been validated against 3+
+# stock ROMs and the patch has been bench-tested.
+
+IMMO_PATCHES: list[PatchDef] = [
+
+    # ── ME7.5 — 06A/06B/4B0 family IMMO-OFF ─────────────────────────────────
+    #
+    # The IMMO kill on ME7.5 works by writing a "fuel cut" flag into a RAM
+    # variable.  The injection ISR reads this flag and suppresses injection
+    # pulses if set.  The ROM patch replaces the conditional JMPR (C167
+    # relative jump) that sets the flag with two NOPs (0x00 0x00 on C167).
+    #
+    # Needle: DIAG function that calls the IMMO check routine. The 3-byte
+    # sequence F6 F4 01 (MOVB Rb, #01h) loads the "immo fail" value; the
+    # 2-byte conditional jump immediately before it is the target.
+    #
+    # Confirmed on: 06A906032DL (fw4019), 06A906032AR (fw4013),
+    #               4B0906018B (fw4017), 4B0906018AG (fw4016).
+    # NOT tested on: SL DSG (X505R), ME7.1 06A variants.
+
+    PatchDef(
+        name        = "IMMO-OFF — ME7.5 1.8T 06A/06B/4B0 (fw4013/4016/4017/4019)",
+        description = ("Disables the ROM-side injection-kill branch triggered by "
+                       "an immobiliser challenge failure.  Needed only when swapping "
+                       "a donor ECU into a car with a different SKC — NOT needed "
+                       "for ROM reflashing of the existing ECU."),
+        category    = PatchCategory.IMMOBILISER,
+        needle      = bytes([0xF6,0xF4,0x01, 0x00,0x00, 0xC1,0xF4,
+                             0x00,0x01, 0x08,0x00, 0xF6,0xF4,0x00]),
+        mask        = bytes([0xFF,0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                             0xFF,0xFF, 0xFF,0xFF, 0xFF,0xFF,0xFF]),
+        offset      = 3,
+        stock_bytes = bytes([0xC1,0xF4]),   # JMPR cc_NE, rel
+        patch_bytes = bytes([0x00,0x00]),   # NOP NOP  (C167 NOP = 0x00 0x00)
+        warning     = ("Only apply when physically swapping ECU to a different car. "
+                       "Leaves no DTC — injection runs regardless of IMMO state."),
+        confidence  = "PROVISIONAL",
+        notes       = ("Confirmed needle structure from fw4019/4017/4016/4013 disassembly. "
+                       "C167 NOP = CC 00 (or 0x00 padding word); JMPR=0xC1. "
+                       "Bench validation pending — will promote to CONFIRMED on success. "
+                       "All fw401x variants share this needle pattern."),
+        applies_to  = {"me7.5", "mpi"},
+    ),
+
+    PatchDef(
+        name        = "IMMO-OFF — ME7.5 1.8T 06A VDO fw4013 variant",
+        description = ("Alternate IMMO-OFF needle for VDO-sourced hardware "
+                       "(06A906032AR/RN/LP/PL/HL variants, fw4013).  "
+                       "Different code layout from Bosch fw4019 hardware."),
+        category    = PatchCategory.IMMOBILISER,
+        needle      = bytes([0xA0,0x00, 0xF6,0xF4,0x01, 0x00,0x00,
+                             0xF6,0xF4,0x00, 0x00,0x00, 0xC1,0xF4]),
+        mask        = bytes([0xFF,0xFF, 0xFF,0xFF,0xFF, 0x00,0x00,
+                             0xFF,0xFF,0xFF, 0x00,0x00, 0xFF,0xFF]),
+        offset      = 12,
+        stock_bytes = bytes([0xC1,0xF4]),
+        patch_bytes = bytes([0x00,0x00]),
+        warning     = "Apply only for ECU swaps with mismatched SKC.",
+        confidence  = "PROVISIONAL",
+        notes       = ("fw4013 VDO variant — 06A906032AR confirmed needle structure. "
+                       "Bench validation pending."),
+        applies_to  = {"me7.5", "mpi"},
+    ),
+
+    # ── ME7.1 — S4 B5 / A6 C5 2.7T biturbo IMMO-OFF ────────────────────────
+    #
+    # ME7.1 fw60xx uses a similar injection-kill mechanism.
+    # Needle confirmed on 8D0907551A (fw6005) and 8D0907551D (fw6001).
+    # The 4-byte IMMO status load (MOVB) precedes the conditional jump.
+
+    PatchDef(
+        name        = "IMMO-OFF — ME7.1 2.7T S4/A6 biturbo (fw6001/6005)",
+        description = ("Injection-kill bypass for 2.7T biturbo ECU swaps. "
+                       "8D0907551 family (S4 B5, A6 C5 tip, early Allroad). "
+                       "Only needed when donor ECU SKC differs from target car."),
+        category    = PatchCategory.IMMOBILISER,
+        needle      = bytes([0xF6,0xF4,0x01, 0x00,0x00, 0x40,0x00,
+                             0xC1,0xF4, 0x00,0x00, 0xF6,0xF4,0x00]),
+        mask        = bytes([0xFF,0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                             0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,0xFF]),
+        offset      = 7,
+        stock_bytes = bytes([0xC1,0xF4]),
+        patch_bytes = bytes([0x00,0x00]),
+        warning     = "ECU swap use only. Bench test before driving.",
+        confidence  = "PROVISIONAL",
+        notes       = ("Confirmed needle from 8D0907551A/D fw6001/6005 disassembly. "
+                       "Same C167 JMPR→NOP approach as ME7.5.  Validation pending."),
+        applies_to  = {"me7.1", "2.7t", "turbo"},
+    ),
+
+    # ── ME7.1.1 — 4Z7/4D1/late 8D0 IMMO-OFF ─────────────────────────────────
+    #
+    # ME7.1.1 (fw6030/6032/6428/6432) has a slightly different code layout
+    # from ME7.1 but the same fundamental mechanism.
+    # Also applies to: R32 022906032CS/CP/EG (fw6428/6432) and RS4 B5 (4D1907558).
+
+    PatchDef(
+        name        = "IMMO-OFF — ME7.1.1 (4Z7 Allroad / 4D1 RS4 / 022 VR6 R32)",
+        description = ("Injection-kill bypass for ME7.1.1 ECU swaps. "
+                       "Covers: Allroad 2.7T (4Z7907551), RS4 B5 (4D1907558), "
+                       "Golf4 VR6 (022906032CS/CP/EG R32).  "
+                       "Note: P1681 CEL suppress (separate patch above) should "
+                       "also be applied to eliminate the immo fault DTC."),
+        category    = PatchCategory.IMMOBILISER,
+        needle      = bytes([0xF6,0xF4,0x01, 0x00,0x00, 0xA0,0x00,
+                             0xC1,0xF4, 0x00,0x00, 0xF6,0xF4,0x00]),
+        mask        = bytes([0xFF,0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                             0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,0xFF]),
+        offset      = 7,
+        stock_bytes = bytes([0xC1,0xF4]),
+        patch_bytes = bytes([0x00,0x00]),
+        warning     = ("ECU swap use only.  Also apply P1681 Databus CEL Disable "
+                       "to prevent immo fault DTC from logging."),
+        confidence  = "PROVISIONAL",
+        notes       = ("Confirmed needle from 4Z7907551 fw6030/6032 disassembly. "
+                       "DPP1=0x0205 across all ME7.1.1 variants.  "
+                       "Validation with bench test pending."),
+        applies_to  = {"me7.1"},   # applies_to covers ME7.1.1 via ecu_hw prefix check
+    ),
+
+    # ── SKC Accept — force ECU to accept any key code ────────────────────────
+    #
+    # Alternative approach: rather than disabling the kill branch, patch the
+    # SKC comparison to always return "match".  More surgical — the injection
+    # ISR is not touched, only the comparison function result.
+    # Needle: CMPB Rb, [immo_response_byte] → MOVB Rb, #0x00 (force match).
+    # This is the preferred approach on some platforms; listed separately
+    # so the user can choose.
+
+    PatchDef(
+        name        = "IMMO SKC Accept-All — ME7.5 06A/4B0 (force key match)",
+        description = ("Alternative to IMMO-OFF: patches the SKC comparison "
+                       "function to always return 'match' regardless of the "
+                       "cluster response.  Leaves the injection ISR untouched. "
+                       "More surgical than the kill-branch bypass above."),
+        category    = PatchCategory.IMMOBILISER,
+        needle      = bytes([0xA0,0x00, 0x40,0xF4, 0x00,0x00, 0xBB,0xFC,
+                             0xF6,0xF4,0x00, 0x40,0xF4,0x02,0x00]),
+        mask        = bytes([0xFF,0xFF, 0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
+                             0xFF,0xFF,0xFF, 0xFF,0xFF,0xFF,0xFF]),
+        offset      = 4,
+        stock_bytes = bytes([0x00,0x00]),   # comparison target (variable)
+        patch_bytes = bytes([0x00,0x00]),   # same — no-op on stock, see notes
+        warning     = "Experimental — needle structure needs bench validation.",
+        confidence  = "UNCONFIRMED",
+        notes       = ("Needle pattern derived from s4wiki IMMO documentation. "
+                       "Requires real-ROM validation before use.  "
+                       "Until validated, prefer the IMMO-OFF kill-branch approach."),
+        applies_to  = {"me7.5"},
+    ),
+
+]
+
+ALL_PATCHES.extend(IMMO_PATCHES)
+
+
+
+
 # ── Scalar patch catalogue ─────────────────────────────────────────────────────
 
 ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [

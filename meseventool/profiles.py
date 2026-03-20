@@ -304,6 +304,60 @@ PROFILE_06B = ROMProfile(
 
 # ── Placeholder profiles — no patches or maps yet, structure ready ─────────────
 
+PROFILE_VR6_ME71 = ROMProfile(
+    name          = "ME7.1 — 2.8/3.2 VR6 N/A (022906032 / 021906018)",
+    description   = "Naturally aspirated VR6: Golf IV 2.8L AAA/AES (021906018R/M), "
+                    "Golf IV 2.8L ABV/AHG (022906032E/B/C/CS/BM), "
+                    "Golf V R32 3.2L (022906032EG/CE/CD/CP).  "
+                    "Also: Jetta IV VR6, Passat B5 2.8L, T4 Transporter VR6.  "
+                    "NB O2.  MPI (sequential).  No boost maps — N/A engine.  "
+                    "Dual-bank lambda on 024-family 30V engines (R32).  "
+                    "Part numbers: 022906032 (Golf4/Jetta4 VR6, R32) "
+                    "and 021906018 (Golf3-era VR6 on ME7).",
+    part_prefixes = ["022906032", "021906018", "022906019"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1",
+    variants      = [
+        "AAA 2.8 174hp",    # Golf3/Golf4 VR6 (021906018R — ME7.1 early)
+        "AES 2.8 174hp",    # T4 Transporter VR6 (021906256H — same family)
+        "AHG 2.8 174hp",    # Golf4 VR6 Golf4 (022906032E)
+        "AZZ 2.8 197hp",    # Golf4 VR6 later (022906032CS/BM)
+        "BDE 2.8 197hp",    # Jetta4 VR6 (022906032CS)
+        "BDF 2.8 174hp",    # variant
+        "AXYP 3.2 240hp",   # Golf4 R32 (022906032CP — ME7.1.1 fw6428)
+        "BFH 3.2 250hp",    # Golf5 R32 (022906032CE/CD/EG — ME7.1.1 fw6432)
+        "BMX 2.0 150hp",    # Golf4 2.0 8v ABA on 022 board (placeholder)
+    ],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    dual_bank     = False,   # True for R32 30V — set per-variant if needed
+    notes         = "VR6 N/A family.  Boost patches irrelevant.  "
+                    "DPP1=0x0205 confirmed on Golf4 VR6 and R32 corpus ROMs.  "
+                    "ME7.1 fw6228/6428 (2.8L) and ME7.1.1 fw6428/6432 (R32).  "
+                    "vmecuhn may be blank on older Golf3-era 021906018 ROMs — "
+                    "Bosch number (0261206xxx) is the reliable key.",
+)
+
+PROFILE_V5_ME75 = ROMProfile(
+    name          = "ME7.5 — 2.3 V5 N/A (071906018)",
+    description   = "Naturally aspirated 2.3L V5: Passat B5 and Golf IV 2.3 20V.  "
+                    "071-906-018 prefix.  NB O2.  MPI.  No boost maps.  "
+                    "PLACEHOLDER — structure ready, no patches or maps yet.",
+    part_prefixes = ["071906018"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.5",
+    variants      = ["AGZ 2.3 V5 170hp", "AQN 2.3 V5 170hp", "AZX 2.3 V5 170hp"],
+    dpp1_min      = 0x0200,
+    dpp1_max      = 0x0210,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    notes         = "V5 N/A.  Boost patches irrelevant.  No content yet.",
+)
+
 PROFILE_BGU_FSI = ROMProfile(
     name          = "ME7.5 — 2.0T FSI (BWT/BWA/AXX)",
     description   = "2.0T FSI direct injection.  Golf V GTI, A3 8P, Jetta V.  "
@@ -417,9 +471,11 @@ ALL_PROFILES: List[ROMProfile] = [
     PROFILE_AUQ,
     PROFILE_AGU_ME71,
     PROFILE_06B,
+    PROFILE_VR6_ME71,      # Golf4/Jetta4 VR6 2.8, R32 3.2
+    PROFILE_V5_ME75,       # Passat/Golf V5 2.3
     PROFILE_BGU_FSI,
-    PROFILE_V6_27T_ME71,    # 8D0/4B0/early 4Z7 — ecu_hw ME7.1
-    PROFILE_V6_27T_ME711,   # later 4Z7 N/Q/R/S/T/AA — ecu_hw ME7.1.1
+    PROFILE_V6_27T_ME71,
+    PROFILE_V6_27T_ME711,
     PROFILE_V8_RS4,
     PROFILE_NA_V6,
 ]

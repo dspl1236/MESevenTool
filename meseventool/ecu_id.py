@@ -48,8 +48,10 @@ _ENGINE_CODE_RE = re.compile(
 _VS_RE = re.compile(rb'(?:40|42|43|44)/1/ME7[.0-9A-Za-z]{1,8}')
 
 _PN_RE = re.compile(rb'(?:'
-    rb'[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'   # 8D0907551M, 4Z7907551AA, 4D1907558 (no suffix)
+    rb'[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'   # 8D0907551M, 4Z7907551AA, 4D1907558
     rb'|0[0-9][A-Z][0-9]{6}[A-Z]{0,4}'   # 06A906032DL, 06B906018, 06A906032
+    rb'|022906032[A-Z]{0,4}'              # VR6 Golf4/Jetta/R32: 022906032E/CS/CP/EG
+    rb'|021906018[A-Z]{0,4}'              # VR6 Golf3/T4: 021906018R/M/B
     rb')')
 
 # Bosch number pattern: 0261 followed by 6 digits

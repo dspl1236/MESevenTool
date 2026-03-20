@@ -24,6 +24,7 @@ from .patches   import (PatchDef, PatchResult, PatchState, PatchCategory,
                         ALL_PATCHES, detect_all)
 from .profiles  import (ROMProfile, PROFILE_AWP, PROFILE_UNKNOWN,
                         ALL_PROFILES, PROFILES, detect_profile, get_profile)
+from .known_roms import (KnownROM, KNOWN_ROMS, lookup_rom, is_known_stock)
 from .ecu_id    import (ECUIdentity, identify, identify_from_filename,
                         _clean_string)
 
@@ -59,3 +60,4 @@ __all__ = [
 ]
 from .xdf import XDFLoader, XDFTable, XDFAxis
 from .kwp import KWPMonitor, LiveValues, kwpbridge_available, kwpbridge_running
+
