@@ -513,15 +513,17 @@ class PatchesWidget(QWidget):
 # ── Maps panel ────────────────────────────────────────────────────────────────
 
 class MapsWidget(QWidget):
-    """Calibration map viewer/editor — editable tables for each map."""
+    """Calibration map viewer/editor with stock diff highlighting."""
 
     map_written = pyqtSignal(str)   # emits map name when cells written to ROM
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._rom:     ROMImage | None = None
-        self._maps:    list = []
-        self._cur_idx: int  = -1
+        self._rom:        ROMImage | None = None
+        self._maps:       list = []
+        self._cur_idx:    int  = -1
+        self._stock_data: dict = {}   # map_name → List[List[float]] from stock ROM
+        self._diff_mode:  bool = False
         self._build_ui()
 
     def _build_ui(self):
@@ -542,6 +544,28 @@ class MapsWidget(QWidget):
         self._btn_group_lay.setSpacing(4)
         bar_lay.addWidget(self._btn_group_w)
         bar_lay.addStretch()
+
+        # Diff mode toggle
+        self._btn_diff = QPushButton("Diff: OFF")
+        self._btn_diff.setCheckable(True)
+        self._btn_diff.setStyleSheet(btn_style(C_DIM))
+        self._btn_diff.setToolTip(
+            "Toggle stock diff highlighting.\n"
+            "Cells changed from stock baseline are highlighted in magenta.\n"
+            "Requires a stock baseline to be loaded (auto-loaded for known stock ROMs).")
+        self._btn_diff.clicked.connect(self._on_diff_toggle)
+        bar_lay.addWidget(self._btn_diff)
+
+        # Load baseline button
+        self._btn_baseline = QPushButton("Load Baseline…")
+        self._btn_baseline.setStyleSheet(btn_style(C_PURPLE))
+        self._btn_baseline.setToolTip(
+            "Load a known stock ROM as the diff baseline.\n"
+            "Cells in the current ROM that differ from the baseline\n"
+            "will be highlighted when Diff mode is ON.")
+        self._btn_baseline.clicked.connect(self._on_load_baseline)
+        bar_lay.addWidget(self._btn_baseline)
+
         self._btn_write = QPushButton("Write to ROM")
         self._btn_write.setStyleSheet(btn_style(C_AMBER))
         self._btn_write.setEnabled(False)
@@ -577,6 +601,59 @@ class MapsWidget(QWidget):
 
         self._map_buttons: list[QPushButton] = []
         self._pending_edits: dict[tuple, float] = {}  # (row,col) → new value
+
+    def set_stock_baseline(self, rom: ROMImage, maps: list):
+        """Snapshot map data from a stock ROM as the diff baseline."""
+        self._stock_data.clear()
+        for m in maps:
+            data = m.read(rom)
+            if data:
+                self._stock_data[m.name] = data
+        changed = len(self._stock_data)
+        if changed:
+            self._btn_diff.setStyleSheet(btn_style(C_PURPLE))
+            self._btn_diff.setToolTip(
+                f"Diff baseline set ({changed} maps).\n"
+                "Magenta cells = changed from stock.")
+        if self._cur_idx >= 0:
+            self._show_map(self._cur_idx)
+
+    def _on_diff_toggle(self, checked: bool):
+        self._diff_mode = checked
+        self._btn_diff.setText("Diff: ON" if checked else "Diff: OFF")
+        self._btn_diff.setStyleSheet(
+            btn_style(C_PURPLE) if checked else btn_style(C_DIM))
+        if self._cur_idx >= 0:
+            self._show_map(self._cur_idx)
+
+    def _on_load_baseline(self):
+        if not _HAS_QT:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load Stock Baseline ROM", "",
+            "ROM files (*.bin *.ori *.org *.orig *.BIN *.ORI)")
+        if not path:
+            return
+        try:
+            baseline_rom = ROMImage.load(path)
+            import sys as _sys
+            _sys.path.insert(0, str(__file__))
+            from meseventool.profiles import detect_profile
+            from meseventool.ecu_id import identify
+            from meseventool.dpp import extract_dpp
+            ecu  = identify(baseline_rom)
+            dpp  = extract_dpp(baseline_rom)
+            prof = detect_profile(ecu, dpp)
+            maps = prof.make_maps(ecu.vmecuhn or None)
+            self.set_stock_baseline(baseline_rom, maps)
+            # Auto-enable diff mode
+            self._diff_mode = True
+            self._btn_diff.setChecked(True)
+            self._btn_diff.setText("Diff: ON")
+            self._btn_diff.setStyleSheet(btn_style(C_PURPLE))
+        except Exception as exc:
+            QMessageBox.warning(self, "Baseline Error",
+                                f"Could not load baseline:\n{exc}")
 
     def load_rom(self, rom: ROMImage, searcher: Searcher, maps: list):
         self._rom      = rom
@@ -648,6 +725,10 @@ class MapsWidget(QWidget):
         lo, hi = min(flat), max(flat)
         span = max(hi - lo, 1e-6)
 
+        # Stock baseline for diff highlighting
+        stock = self._stock_data.get(m.name) if self._diff_mode else None
+        diff_count = 0
+
         self._table.blockSignals(True)
         self._table.setRowCount(rows)
         self._table.setColumnCount(cols)
@@ -656,22 +737,38 @@ class MapsWidget(QWidget):
             for c, val in enumerate(row):
                 item = QTableWidgetItem(f"{val:.2f}")
                 item.setTextAlignment(Qt.AlignCenter)
-                # Heatmap: blue (low) → green (mid) → red (high)
                 t = (val - lo) / span   # 0→1
                 if t < 0.5:
-                    # blue → green
                     bg = QColor(
                         int(20 + 10 * t),
                         int(40 + 160 * (t * 2)),
                         int(80 - 60 * (t * 2)),
                     )
                 else:
-                    # green → red
                     bg = QColor(
                         int(20 + 200 * ((t - 0.5) * 2)),
                         int(200 - 160 * ((t - 0.5) * 2)),
                         20,
                     )
+
+                # Diff overlay — magenta border/tint for cells changed from stock
+                is_diff = False
+                if stock and r < len(stock) and c < len(stock[r]):
+                    stock_val = stock[r][c]
+                    if abs(val - stock_val) > 1e-4:
+                        is_diff = True
+                        diff_count += 1
+                        # Blend towards magenta: darken bg and add pink cast
+                        bg = QColor(
+                            min(255, bg.red()   + 80),
+                            max(0,   bg.green() - 40),
+                            min(255, bg.blue()  + 80),
+                        )
+                        delta = val - stock_val
+                        item.setToolTip(
+                            f"Stock: {stock_val:.2f}  Current: {val:.2f}  "
+                            f"Δ {delta:+.2f}")
+
                 item.setBackground(bg)
                 lum = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
                 item.setForeground(QColor("#e8eaf0" if lum < 100 else "#0d0d0f"))
@@ -682,11 +779,19 @@ class MapsWidget(QWidget):
 
         conf_colour = {"CONFIRMED": C_GREEN, "PROVISIONAL": C_AMBER}.get(
             m.confidence, C_RED)
+        diff_txt = ""
+        if stock is not None:
+            diff_txt = (f"  ·  <span style='color:{C_PURPLE}'>"
+                        f"Δ {diff_count} cell(s) from stock</span>")
+        elif self._diff_mode and m.name not in self._stock_data:
+            diff_txt = f"  ·  <span style='color:{C_DIM}'>no baseline for {m.name}</span>"
+
         self._lbl_map_info.setText(
             f"{m.name}  ·  {rows}×{cols}  ·  "
             f"range: {lo:.2f} – {hi:.2f}  ·  "
             f"addr: <span style='color:{C_BLUE}'>0x{m.data_addr:06X}</span>  ·  "
-            f"<span style='color:{conf_colour}'>{m.confidence}</span>")
+            f"<span style='color:{conf_colour}'>{m.confidence}</span>"
+            f"{diff_txt}")
 
     def _on_cell_changed(self, item: QTableWidgetItem):
         """Track edited cells — don't write until user clicks Write to ROM."""
@@ -1065,6 +1170,13 @@ class MESevenWindow(QMainWindow):
         self._w_info.update(rom, ident, self._dpp, cs_result, profile)
         self._w_patches.load_rom(rom, self._searcher, profile)
         self._w_maps.load_rom(rom, self._searcher, maps)
+
+        # Auto-set stock baseline when loading a confirmed stock ROM
+        # (diff mode highlights changes vs the factory calibration)
+        import zlib as _zlib
+        _crc = _zlib.crc32(rom.data) & 0xFFFFFFFF
+        if is_known_stock(_crc):
+            self._w_maps.set_stock_baseline(rom, maps)
 
         # Tell KWP monitor which part numbers are valid for this ROM
         pns = [ident.vmecuhn] if ident.vmecuhn else []
