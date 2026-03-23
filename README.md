@@ -3,6 +3,17 @@
 ROM editor and patch tool for Bosch ME7.x ECUs (Bosch Motronic ME7.1, ME7.1.1, ME7.5).
 
 **CPU:** Infineon C167CR (16-bit, little-endian) — all supported variants.  
+
+> **⚠ Work in Progress — Use at Your Own Risk**
+>
+> This tool is under active development. Features may be incomplete, map
+> addresses may be unverified, and patches may not have been tested on all
+> hardware variants. **Always read and back up your original ROM before making
+> any changes.** Read it twice, compare the files, keep both copies safe.
+>
+> If you find a bug, incorrect address, or have a ROM dump to contribute,
+> please [open an issue](https://github.com/dspl1236/MESevenTool/issues).
+
 **ROM:** 256KB (ME7.1 early), 512KB (ECUFlash extract), or 1MB (ME7.5 full flash).  
 **Memory map:** File offset 0x00000 = C167 address 0x80000. No mirroring.
 
