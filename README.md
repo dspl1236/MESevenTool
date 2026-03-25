@@ -226,6 +226,19 @@ rom.save("my_awp_patched.bin")
 
 ---
 
+## Known Limitations
+
+| Area | Issue | Status |
+|------|-------|--------|
+| **CDKAT address conflict** | Two catalyst monitor patches target 0x0181A1 vs 0x0181A2 — one is wrong. Verify against DAMOS | Needs verification |
+| **Profile ambiguity** | AWP/AMU/AUQ share `06A906032` prefix — first match wins. Profile ordering is load-bearing | Document / improve |
+| **IMMO SKC Accept-All** | Patch bytes == stock bytes (deliberate no-op until bench validated) | UNCONFIRMED |
+| **No atomic save** | `rom.save()` overwrites original without backup or temp-file rename | TODO |
+| **Overlapping part prefixes** | `detect_profile()` first-match can pick wrong profile for shared prefixes | TODO |
+| **No signed scalar patches** | `ScalarPatchDef` assumes unsigned values only | TODO |
+
+---
+
 ## Ghidra Bridge (External)
 
 MESevenTool does not embed Ghidra. The correct workflow is:
