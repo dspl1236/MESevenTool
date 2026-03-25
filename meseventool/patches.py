@@ -341,7 +341,7 @@ class OffsetPatchDef:
     def check_applicable(self, profile) -> bool:
         if not self.applies_to:
             return True
-        return bool(self.applies_to & set(profile.platforms))
+        return self.applies_to.issubset(set(profile.platforms))
 
     def _find_addr(self, rom: ROMImage) -> int:
         """Return file offset of patch site, or 0 if anchor not found."""
@@ -487,7 +487,7 @@ class MultiOffsetPatchDef:
     def check_applicable(self, profile) -> bool:
         if not self.applies_to:
             return True
-        return bool(self.applies_to & set(profile.platforms))
+        return self.applies_to.issubset(set(profile.platforms))
 
     def _find_anchor(self, rom: ROMImage) -> int:
         """Return file offset of anchor string start, or -1 if not found."""

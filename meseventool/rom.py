@@ -163,6 +163,10 @@ class ROMImage:
     def read_u16_le(self, offset: int) -> int:
         return self.data[offset] | (self.data[offset + 1] << 8)
 
+    def read_u32_le(self, offset: int) -> int:
+        d = self.data
+        return d[offset] | (d[offset+1] << 8) | (d[offset+2] << 16) | (d[offset+3] << 24)
+
     def read_u32_be(self, offset: int) -> int:
         d = self.data
         return (d[offset] << 24) | (d[offset+1] << 16) | (d[offset+2] << 8) | d[offset+3]
@@ -180,6 +184,12 @@ class ROMImage:
 
     def write_u16_le(self, offset: int, value: int) -> None:
         self.write(offset, bytes([value & 0xFF, (value >> 8) & 0xFF]))
+
+    def write_u32_le(self, offset: int, value: int) -> None:
+        self.write(offset, bytes([
+             value & 0xFF,        (value >>  8) & 0xFF,
+            (value >> 16) & 0xFF, (value >> 24) & 0xFF,
+        ]))
 
     def write_u32_be(self, offset: int, value: int) -> None:
         self.write(offset, bytes([

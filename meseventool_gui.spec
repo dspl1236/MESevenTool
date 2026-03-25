@@ -5,7 +5,10 @@ a = Analysis(
     ['app/main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[],
+    datas=[
+        ('reference/*.json', 'reference'),
+        ('reference/*.xdf',  'reference'),
+    ],
     hiddenimports=[
         'meseventool',
         'meseventool.rom',
@@ -17,7 +20,9 @@ a = Analysis(
         'meseventool.profiles',
         'meseventool.ecu_id',
         'meseventool.xdf',
+        'meseventool.xdf_parser',
         'meseventool.kwp',
+        'meseventool.known_roms',
         'meseventool.version',
     ],
     hookspath=[],

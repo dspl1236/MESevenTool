@@ -80,10 +80,12 @@ class ECUIdentity:
 
     @property
     def is_me75(self) -> bool:
-        return self.rom_size_kb == 512
+        """ME7.5 ROMs are 512KB (ECUFlash extract) or 1024KB (full flash)."""
+        return self.rom_size_kb in (512, 1024)
 
     @property
     def is_me71(self) -> bool:
+        """ME7.1 early ROMs are 256KB."""
         return self.rom_size_kb == 256
 
     @property

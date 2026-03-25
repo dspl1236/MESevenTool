@@ -907,9 +907,6 @@ class MESevenWindow(QMainWindow):
         if rom_path and os.path.exists(rom_path):
             self._load_rom(rom_path)
 
-        if rom_path and os.path.exists(rom_path):
-            self._load_rom(rom_path)
-
     def _build_menu(self):
         mb = self.menuBar()
         mb.setStyleSheet(

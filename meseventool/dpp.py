@@ -27,11 +27,11 @@ class DPPValues:
         """Segment page used for most ROM data refs: dpp1 - 1."""
         return max(0, self.dpp1 - 1)
 
-    def seg_to_file(self, seg: int, offset: int, rom_size: int = 0x80000) -> int:
+    def seg_to_file(self, seg: int, offset: int, rom_size: int = 0x100000) -> int:
         physical = seg * SEGMENT_SIZE + (offset & 0x3FFF)
         return physical & (rom_size - 1)
 
-    def dpp1_to_file(self, offset: int, rom_size: int = 0x80000) -> int:
+    def dpp1_to_file(self, offset: int, rom_size: int = 0x100000) -> int:
         return self.seg_to_file(self.dpp1_seg, offset, rom_size)
 
     def describe(self) -> str:

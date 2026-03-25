@@ -279,13 +279,14 @@ class ChecksumManager:
         if hit is None:
             return   # no multipoint in this ROM — that's OK
 
-        # Extract table address from needle operands at +38 (lo) and +42 (hi)
+        # Extract table address from ROM at needle hit + offsets 38/42
+        # (hit.data is only needle-length; the operands are further out)
         data = bytes(rom.data)
         if hit.file_offset + 46 > rom.size:
             return
 
-        lo  = _le16(hit.data, 38) if len(hit.data) > 39 else 0
-        hi  = _le16(hit.data, 42) if len(hit.data) > 43 else 0
+        lo  = _le16(data, hit.file_offset + 38)
+        hi  = _le16(data, hit.file_offset + 42)
         phy = (hi << 16) | lo
         tbl = phy & ~ROM_ADDR_MASK & (rom.size - 1)
 

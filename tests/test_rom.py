@@ -223,7 +223,7 @@ class TestOneMBROM:
             ROMImage.load(str(path))
 # ── 1MB ROM normalisation ─────────────────────────────────────────────────────
 
-class TestOneMBROM:
+class TestOneMBROMNormalisation:
     """
     ME7.5 ROMs are natively 1MB. No mirroring. Flat file offsets throughout.
     XDF offsets (e.g. KFZW at 0x0120DD) are offsets into the 1MB file.

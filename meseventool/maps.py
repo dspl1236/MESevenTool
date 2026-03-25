@@ -112,8 +112,9 @@ class MapDef:
                 if off + width > rom.size:
                     row.append(0.0)
                     continue
+                # C167 is little-endian — always read LE regardless of sign
                 raw = int.from_bytes(rom.data[off:off+width],
-                                     'big' if self.data_width > 0 else 'little',
+                                     'little',
                                      signed=(self.data_width < 0))
                 row.append(dec(raw))
             rows.append(row)
@@ -135,7 +136,8 @@ class MapDef:
             for c, v in enumerate(row):
                 off = self.data_addr + (r * self.cols + c) * width
                 raw = max(lo, min(hi, enc(v)))
-                rom.data[off:off+width] = raw.to_bytes(width, byteorder='big',
+                # C167 is little-endian — always write LE
+                rom.data[off:off+width] = raw.to_bytes(width, byteorder='little',
                                                         signed=signed)
 
 
