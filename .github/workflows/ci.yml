@@ -75,6 +75,7 @@ jobs:
 
       - name: Delete old latest release
         if: github.event_name == 'push'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -83,19 +84,19 @@ jobs:
 
       - name: Create latest release
         if: github.event_name == 'push'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create latest ^
-            --title "MESevenTool — Latest Build" ^
-            --notes "## MESevenTool^
+          gh release create latest \
+            --title "MESevenTool — Latest Build" \
+            --notes "## MESevenTool
 
-          Bosch ME7.x ROM editor and patch tool.^
+          Bosch ME7.x ROM editor and patch tool.
 
-          Download MESevenTool.exe and run — no install needed.^
+          Download MESevenTool.exe and run — no install needed.
 
-          Supports ME7.1, ME7.1.1, ME7.5 across 1.8T, 2.7T biturbo, V8, VR6.^
+          Supports ME7.1, ME7.1.1, ME7.5 across 1.8T, 2.7T biturbo, V8, VR6.
 
-          Commit: ${{ github.sha }}" ^
+          Commit: ${{ github.sha }}" \
             "dist/MESevenTool.exe"
-        shell: cmd
