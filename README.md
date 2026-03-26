@@ -1,8 +1,13 @@
 # MESevenTool
 
+[![CI](https://github.com/dspl1236/MESevenTool/actions/workflows/ci.yml/badge.svg)](https://github.com/dspl1236/MESevenTool/actions/workflows/ci.yml)
+[![Download](https://img.shields.io/github/v/release/dspl1236/MESevenTool?label=Download&logo=windows)](https://github.com/dspl1236/MESevenTool/releases/latest/download/MESevenTool.exe)
+
 ROM editor and patch tool for Bosch ME7.x ECUs (Bosch Motronic ME7.1, ME7.1.1, ME7.5).
 
-**CPU:** Infineon C167CR (16-bit, little-endian) — all supported variants.  
+**[⬇ Download MESevenTool.exe (Windows)](https://github.com/dspl1236/MESevenTool/releases/latest/download/MESevenTool.exe)**
+
+**CPU:** Infineon C167CR (16-bit, little-endian) — all supported variants.
 
 > **⚠ Work in Progress — Use at Your Own Risk**
 >

@@ -7,8 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
-  actions: write
+  contents: write
 
 jobs:
   test:
@@ -70,14 +69,33 @@ jobs:
             --exclude-module numpy `
             app/main.py
 
-      - name: List dist
-        run: dir dist
+      - name: Verify EXE
+        run: if not exist dist\MESevenTool.exe (echo MISSING && exit /b 1)
         shell: cmd
 
-      - name: Upload EXE artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MESevenTool-windows-exe
-          path: dist/
-          retention-days: 7
-          if-no-files-found: error
+      - name: Delete old latest release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+
+      - name: Create latest release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest ^
+            --title "MESevenTool — Latest Build" ^
+            --notes "## MESevenTool^
+
+          Bosch ME7.x ROM editor and patch tool.^
+
+          Download MESevenTool.exe and run — no install needed.^
+
+          Supports ME7.1, ME7.1.1, ME7.5 across 1.8T, 2.7T biturbo, V8, VR6.^
+
+          Commit: ${{ github.sha }}" ^
+            "dist/MESevenTool.exe"
+        shell: cmd
