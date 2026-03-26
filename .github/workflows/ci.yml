@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -66,9 +70,14 @@ jobs:
             --exclude-module numpy `
             app/main.py
 
+      - name: List dist
+        run: dir dist
+        shell: cmd
+
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: MESevenTool-windows-exe
-          path: dist/MESevenTool.exe
-          retention-days: 90
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
