@@ -47,7 +47,11 @@ __all__ = [
     "U8", "U16", "S8", "S16", "_rpm", "_deg", "_pct", "_lambda",
     # Patches
     "PatchDef", "PatchResult", "PatchState", "PatchCategory",
+    "FixedAddressPatchDef", "OffsetPatchDef",
+    "ScalarPatchDef", "MultiOffsetPatchDef",
     "ALL_PATCHES", "detect_all",
+    # Known ROMs
+    "KnownROM", "KNOWN_ROMS", "lookup_rom", "is_known_stock",
     # Profiles
     "ROMProfile", "PROFILE_AWP", "PROFILE_UNKNOWN",
     "ALL_PROFILES", "PROFILES", "detect_profile", "get_profile",

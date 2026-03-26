@@ -210,8 +210,6 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
     # Load axis — 16 breakpoints (relative air mass, 0.0–1.5 g/stroke approx)
     _LOAD16 = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70,
                0.80, 0.90, 1.00, 1.10, 1.20, 1.30, 1.40, 1.50]
-    # Load axis — 12 breakpoints (for KFZW y axis)
-    _LOAD12 = [0.00, 0.10, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00, 1.10, 1.20, 1.30, 1.40]
     # Lambda axis — 6 RPM breakpoints for LAMFA
     _LAMFA_RPM6  = [800, 1600, 2400, 3200, 4000, 5200]
     # Lambda load — 15 breakpoints for LAMFA rows
