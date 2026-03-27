@@ -360,41 +360,56 @@ class PatchesWidget(QWidget):
         results = detect_all(rom, searcher, profile)
         result_map = {r.patch.name: r for r in results}
 
-        # Group PatchDef by category
+        # Group PatchDef by category — only include applicable+found patches
         categories: dict[str, list] = {}
         for patch in ALL_PATCHES:
+            # Skip patches not applicable to this profile
+            if self._profile and not self._profile.patch_applies(patch):
+                continue
+            result = result_map.get(patch.name)
+            state = result.state if result else PatchState.MISSING
+            # Skip patches whose needle wasn't found in this ROM
+            if state in (PatchState.MISSING, PatchState.NOT_APPLICABLE):
+                continue
             cat = patch.category.value if isinstance(patch.category, PatchCategory) else str(patch.category)
-            categories.setdefault(cat, []).append(('toggle', patch))
+            categories.setdefault(cat, []).append(('toggle', patch, result))
 
         for scalar in ALL_SCALAR_PATCHES:
+            if self._profile and not self._profile.patch_applies(scalar):
+                continue
+            current = scalar.read(rom, searcher)
+            if current is None:
+                continue  # needle not found — hide
             cat = scalar.category.value if isinstance(scalar.category, PatchCategory) else str(scalar.category)
-            categories.setdefault(cat, []).append(('scalar', scalar))
+            categories.setdefault(cat, []).append(('scalar', scalar, current))
+
+        if not categories:
+            no_patches = QLabel(
+                "No applicable patches found for this ROM variant.\n\n"
+                "This ECU's firmware may not have any supported patch sites,\n"
+                "or the profile detection didn't match a known platform.")
+            no_patches.setStyleSheet(f"color:{C_DIM}; font-size:12px; padding:40px;")
+            no_patches.setAlignment(Qt.AlignCenter)
+            self._content_lay.addWidget(no_patches)
+            self._content_lay.addStretch()
+            return
 
         for cat_name, items in sorted(categories.items()):
             box = QGroupBox(cat_name)
             box_lay = QVBoxLayout(box)
             box_lay.setSpacing(4)
 
-            for kind, patch in items:
+            for entry in items:
                 row = QWidget()
                 row_lay = QHBoxLayout(row)
                 row_lay.setContentsMargins(4, 2, 4, 2)
                 row_lay.setSpacing(8)
 
-                if kind == 'toggle':
-                    # Check platform applicability
-                    if self._profile and not self._profile.patch_applies(patch):
-                        # Grey-out row with NOT_APPLICABLE label
-                        lbl_na = QLabel(f"{patch.name}  — not applicable for this ECU")
-                        lbl_na.setStyleSheet(f"color:{C_DIM}; font-size:11px; padding:2px 6px;")
-                        box_lay.addWidget(lbl_na)
-                        continue
-
-                    result = result_map.get(patch.name)
-                    state  = result.state if result else PatchState.MISSING
+                if entry[0] == 'toggle':
+                    _, patch, result = entry
+                    state = result.state
 
                     cb = QCheckBox(patch.name)
-                    cb.setEnabled(state != PatchState.MISSING)
                     cb.setChecked(state == PatchState.PATCHED)
                     cb.setToolTip(
                         f"{patch.description}\n\n"
@@ -420,11 +435,7 @@ class PatchesWidget(QWidget):
                     row_lay.addWidget(state_lbl)
 
                 else:  # scalar
-                    if self._profile and not self._profile.patch_applies(patch):
-                        lbl_na = QLabel(f"{patch.name}  — not applicable for this ECU")
-                        lbl_na.setStyleSheet(f"color:{C_DIM}; font-size:11px; padding:2px 6px;")
-                        box_lay.addWidget(lbl_na)
-                        continue
+                    _, patch, current = entry
                     lbl = QLabel(f"{patch.name}:")
                     lbl.setFixedWidth(180)
                     lbl.setToolTip(
@@ -432,23 +443,16 @@ class PatchesWidget(QWidget):
                         f"Range: {patch.min_val}–{patch.max_val} {patch.unit}\n"
                         f"Confidence: {patch.confidence}")
 
-                    current = patch.read(rom, searcher)
                     spin = QDoubleSpinBox()
                     spin.setRange(patch.min_val, patch.max_val)
                     spin.setSuffix(f"  {patch.unit}")
                     spin.setDecimals(0 if patch.scale >= 1.0 else 1)
                     spin.setSingleStep(max(1.0, patch.scale * 50))
-                    if current is not None:
-                        spin.setValue(current)
-                        spin.setEnabled(True)
-                    else:
-                        spin.setEnabled(False)
-                        spin.setToolTip("Needle not found in this ROM variant")
+                    spin.setValue(current)
 
                     apply_btn = QPushButton("Apply")
                     apply_btn.setFixedWidth(60)
                     apply_btn.setStyleSheet(btn_style(C_AMBER))
-                    apply_btn.setEnabled(current is not None)
                     apply_btn.clicked.connect(
                         lambda _, p=patch, sp=spin: self.scalar_changed.emit(p, sp.value()))
 
