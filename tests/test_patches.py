@@ -2313,3 +2313,215 @@ class TestCDNWS4B0906018CM(unittest.TestCase):
         # Tuned file but CDNWS 0x02 still intact
         from meseventool.patches import PatchState
         self.assertEqual(self._detect('170hp_018cm_PassatUNI2.bin').state, PatchState.STOCK)
+
+
+# ── End-to-end workflow tests ────────────────────────────────────────────────
+
+import struct
+import tempfile
+import os
+from meseventool.checksum import ChecksumManager
+
+
+def _make_workflow_rom(needle_in_cal=True):
+    """
+    Build a 512KB synthetic ROM with:
+    - The first real patch's stock needle embedded
+    - A valid main checksum
+    If needle_in_cal=True, needle lives inside the cal page so applying
+    the patch invalidates the checksum (the realistic scenario).
+    """
+    size   = 0x80000
+    cal_off = size - 0x10000   # 0x70000
+    patch  = ALL_PATCHES[0]    # Knock Retard Disable
+
+    needle_addr = (cal_off + 0x1000) if needle_in_cal else 0x20000
+
+    data = bytearray([0xAA] * size)
+    for i, b in enumerate(patch.needle):
+        data[needle_addr + i] = b if patch.mask[i] == MASK else 0x00
+    for i, b in enumerate(patch.stock_bytes):
+        data[needle_addr + patch.offset + i] = b
+
+    # Compute valid checksum
+    storage = cal_off + 0xFFF8
+    data[storage:storage + 8] = b'\x00' * 8
+    total = 0
+    for i in range(cal_off, storage - 1, 2):
+        total += data[i] | (data[i + 1] << 8)
+    total &= 0xFFFFFFFF
+    comp = (~total) & 0xFFFFFFFF
+    struct.pack_into('<I', data, storage, total)
+    struct.pack_into('<I', data, storage + 4, comp)
+
+    return ROMImage(data=data), patch
+
+
+class TestPatchWorkflowE2E:
+    """
+    Full apply → checksum fix → save → reload → verify → revert →
+    checksum fix → save → reload cycle.
+    """
+
+    # ── helpers ────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _save_reload(rom):
+        fd, tmp = tempfile.mkstemp(suffix='.bin')
+        os.close(fd)
+        rom.save_as(tmp)
+        rom2 = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom2
+
+    # ── 1. apply in cal page — checksum must break ────────────────────────
+
+    def test_apply_invalidates_checksum_in_cal_page(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        assert result.state == PatchState.STOCK
+
+        assert ChecksumManager(rom).verify().main_ok
+        patch.apply(rom, result)
+        assert patch.detect(rom).state == PatchState.PATCHED
+        assert not ChecksumManager(rom).verify().main_ok
+
+    # ── 2. fix checksum after apply ───────────────────────────────────────
+
+    def test_fix_checksum_after_apply(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+
+        cs = ChecksumManager(rom)
+        cs.fix()
+        assert cs.verify().main_ok
+
+    # ── 3. save → reload preserves patch + checksum ───────────────────────
+
+    def test_save_reload_preserves_patch_and_checksum(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+        ChecksumManager(rom).fix()
+
+        rom2 = self._save_reload(rom)
+        assert patch.detect(rom2).state == PatchState.PATCHED
+        assert ChecksumManager(rom2).verify().main_ok
+
+    # ── 4. revert restores stock ──────────────────────────────────────────
+
+    def test_revert_restores_stock(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+        ChecksumManager(rom).fix()
+
+        result2 = patch.detect(rom)
+        patch.revert(rom, result2)
+        assert patch.detect(rom).state == PatchState.STOCK
+
+    # ── 5. revert invalidates checksum ────────────────────────────────────
+
+    def test_revert_invalidates_checksum(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+        ChecksumManager(rom).fix()
+
+        result2 = patch.detect(rom)
+        patch.revert(rom, result2)
+        assert not ChecksumManager(rom).verify().main_ok
+
+    # ── 6. full round-trip: apply → fix → save → reload → revert → fix →
+    #       save → reload — final state is stock with valid checksum ───────
+
+    def test_full_roundtrip(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        snapshot_before = bytes(rom.data)
+
+        # Apply
+        result = patch.detect(rom)
+        assert result.state == PatchState.STOCK
+        assert patch.apply(rom, result)
+        assert patch.detect(rom).state == PatchState.PATCHED
+
+        # Fix checksum + save + reload
+        ChecksumManager(rom).fix()
+        assert ChecksumManager(rom).verify().main_ok
+        rom2 = self._save_reload(rom)
+        assert patch.detect(rom2).state == PatchState.PATCHED
+        assert ChecksumManager(rom2).verify().main_ok
+
+        # Revert
+        result2 = patch.detect(rom2)
+        assert patch.revert(rom2, result2)
+        assert patch.detect(rom2).state == PatchState.STOCK
+
+        # Fix checksum + save + reload
+        ChecksumManager(rom2).fix()
+        assert ChecksumManager(rom2).verify().main_ok
+        rom3 = self._save_reload(rom2)
+        assert patch.detect(rom3).state == PatchState.STOCK
+        assert ChecksumManager(rom3).verify().main_ok
+
+        # Final data should match original
+        assert bytes(rom3.data) == snapshot_before
+
+    # ── 7. outside cal page — checksum stays valid ────────────────────────
+
+    def test_apply_outside_cal_page_keeps_checksum(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=False)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+        assert patch.detect(rom).state == PatchState.PATCHED
+        assert ChecksumManager(rom).verify().main_ok
+
+    # ── 8. double-apply is idempotent ─────────────────────────────────────
+
+    def test_double_apply_idempotent(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        r1 = patch.detect(rom)
+        patch.apply(rom, r1)
+        data_after_first = bytes(rom.data)
+
+        r2 = patch.detect(rom)
+        assert r2.state == PatchState.PATCHED
+        patch.apply(rom, r2)
+        assert bytes(rom.data) == data_after_first
+
+    # ── 9. double-revert is idempotent ────────────────────────────────────
+
+    def test_double_revert_idempotent(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        snapshot = bytes(rom.data)
+
+        r1 = patch.detect(rom)
+        assert r1.state == PatchState.STOCK
+        patch.revert(rom, r1)
+        assert bytes(rom.data) == snapshot
+
+    # ── 10. file size preserved on save/reload ────────────────────────────
+
+    def test_file_size_preserved(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        result = patch.detect(rom)
+        patch.apply(rom, result)
+        ChecksumManager(rom).fix()
+
+        fd, tmp = tempfile.mkstemp(suffix='.bin')
+        os.close(fd)
+        rom.save_as(tmp)
+        size = os.path.getsize(tmp)
+        os.unlink(tmp)
+        assert size == len(rom.data)
+
+    # ── 11. detect_all returns results for all patches ────────────────────
+
+    def test_detect_all_includes_workflow_patch(self):
+        rom, patch = _make_workflow_rom(needle_in_cal=True)
+        results = detect_all(rom)
+        assert len(results) == len(ALL_PATCHES)
+        # Our embedded patch should be detected as STOCK
+        r = next(r for r in results if r.patch.name == patch.name)
+        assert r.state == PatchState.STOCK
