@@ -2525,3 +2525,184 @@ class TestPatchWorkflowE2E:
         # Our embedded patch should be detected as STOCK
         r = next(r for r in results if r.patch.name == patch.name)
         assert r.state == PatchState.STOCK
+
+
+# ── Multi-patch and per-type workflow tests ──────────────────────────────────
+
+from meseventool.patches import FixedAddressPatchDef
+
+
+def _make_multi_patch_rom():
+    """Build a ROM with multiple patch needles embedded + fixed-address sites.
+
+    Embeds ALL_PATCHES[0] (Knock Retard) needle in cal page and
+    sets up fixed-address patch sites for any FixedAddressPatchDef patches
+    whose addresses fall inside 512K.
+    """
+    size    = 0x80000
+    cal_off = size - 0x10000
+    data    = bytearray([0xAA] * size)
+
+    # Embed needle for first PatchDef (Knock Retard Disable)
+    p0 = ALL_PATCHES[0]
+    addr0 = cal_off + 0x1000
+    for i, b in enumerate(p0.needle):
+        data[addr0 + i] = b if p0.mask[i] == MASK else 0x00
+    for i, b in enumerate(p0.stock_bytes):
+        data[addr0 + p0.offset + i] = b
+
+    # Set up stock bytes for all FixedAddressPatchDef patches
+    fixed_patches = [p for p in ALL_PATCHES if isinstance(p, FixedAddressPatchDef)]
+    for fp in fixed_patches:
+        if fp.fixed_addr + len(fp.stock_bytes) <= size:
+            for i, b in enumerate(fp.stock_bytes):
+                data[fp.fixed_addr + i] = b
+
+    # Compute valid checksum
+    storage = cal_off + 0xFFF8
+    data[storage:storage + 8] = b'\x00' * 8
+    total = 0
+    for i in range(cal_off, storage - 1, 2):
+        total += data[i] | (data[i + 1] << 8)
+    total &= 0xFFFFFFFF
+    comp = (~total) & 0xFFFFFFFF
+    struct.pack_into('<I', data, storage, total)
+    struct.pack_into('<I', data, storage + 4, comp)
+
+    return ROMImage(data=data)
+
+
+class TestMultiPatchWorkflow:
+    """Apply multiple patches, fix checksum, save/reload, revert all."""
+
+    @staticmethod
+    def _save_reload(rom):
+        fd, tmp = tempfile.mkstemp(suffix='.bin')
+        os.close(fd)
+        rom.save_as(tmp)
+        rom2 = ROMImage.load(tmp)
+        os.unlink(tmp)
+        return rom2
+
+    def test_stack_needle_and_fixed_patches(self):
+        """Apply a needle patch + all applicable fixed-address patches,
+        fix checksum, save/reload, verify all, revert all, verify stock."""
+        rom = _make_multi_patch_rom()
+        snapshot = bytes(rom.data)
+
+        # Detect all
+        results = detect_all(rom)
+
+        # Collect applicable patches (STOCK state)
+        applicable = [(r.patch, r) for r in results
+                      if r.state == PatchState.STOCK]
+        assert len(applicable) >= 2, "Need at least 2 patchable entries"
+
+        # Apply all
+        for patch, result in applicable:
+            assert patch.apply(rom, result), f"Apply failed: {patch.name}"
+
+        # Verify all now PATCHED
+        results2 = detect_all(rom)
+        for r in results2:
+            if r.state == PatchState.STOCK:
+                # Should only be patches that weren't applicable
+                orig = next(o for o in results if o.patch.name == r.patch.name)
+                assert orig.state != PatchState.STOCK
+
+        # Fix checksum, save, reload
+        ChecksumManager(rom).fix()
+        assert ChecksumManager(rom).verify().main_ok
+        rom2 = self._save_reload(rom)
+
+        # Verify patches survived save/reload
+        results3 = detect_all(rom2)
+        for patch, _ in applicable:
+            r = next(r for r in results3 if r.patch.name == patch.name)
+            assert r.state == PatchState.PATCHED, \
+                f"{patch.name} lost after save/reload (got {r.state})"
+        assert ChecksumManager(rom2).verify().main_ok
+
+        # Revert all
+        results4 = detect_all(rom2)
+        for r in results4:
+            if r.state == PatchState.PATCHED:
+                assert r.patch.revert(rom2, r), f"Revert failed: {r.patch.name}"
+
+        # Fix checksum, save, reload
+        ChecksumManager(rom2).fix()
+        assert ChecksumManager(rom2).verify().main_ok
+        rom3 = self._save_reload(rom2)
+
+        # All should be back to stock
+        results5 = detect_all(rom3)
+        for patch, _ in applicable:
+            r = next(r for r in results5 if r.patch.name == patch.name)
+            assert r.state == PatchState.STOCK, \
+                f"{patch.name} not stock after revert (got {r.state})"
+        assert ChecksumManager(rom3).verify().main_ok
+
+        # Data should match original
+        assert bytes(rom3.data) == snapshot
+
+    def test_fixed_address_patch_roundtrip(self):
+        """Each FixedAddressPatchDef: detect → apply → detect → revert → detect."""
+        rom = _make_multi_patch_rom()
+
+        fixed_patches = [p for p in ALL_PATCHES
+                         if isinstance(p, FixedAddressPatchDef)
+                         and p.fixed_addr + len(p.stock_bytes) <= rom.size]
+
+        for fp in fixed_patches:
+            rom_copy = ROMImage(data=bytearray(rom.data))
+            r1 = fp.detect(rom_copy)
+            if r1.state != PatchState.STOCK:
+                continue
+
+            assert fp.apply(rom_copy, r1)
+            r2 = fp.detect(rom_copy)
+            assert r2.state == PatchState.PATCHED, \
+                f"{fp.name}: expected PATCHED after apply, got {r2.state}"
+
+            assert fp.revert(rom_copy, r2)
+            r3 = fp.detect(rom_copy)
+            assert r3.state == PatchState.STOCK, \
+                f"{fp.name}: expected STOCK after revert, got {r3.state}"
+
+    def test_apply_order_independence(self):
+        """Applying patches in forward vs reverse order yields same result."""
+        rom_fwd = _make_multi_patch_rom()
+        rom_rev = ROMImage(data=bytearray(rom_fwd.data))
+
+        results_fwd = detect_all(rom_fwd)
+        applicable_fwd = [(r.patch, r) for r in results_fwd
+                          if r.state == PatchState.STOCK]
+
+        results_rev = detect_all(rom_rev)
+        applicable_rev = [(r.patch, r) for r in results_rev
+                          if r.state == PatchState.STOCK]
+
+        # Apply forward
+        for patch, result in applicable_fwd:
+            patch.apply(rom_fwd, result)
+        ChecksumManager(rom_fwd).fix()
+
+        # Apply reverse
+        for patch, result in reversed(applicable_rev):
+            patch.apply(rom_rev, result)
+        ChecksumManager(rom_rev).fix()
+
+        assert bytes(rom_fwd.data) == bytes(rom_rev.data)
+
+    def test_checksum_fix_idempotent(self):
+        """Calling fix() twice doesn't change anything."""
+        rom = _make_multi_patch_rom()
+        results = detect_all(rom)
+        for r in results:
+            if r.state == PatchState.STOCK:
+                r.patch.apply(rom, r)
+
+        ChecksumManager(rom).fix()
+        data_after_first = bytes(rom.data)
+        ChecksumManager(rom).fix()
+        assert bytes(rom.data) == data_after_first
