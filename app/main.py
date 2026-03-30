@@ -640,8 +640,6 @@ class MapsWidget(QWidget):
             return
         try:
             baseline_rom = ROMImage.load(path)
-            import sys as _sys
-            _sys.path.insert(0, str(__file__))
             from meseventool.profiles import detect_profile
             from meseventool.ecu_id import identify
             from meseventool.dpp import extract_dpp
@@ -1174,44 +1172,55 @@ class MESevenWindow(QMainWindow):
         self._searcher = Searcher(rom)
         self._dirty    = False
 
-        # DPP extraction
-        ex = DPPExtractor(self._searcher)
-        if self._searcher.find_dppx():
-            pass
-        self._dpp = ex.extract()
+        try:
+            # DPP extraction
+            ex = DPPExtractor(self._searcher)
+            self._dpp = ex.extract()
 
-        # ECU identification
-        ident = identify(rom)
+            # ECU identification
+            ident = identify(rom)
 
-        # Checksum verification
-        cs_mgr  = ChecksumManager(rom)
-        cs_result = cs_mgr.verify()
+            # Checksum verification
+            cs_mgr  = ChecksumManager(rom)
+            cs_result = cs_mgr.verify()
 
-        # Profile detection
-        profile = detect_profile(ident, self._dpp)
+            # Profile detection
+            profile = detect_profile(ident, self._dpp)
+            if profile is None:
+                QMessageBox.warning(self, "Unknown ECU",
+                    f"Could not detect an ME7 profile for this ROM.\n"
+                    f"ECU ID: {ident.display_name if ident else 'unknown'}\n\n"
+                    "The ROM loaded but patches and maps will not be available.")
+                return
 
-        # Maps — use confirmed XDF offsets if we know the exact part number
-        xdf_pn = ident.vmecuhn or None
-        maps = profile.make_maps(xdf_pn=xdf_pn)
+            # Maps — use confirmed XDF offsets if we know the exact part number
+            xdf_pn = ident.vmecuhn or None
+            maps = profile.make_maps(xdf_pn=xdf_pn)
 
-        # Update UI panels
-        self._w_info.update(rom, ident, self._dpp, cs_result, profile)
-        self._w_patches.load_rom(rom, self._searcher, profile)
-        self._w_maps.load_rom(rom, self._searcher, maps)
+            # Update UI panels
+            self._w_info.update(rom, ident, self._dpp, cs_result, profile)
+            self._w_patches.load_rom(rom, self._searcher, profile)
+            self._w_maps.load_rom(rom, self._searcher, maps)
 
-        # Auto-set stock baseline when loading a confirmed stock ROM
-        # (diff mode highlights changes vs the factory calibration)
-        import zlib as _zlib
-        _crc = _zlib.crc32(rom.data) & 0xFFFFFFFF
-        if is_known_stock(_crc):
-            self._w_maps.set_stock_baseline(rom, maps)
+            # Auto-set stock baseline when loading a confirmed stock ROM
+            import zlib as _zlib
+            _crc = _zlib.crc32(rom.data) & 0xFFFFFFFF
+            if is_known_stock(_crc):
+                self._w_maps.set_stock_baseline(rom, maps)
 
-        # Tell KWP monitor which part numbers are valid for this ROM
-        pns = [ident.vmecuhn] if ident.vmecuhn else []
-        if ident.ssecuhn and ident.ssecuhn not in pns:
-            pns.append(ident.ssecuhn)
-        self._kwp_monitor.set_rom_part_numbers(pns)
-        self._refresh_kwp_menu_label()
+            # Tell KWP monitor which part numbers are valid for this ROM
+            pns = [ident.vmecuhn] if ident.vmecuhn else []
+            if ident.ssecuhn and ident.ssecuhn not in pns:
+                pns.append(ident.ssecuhn)
+            self._kwp_monitor.set_rom_part_numbers(pns)
+            self._refresh_kwp_menu_label()
+
+        except Exception as e:
+            QMessageBox.critical(self, "ROM Analysis Error",
+                f"Failed to analyse ROM:\n{e}\n\n"
+                "The file loaded but could not be identified. "
+                "It may be corrupt, truncated, or not an ME7 ROM.")
+            return
 
         # Toolbar state
         self.btn_save.setEnabled(True)
