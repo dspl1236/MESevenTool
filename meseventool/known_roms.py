@@ -72,9 +72,10 @@ _CATALOG: list[KnownROM] = [
     KnownROM(0x28e1e3cc, "8L0906018M",  "0261206797", "42/1/ME7.5/5/4018.10//F19x5/Dst01t/300999",
              "ME7.5", 512,  "Audi TT 8L 1.8T AMU 225hp — 8L fw4018"),
 
-    # ── ME7.5 — Unknown profile (ABA 2.0 M3.8-era board) ────────────────────
-    KnownROM(0x427bf20b, "",            "0261204634", "",
-             "ME7.5", 512,  "VW Golf3/4 2.0 8v ABA 115hp — 0261204634 (M3.8 board)"),
+    # NOTE: 0x427BF20B (ABA 2.0 8v, Bosch 0261204634, 512KB) removed.
+    # Originally mislabeled "ME7.5 M3.8 board" — actually Bosch M5.9.x
+    # (flash-based, 512KB). Bosch 026120 4xxx + 512KB = M5.9 flash, not
+    # ME7 or M3.8 EPROM. Out of scope for both MESevenTool and M35Tool.
 
     # ── ME7.1 — 8D0907551 S4 B5 2.7T biturbo ────────────────────────────────
     KnownROM(0xb8c7dbce, "8D0907551A",  "0261206110", "42/1/ME7.1/5/6005.01//X22k6/Dstc2g/310599",
