@@ -243,6 +243,9 @@ class TestCataloguePatches:
             "dual_bank",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
             "4b0906018", "me7.1.1", "2.7t", "4z7907551",
+            # ME7.1 ECU-specific tags (from M38x xlsx)
+            "4b0907557b", "4b0907557p", "4b0907558m",
+            "06a906018r", "06a906018cg", "06a906018cj",
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
             for tag in p.applies_to:

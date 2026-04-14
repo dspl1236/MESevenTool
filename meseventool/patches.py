@@ -1539,6 +1539,130 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to    = {"me7.5", "1.8t"},
     ),
 
+    # ── ME7.1 1.8T CD Param Patches — from M38x M592 Function Datasheet ────────
+    # Source: M38x M592 Function Datasheet.xlsx (s4wiki.com), cross-referenced
+    # against TunerPro XDF definitions. Addresses are flat ROM file offsets.
+    #
+    # CDHSH = Codewort Heizerdiagnose hinter Kat (downstream O2 heater diag)
+    # CDHSV = Codewort Heizerdiagnose vor Kat   (upstream O2 heater diag)
+    # 0 = keine Diagnose (disabled), 1 = Diagnose aktiv (active)
+
+    # 4B0907557B M382 (AEB 1.8T 150hp) — confirmed from community XDF
+    FixedAddressPatchDef(
+        name        = "Downstream O2 Heater Diagnosis Disable — CDHSH (4B0907557B M382)",
+        description = ("Disables downstream O2 sensor heater diagnosis by setting CDHSH=0 "
+                       "at 0x07CD1 in 4B0907557B (AEB 1.8T M382). Prevents heater DTCs "
+                       "when rear O2 sensor is removed."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07CD1,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSH at 0x07CD1, CDHSV at 0x07CD0 (adjacent). "
+                      "Source: M38x M592 Function Datasheet.xlsx (s4wiki.com). "
+                      "AEB 1.8T 150hp, 4B0907557B ECU, M382 firmware.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557b"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Upstream O2 Heater Diagnosis Disable — CDHSV (4B0907557B M382)",
+        description = ("Disables upstream O2 sensor heater diagnosis by setting CDHSV=0 "
+                       "at 0x07CD0 in 4B0907557B (AEB 1.8T M382). Apply with CDHSH patch "
+                       "for full pre/post-cat O2 heater disable."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07CD0,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSV at 0x07CD0. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557b"},
+    ),
+
+    # 4B0907557P M592 (AEB 1.8T 150hp later — M592 firmware)
+    FixedAddressPatchDef(
+        name        = "Downstream O2 Heater Diagnosis Disable — CDHSH (4B0907557P M592)",
+        description = ("Disables downstream O2 sensor heater diagnosis by setting CDHSH=0 "
+                       "at 0x07867 in 4B0907557P (AEB 1.8T M592 later firmware)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07867,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSH at 0x07867, CDHSV at 0x07866. "
+                      "Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557p"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Upstream O2 Heater Diagnosis Disable — CDHSV (4B0907557P M592)",
+        description = ("Disables upstream O2 sensor heater diagnosis by setting CDHSV=0 "
+                       "at 0x07866 in 4B0907557P (AEB 1.8T M592 later firmware)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07866,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSV at 0x07866. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557p"},
+    ),
+
+    # 06A906018R M383 (AGU 1.8T 150hp — ME7.1 Golf IV / A3 8L)
+    FixedAddressPatchDef(
+        name        = "Downstream O2 Heater Diagnosis Disable — CDHSH (06A906018R M383)",
+        description = ("Disables downstream O2 sensor heater diagnosis by setting CDHSH=0 "
+                       "at 0x0720B in 06A906018R (AGU 1.8T M383, Golf IV / A3 8L)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0720B,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSH at 0x0720B, CDHSV at 0x0720A. "
+                      "Same addresses for 06A906018CJ (confirmed from xlsx). "
+                      "Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018r"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Upstream O2 Heater Diagnosis Disable — CDHSV (06A906018R M383)",
+        description = ("Disables upstream O2 sensor heater diagnosis by setting CDHSV=0 "
+                       "at 0x0720A in 06A906018R (AGU 1.8T M383)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0720A,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSV at 0x0720A. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018r"},
+    ),
+
+    # 06A906018CG M383 (AGU 1.8T — slightly different firmware offsets)
+    FixedAddressPatchDef(
+        name        = "Downstream O2 Heater Diagnosis Disable — CDHSH (06A906018CG M383)",
+        description = ("Disables downstream O2 sensor heater diagnosis by setting CDHSH=0 "
+                       "at 0x07275 in 06A906018CG (AGU 1.8T M383 variant)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07275,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSH at 0x07275, CDHSV at 0x07274. NMAXDV at 0x0693A, NMAXF at 0x069EC. "
+                      "Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018cg"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Upstream O2 Heater Diagnosis Disable — CDHSV (06A906018CG M383)",
+        description = ("Disables upstream O2 sensor heater diagnosis by setting CDHSV=0 "
+                       "at 0x07274 in 06A906018CG."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07274,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDHSV at 0x07274. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018cg"},
+    ),
+
 ]  # end ALL_PATCHES
 
 
@@ -1909,6 +2033,63 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
     ),
 
 ]  # end ALL_SCALAR_PATCHES
+
+# ── ME7.1 Rev Limit (NMAXDV / NMAXF) — fixed addresses from M38x xlsx ─────────
+# NMAXDV = Drehzahlbegrenzung bei Fehlererkennung Geschwindigkeitssignal
+#          = Rev limiter (generates DTC + MIL when exceeded)
+#          Encoding: BE uint16, scale 40 RPM/count (raw × 40 = RPM)
+# NMAXF  = Hard RPM cutoff = NMAXDV + 300 RPM (OEM relationship, confirmed from
+#          MED9.1 TFSI Funktionsrahmen p.491 and Motronic-3.8.x-5.9.x.md)
+#          Encoding: BE uint16, scale 0.25 RPM/count
+# Source: M38x M592 Function Datasheet.xlsx (s4wiki.com)
+
+# 4B0907557B M382 — AEB 1.8T 150hp
+# NMAXDV at $0743A (BE u16, ×40 RPM), NMAXF at $074C6 (BE u16, ×0.25 RPM)
+ALL_SCALAR_PATCHES.append(ScalarPatchDef(
+    name          = "Rev Limit NMAXDV (4B0907557B M382 AEB)",
+    description   = ("RPM limiter codeword. Generates DTC + MIL when engine speed exceeds "
+                     "this value. NMAXF should be set to NMAXDV + 300 RPM. "
+                     "Encoding: BE uint16, 40 RPM per count. "
+                     "At $0743A in 4B0907557B (AEB 1.8T M382)."),
+    category      = PatchCategory.PERFORMANCE,
+    needle        = bytes.fromhex("000000000000000000000000"),  # placeholder — use fixed
+    mask          = bytes.fromhex("000000000000000000000000"),
+    offset        = 0x0743A,  # used as fixed address via zero-mask needle
+    size          = 2,
+    big_endian    = True,
+    scale         = 40.0,
+    unit          = "RPM",
+    min_val       = 4000.0,
+    max_val       = 9000.0,
+    confidence    = "CONFIRMED",
+    notes         = ("NMAXDV at flat 0x0743A (BE u16 × 40 RPM/count). "
+                     "NMAXF at flat 0x074C6 (BE u16 × 0.25 RPM/count). "
+                     "OEM: NMAXF = NMAXDV + 300 RPM. "
+                     "Source: M38x M592 Function Datasheet.xlsx."),
+    applies_to    = {"me7.1", "1.8t", "4b0907557b"},
+))
+
+ALL_SCALAR_PATCHES.append(ScalarPatchDef(
+    name          = "Rev Limit NMAXDV (06A906018CG M383 AGU)",
+    description   = ("RPM limiter codeword. Generates DTC + MIL when exceeded. "
+                     "Encoding: BE uint16, 40 RPM per count. "
+                     "At $0693A in 06A906018CG (AGU 1.8T M383)."),
+    category      = PatchCategory.PERFORMANCE,
+    needle        = bytes.fromhex("000000000000000000000000"),
+    mask          = bytes.fromhex("000000000000000000000000"),
+    offset        = 0x0693A,
+    size          = 2,
+    big_endian    = True,
+    scale         = 40.0,
+    unit          = "RPM",
+    min_val       = 4000.0,
+    max_val       = 9000.0,
+    confidence    = "CONFIRMED",
+    notes         = ("NMAXDV at flat 0x0693A (BE u16 × 40 RPM). "
+                     "NMAXF at flat 0x069EC. OEM: NMAXF = NMAXDV + 300 RPM. "
+                     "Source: M38x M592 Function Datasheet.xlsx."),
+    applies_to    = {"me7.1", "1.8t", "06a906018cg"},
+))
 
 # Legacy aliases
 PATCH_REGISTRY  = ALL_PATCHES
