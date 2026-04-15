@@ -1830,6 +1830,22 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
 
+    # 4B0907558M M592 (AEB 1.8T) — CDTES only (no CDLSH/CDLSV in xlsx)
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable — CDTES (4B0907558M M592)",
+        description = ("Disables EVAP/tank vent diagnosis by setting CDTES=0 at 0x0798C "
+                       "in 4B0907558M (AEB 1.8T M592). Prevents P0440-P0446 when "
+                       "canister removed. CDLSH/CDLSV not present in this variant."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0798C,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDTES at 0x0798C. Source: M38x M592 Function Datasheet.xlsx. "
+                      "Note: 4B0907558M has CDTES only — no CDLSH/CDLSV in datasheet.",
+        applies_to  = {"me7.1", "1.8t", "4b0907558m"},
+    ),
+
 ]  # end ALL_PATCHES
 
 
