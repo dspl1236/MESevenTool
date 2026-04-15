@@ -1663,6 +1663,173 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
 
+    # ── ME7.1 1.8T Post-Cat O2 + EVAP Diagnosis — CDLSH/CDLSV/CDTES ──────────
+    # Source: M38x M592 Function Datasheet.xlsx (s4wiki.com)
+    # CDLSH = Codewort Lambda-Sonde Diagnose hinterm Kat   (rear O2 diag)
+    # CDLSV = Codewort Lambda-Sonde Diagnose vor Kat       (front O2 diag)
+    # CDTES = Codewort Tank-Entlüftung Diagnose            (EVAP/purge diag)
+    # 0 = keine Diagnose (disabled), 1 = Diagnose aktiv
+
+    # 4B0907557B M382 (AEB 1.8T 150hp)
+    FixedAddressPatchDef(
+        name        = "Rear O2 Diagnosis Disable — CDLSH (4B0907557B M382)",
+        description = ("Disables rear (post-cat) O2 sensor diagnosis by setting CDLSH=0 "
+                       "at 0x07D00 in 4B0907557B. Apply with CDLSV for full O2 delete."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07D00,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSH at 0x07D00. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557b"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Front O2 Diagnosis Disable — CDLSV (4B0907557B M382)",
+        description = ("Disables front (pre-cat) O2 sensor diagnosis by setting CDLSV=0 "
+                       "at 0x07D11 in 4B0907557B."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07D11,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSV at 0x07D11. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557b"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable — CDTES (4B0907557B M382)",
+        description = ("Disables EVAP/tank vent diagnosis by setting CDTES=0 at 0x07D4A "
+                       "in 4B0907557B. Prevents P0440-P0446 when canister removed."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07D4A,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDTES at 0x07D4A. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557b"},
+    ),
+
+    # 4B0907557P M592 (AEB 1.8T later)
+    FixedAddressPatchDef(
+        name        = "Rear O2 Diagnosis Disable — CDLSH (4B0907557P M592)",
+        description = ("Disables rear O2 sensor diagnosis by setting CDLSH=0 at 0x07896 "
+                       "in 4B0907557P (AEB 1.8T M592)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07896,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSH at 0x07896. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557p"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Front O2 Diagnosis Disable — CDLSV (4B0907557P M592)",
+        description = ("Disables front O2 sensor diagnosis by setting CDLSV=0 at 0x078A7 "
+                       "in 4B0907557P."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x078A7,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSV at 0x078A7. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557p"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable — CDTES (4B0907557P M592)",
+        description = ("Disables EVAP/tank vent diagnosis by setting CDTES=0 at 0x078E0 "
+                       "in 4B0907557P."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x078E0,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDTES at 0x078E0. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "4b0907557p"},
+    ),
+
+    # 06A906018R M383 (AGU 1.8T 150hp — Golf IV / A3 8L)
+    FixedAddressPatchDef(
+        name        = "Rear O2 Diagnosis Disable — CDLSH (06A906018R M383)",
+        description = ("Disables rear O2 sensor diagnosis by setting CDLSH=0 at 0x0723A "
+                       "in 06A906018R (AGU 1.8T M383)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0723A,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSH at 0x0723A. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018r"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Front O2 Diagnosis Disable — CDLSV (06A906018R M383)",
+        description = ("Disables front O2 sensor diagnosis by setting CDLSV=0 at 0x0724B "
+                       "in 06A906018R."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x0724B,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSV at 0x0724B. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018r"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable — CDTES (06A906018R M383)",
+        description = ("Disables EVAP/tank vent diagnosis by setting CDTES=0 at 0x07284 "
+                       "in 06A906018R."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x07284,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDTES at 0x07284. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018r"},
+    ),
+
+    # 06A906018CG M383 (AGU 1.8T variant)
+    FixedAddressPatchDef(
+        name        = "Rear O2 Diagnosis Disable — CDLSH (06A906018CG M383)",
+        description = ("Disables rear O2 sensor diagnosis by setting CDLSH=0 at 0x072A4 "
+                       "in 06A906018CG (AGU 1.8T M383 variant)."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x072A4,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSH at 0x072A4. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018cg"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "Front O2 Diagnosis Disable — CDLSV (06A906018CG M383)",
+        description = ("Disables front O2 sensor diagnosis by setting CDLSV=0 at 0x072B5 "
+                       "in 06A906018CG."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x072B5,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDLSV at 0x072B5. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018cg"},
+    ),
+
+    FixedAddressPatchDef(
+        name        = "EVAP Purge Diagnosis Disable — CDTES (06A906018CG M383)",
+        description = ("Disables EVAP/tank vent diagnosis by setting CDTES=0 at 0x072EE "
+                       "in 06A906018CG."),
+        category    = PatchCategory.EMISSIONS,
+        fixed_addr  = 0x072EE,
+        stock_bytes = bytes([0x01]),
+        patch_bytes = bytes([0x00]),
+        confidence  = "CONFIRMED",
+        notes       = "CDTES at 0x072EE. Source: M38x M592 Function Datasheet.xlsx.",
+        applies_to  = {"me7.1", "1.8t", "06a906018cg"},
+    ),
+
 ]  # end ALL_PATCHES
 
 
