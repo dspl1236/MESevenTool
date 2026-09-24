@@ -14,7 +14,7 @@ from meseventool.dpp import DPPValues
 from meseventool.ecu_id import ECUIdentity, part_number_tags, is_part_number_tag
 from meseventool.patches import (
     ALL_PATCHES, ALL_SCALAR_PATCHES, FixedAddressPatchDef,
-    FixedAddressScalarDef, PatchState, detect_all,
+    FixedAddressScalarDef, PatchCategory, PatchState, detect_all,
 )
 from meseventool.profiles import (
     PROFILE_AGU_ME71, PROFILE_06B, detect_profile, detect_rom_profile,
@@ -31,10 +31,6 @@ def _rom(fill=0x01, size=0x40000):
 
 def _patch(name_fragment):
     return next(p for p in ALL_PATCHES if name_fragment in p.name)
-
-
-def _scalar(name_fragment):
-    return next(p for p in ALL_SCALAR_PATCHES if name_fragment in p.name)
 
 
 def _pn_gated_fixed_patches():
@@ -104,14 +100,14 @@ class TestFixedAddressGating:
 
     def test_family_profile_without_part_number_not_applicable(self):
         rom = _rom()
-        p = _patch("CDTES (06A906018CG")
-        assert p.detect(rom, profile=PROFILE_AGU_ME71).state == PatchState.NOT_APPLICABLE
+        p = _patch("Catalyst Monitor Disable CDKAT (4B0906018")
+        assert p.detect(rom, profile=PROFILE_06B).state == PatchState.NOT_APPLICABLE
 
     def test_matching_part_number_applies(self):
         """Previously hidden in the GUI even on the ECU it was written for."""
         rom = _rom()
-        prof = detect_rom_profile(ECUIdentity(vmecuhn="06A906018CG"), DPPValues())
-        p = _patch("CDTES (06A906018CG")
+        prof = detect_rom_profile(ECUIdentity(vmecuhn="4B0906018CM"), DPPValues())
+        p = _patch("Catalyst Monitor Disable CDKAT (4B0906018")
         r = p.detect(rom, profile=prof)
         assert r.state == PatchState.STOCK
         assert prof.patch_applies(p)
@@ -121,7 +117,11 @@ class TestFixedAddressGating:
     def test_other_part_number_not_applicable(self):
         rom = _rom()
         prof = detect_rom_profile(ECUIdentity(vmecuhn="06A906018CG"), DPPValues())
-        p = _patch("CDTES (06A906018R")
+        p = FixedAddressPatchDef(
+            name="test-only", description="test-only",
+            category=PatchCategory.EMISSIONS, fixed_addr=0x100,
+            stock_bytes=bytes([0x01]), patch_bytes=bytes([0x00]),
+            applies_to={"me7.1", "06a906018r"})
         assert p.detect(rom, profile=prof).state == PatchState.NOT_APPLICABLE
         assert not prof.patch_applies(p)
 
@@ -143,35 +143,40 @@ class TestFixedAddressGating:
 
 # ── Fixed-address scalars ────────────────────────────────────────────────────
 
-class TestFixedAddressScalar:
+def _scalar():
+    """Test-only rev limit + linked hard cut, modelled on NMAXDV/NMAXF."""
+    return FixedAddressScalarDef(
+        name="test-only rev limit", description="test-only",
+        category=PatchCategory.PERFORMANCE,
+        fixed_addr=0x0693A, size=2, big_endian=True, scale=40.0, unit="RPM",
+        min_val=4000.0, max_val=9000.0,
+        applies_to={"me7.1", "1.8t", "06a906018cg"},
+        linked_name="NMAXF", linked_addr=0x069EC,
+        linked_scale=0.25, linked_delta=300.0)
 
-    NAME = "Rev Limit NMAXDV + NMAXF (06A906018CG"
+
+class TestFixedAddressScalar:
 
     def _profile(self):
         return detect_rom_profile(ECUIdentity(vmecuhn="06A906018CG"), DPPValues())
 
     def _rom_with_raw(self, raw, nmaxf_raw=None):
-        """NMAXDV raw count (×40 RPM); NMAXF defaults to NMAXDV + 300 RPM."""
+        """Rev-limit raw count (×40 RPM); linked value defaults to +300 RPM."""
         rom = _rom(0x00)
-        s = _scalar(self.NAME)
+        s = _scalar()
         if nmaxf_raw is None:
             nmaxf_raw = int((raw * 40 + 300) / 0.25)
         rom.data[s.fixed_addr:s.fixed_addr + 2] = raw.to_bytes(2, 'big')
         rom.data[s.linked_addr:s.linked_addr + 2] = nmaxf_raw.to_bytes(2, 'big')
         return rom
 
-    def test_nmaxdv_uses_fixed_address_type(self):
-        for s in ALL_SCALAR_PATCHES:
-            if "NMAXDV" in s.name:
-                assert isinstance(s, FixedAddressScalarDef), s.name
-
     def test_reads_plausible_value(self):
-        s = _scalar(self.NAME)
+        s = _scalar()
         assert s.read(self._rom_with_raw(170), profile=self._profile()) == 6800.0
 
     def test_implausible_value_hidden(self):
         """0x0101 × 40 = 10280 RPM > 9000 max — site doesn't hold NMAXDV."""
-        s = _scalar(self.NAME)
+        s = _scalar()
         rom = _rom(0x01)
         prof = self._profile()
         assert s.read(rom, profile=prof) is None
@@ -180,14 +185,14 @@ class TestFixedAddressScalar:
         assert bytes(rom.data) == before
 
     def test_needs_part_number_profile(self):
-        s = _scalar(self.NAME)
+        s = _scalar()
         rom = self._rom_with_raw(170)
         assert s.read(rom) is None
         assert s.read(rom, profile=PROFILE_AGU_ME71) is None
         assert not s.write(rom, 7000)
 
     def test_write_roundtrip(self):
-        s = _scalar(self.NAME)
+        s = _scalar()
         rom = self._rom_with_raw(170)
         prof = self._profile()
         assert s.write(rom, 7000, profile=prof)
@@ -196,7 +201,7 @@ class TestFixedAddressScalar:
 
     def test_write_keeps_nmaxf_300_above(self):
         """Raising NMAXDV must move the NMAXF hard cut with it."""
-        s = _scalar(self.NAME)
+        s = _scalar()
         rom = self._rom_with_raw(170)
         assert s.read_linked(rom) == 7100.0
         assert s.write(rom, 7400, profile=self._profile())
@@ -205,7 +210,7 @@ class TestFixedAddressScalar:
 
     def test_implausible_nmaxf_hidden(self):
         """A plausible NMAXDV alone isn't enough — NMAXF must look right too."""
-        s = _scalar(self.NAME)
+        s = _scalar()
         rom = self._rom_with_raw(170, nmaxf_raw=0x0101)   # 64.25 RPM
         prof = self._profile()
         assert s.read(rom, profile=prof) is None
@@ -213,27 +218,21 @@ class TestFixedAddressScalar:
         assert not s.write(rom, 7000, profile=prof)
         assert bytes(rom.data) == before
 
-    def test_every_nmaxdv_links_nmaxf(self):
-        for s in ALL_SCALAR_PATCHES:
-            if "NMAXDV" in s.name:
-                assert s.linked_name == "NMAXF" and s.linked_addr, s.name
-                assert s.linked_delta == 300.0, s.name
-
     def test_write_rejects_out_of_range(self):
-        s = _scalar(self.NAME)
+        s = _scalar()
         assert not s.write(self._rom_with_raw(170), 9500, profile=self._profile())
 
 
-# ── Confidence of datasheet-only entries ─────────────────────────────────────
+# ── Removed M3.8 / M5.9 entries ──────────────────────────────────────────────
 
-def test_m38x_datasheet_entries_not_confirmed():
-    """Values from the M38x datasheet alone haven't been tested on real ROMs."""
-    entries = [p for p in ALL_PATCHES + ALL_SCALAR_PATCHES
-               if "M38x M592 Function Datasheet" in p.notes]
-    assert len(entries) >= 20
-    for p in entries:
-        assert p.confidence == "PROVISIONAL", p.name
-        assert p.warning, p.name
+def test_no_m38x_datasheet_entries_in_catalogue():
+    """M3.8.x / M5.9.x addresses live in docs/m38x_codeword_addresses.md, not
+    in the ME7 catalogue."""
+    for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
+        assert "M38x M592 Function Datasheet" not in p.notes, p.name
+        for tag in ("4b0907557b", "4b0907557p", "4b0907558m",
+                    "06a906018r", "06a906018cg", "06a906018cj"):
+            assert tag not in p.applies_to, p.name
 
 
 # ── Packaging ────────────────────────────────────────────────────────────────
