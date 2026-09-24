@@ -485,6 +485,11 @@ class FixedAddressScalarDef:
     as the sanity window: if the value currently in the ROM falls outside it,
     the address is assumed not to hold this parameter, so read() returns None
     (hidden in the UI) and write() refuses.
+
+    A second parameter that must track this one can be linked: write() then
+    also stores value + linked_delta at linked_addr (encoded with
+    linked_scale, same size and byte order), and read() requires that site to
+    hold a plausible value too.
     """
     name:       str
     description:str
@@ -501,9 +506,34 @@ class FixedAddressScalarDef:
     confidence: str   = "UNCONFIRMED"
     notes:      str   = ""
     applies_to: Set[str] = field(default_factory=set)
+    linked_name:  str           = ""
+    linked_addr:  Optional[int] = None
+    linked_scale: float         = 1.0
+    linked_delta: float         = 0.0
 
     def check_applicable(self, profile=None) -> bool:
         return _fixed_addr_applicable(self.applies_to, profile)
+
+    def _read_at(self, rom: ROMImage, addr: int, scale: float,
+                 offset_val: float = 0.0) -> Optional[float]:
+        if addr + self.size > rom.size:
+            return None
+        raw = int.from_bytes(rom.data[addr : addr + self.size],
+                             'big' if self.big_endian else 'little')
+        return raw * scale + offset_val
+
+    def _write_at(self, rom: ROMImage, addr: int, value: float, scale: float,
+                  offset_val: float = 0.0) -> None:
+        raw = round((value - offset_val) / scale)
+        raw = max(0, min((1 << (self.size * 8)) - 1, raw))
+        rom.write(addr, raw.to_bytes(self.size,
+                                     'big' if self.big_endian else 'little'))
+
+    def read_linked(self, rom: ROMImage) -> Optional[float]:
+        """Current value of the linked parameter, or None if there isn't one."""
+        if self.linked_addr is None:
+            return None
+        return self._read_at(rom, self.linked_addr, self.linked_scale)
 
     def read(self, rom: ROMImage,
              searcher: Optional[Searcher] = None,
@@ -511,14 +541,15 @@ class FixedAddressScalarDef:
         """Current physical value, or None if not applicable / implausible."""
         if not self.check_applicable(profile):
             return None
-        addr = self.fixed_addr
-        if addr + self.size > rom.size:
+        value = self._read_at(rom, self.fixed_addr, self.scale, self.offset_val)
+        if value is None or value < self.min_val or value > self.max_val:
             return None
-        raw = int.from_bytes(rom.data[addr : addr + self.size],
-                             'big' if self.big_endian else 'little')
-        value = raw * self.scale + self.offset_val
-        if value < self.min_val or value > self.max_val:
-            return None
+        if self.linked_addr is not None:
+            linked = self.read_linked(rom)
+            if (linked is None
+                    or linked < self.min_val + self.linked_delta
+                    or linked > self.max_val + self.linked_delta):
+                return None
         return value
 
     def write(self, rom: ROMImage, value: float,
@@ -529,10 +560,10 @@ class FixedAddressScalarDef:
             return False
         if self.read(rom, searcher, profile) is None:
             return False
-        raw = round((value - self.offset_val) / self.scale)
-        raw = max(0, min((1 << (self.size * 8)) - 1, raw))
-        rom.write(self.fixed_addr, raw.to_bytes(self.size,
-                                                'big' if self.big_endian else 'little'))
+        self._write_at(rom, self.fixed_addr, value, self.scale, self.offset_val)
+        if self.linked_addr is not None:
+            self._write_at(rom, self.linked_addr, value + self.linked_delta,
+                           self.linked_scale)
         return True
 
     def __repr__(self) -> str:
@@ -2331,7 +2362,9 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
 
 # ── ME7.1 Rev Limit (NMAXDV / NMAXF) — fixed addresses from M38x xlsx ─────────
 # NMAXDV = Drehzahlbegrenzung bei Fehlererkennung Geschwindigkeitssignal
-#          = Rev limiter (generates DTC + MIL when exceeded)
+#          (datasheet label: rev limit used when a vehicle-speed-signal fault
+#          is detected). Generates DTC + MIL when exceeded. Whether it is also
+#          the normal limiter on these ECUs is unverified.
 #          Encoding: BE uint16, scale 40 RPM/count (raw × 40 = RPM)
 # NMAXF  = Hard RPM cutoff = NMAXDV + 300 RPM (OEM relationship, confirmed from
 #          MED9.1 TFSI Funktionsrahmen p.491 and Motronic-3.8.x-5.9.x.md)
@@ -2341,11 +2374,12 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
 # 4B0907557B M382 — AEB 1.8T 150hp
 # NMAXDV at $0743A (BE u16, ×40 RPM), NMAXF at $074C6 (BE u16, ×0.25 RPM)
 ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
-    name          = "Rev Limit NMAXDV (4B0907557B M382 AEB)",
-    description   = ("RPM limiter codeword. Generates DTC + MIL when engine speed exceeds "
-                     "this value. NMAXF should be set to NMAXDV + 300 RPM. "
-                     "Encoding: BE uint16, 40 RPM per count. "
-                     "At $0743A in 4B0907557B (AEB 1.8T M382)."),
+    name          = "Rev Limit NMAXDV + NMAXF (4B0907557B M382 AEB)",
+    description   = ("Sets NMAXDV (at $0743A) and keeps NMAXF (at $074C6) at "
+                     "NMAXDV + 300 RPM, the OEM relationship. The datasheet labels "
+                     "NMAXDV as the rev limit applied when a vehicle-speed-signal "
+                     "fault is detected; exceeding it sets a DTC + MIL. "
+                     "4B0907557B (AEB 1.8T M382)."),
     category      = PatchCategory.PERFORMANCE,
     fixed_addr    = 0x0743A,
     size          = 2,
@@ -2361,13 +2395,19 @@ ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
                      "OEM: NMAXF = NMAXDV + 300 RPM. "
                      "Source: M38x M592 Function Datasheet.xlsx."),
     applies_to    = {"me7.1", "1.8t", "4b0907557b"},
+    linked_name   = "NMAXF",
+    linked_addr   = 0x074C6,
+    linked_scale  = 0.25,
+    linked_delta  = 300.0,
 ))
 
 ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
-    name          = "Rev Limit NMAXDV (06A906018CG M383 AGU)",
-    description   = ("RPM limiter codeword. Generates DTC + MIL when exceeded. "
-                     "Encoding: BE uint16, 40 RPM per count. "
-                     "At $0693A in 06A906018CG (AGU 1.8T M383)."),
+    name          = "Rev Limit NMAXDV + NMAXF (06A906018CG M383 AGU)",
+    description   = ("Sets NMAXDV (at $0693A) and keeps NMAXF (at $069EC) at "
+                     "NMAXDV + 300 RPM, the OEM relationship. The datasheet labels "
+                     "NMAXDV as the rev limit applied when a vehicle-speed-signal "
+                     "fault is detected; exceeding it sets a DTC + MIL. "
+                     "06A906018CG (AGU 1.8T M383)."),
     category      = PatchCategory.PERFORMANCE,
     fixed_addr    = 0x0693A,
     size          = 2,
@@ -2379,9 +2419,14 @@ ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
     confidence    = "PROVISIONAL",
     warning       = _M38X_WARNING,
     notes         = ("NMAXDV at flat 0x0693A (BE u16 × 40 RPM). "
-                     "NMAXF at flat 0x069EC. OEM: NMAXF = NMAXDV + 300 RPM. "
+                     "NMAXF at flat 0x069EC (BE u16 × 0.25 RPM/count). "
+                     "OEM: NMAXF = NMAXDV + 300 RPM. "
                      "Source: M38x M592 Function Datasheet.xlsx."),
     applies_to    = {"me7.1", "1.8t", "06a906018cg"},
+    linked_name   = "NMAXF",
+    linked_addr   = 0x069EC,
+    linked_scale  = 0.25,
+    linked_delta  = 300.0,
 ))
 
 # Legacy aliases

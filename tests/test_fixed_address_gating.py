@@ -145,15 +145,19 @@ class TestFixedAddressGating:
 
 class TestFixedAddressScalar:
 
-    NAME = "Rev Limit NMAXDV (06A906018CG"
+    NAME = "Rev Limit NMAXDV + NMAXF (06A906018CG"
 
     def _profile(self):
         return detect_rom_profile(ECUIdentity(vmecuhn="06A906018CG"), DPPValues())
 
-    def _rom_with_raw(self, raw):
+    def _rom_with_raw(self, raw, nmaxf_raw=None):
+        """NMAXDV raw count (×40 RPM); NMAXF defaults to NMAXDV + 300 RPM."""
         rom = _rom(0x00)
         s = _scalar(self.NAME)
+        if nmaxf_raw is None:
+            nmaxf_raw = int((raw * 40 + 300) / 0.25)
         rom.data[s.fixed_addr:s.fixed_addr + 2] = raw.to_bytes(2, 'big')
+        rom.data[s.linked_addr:s.linked_addr + 2] = nmaxf_raw.to_bytes(2, 'big')
         return rom
 
     def test_nmaxdv_uses_fixed_address_type(self):
@@ -189,6 +193,31 @@ class TestFixedAddressScalar:
         assert s.write(rom, 7000, profile=prof)
         assert rom.data[s.fixed_addr:s.fixed_addr + 2] == (175).to_bytes(2, 'big')
         assert s.read(rom, profile=prof) == 7000.0
+
+    def test_write_keeps_nmaxf_300_above(self):
+        """Raising NMAXDV must move the NMAXF hard cut with it."""
+        s = _scalar(self.NAME)
+        rom = self._rom_with_raw(170)
+        assert s.read_linked(rom) == 7100.0
+        assert s.write(rom, 7400, profile=self._profile())
+        assert s.read_linked(rom) == 7700.0
+        assert rom.data[s.linked_addr:s.linked_addr + 2] == (30800).to_bytes(2, 'big')
+
+    def test_implausible_nmaxf_hidden(self):
+        """A plausible NMAXDV alone isn't enough — NMAXF must look right too."""
+        s = _scalar(self.NAME)
+        rom = self._rom_with_raw(170, nmaxf_raw=0x0101)   # 64.25 RPM
+        prof = self._profile()
+        assert s.read(rom, profile=prof) is None
+        before = bytes(rom.data)
+        assert not s.write(rom, 7000, profile=prof)
+        assert bytes(rom.data) == before
+
+    def test_every_nmaxdv_links_nmaxf(self):
+        for s in ALL_SCALAR_PATCHES:
+            if "NMAXDV" in s.name:
+                assert s.linked_name == "NMAXF" and s.linked_addr, s.name
+                assert s.linked_delta == 300.0, s.name
 
     def test_write_rejects_out_of_range(self):
         s = _scalar(self.NAME)
