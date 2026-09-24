@@ -42,7 +42,7 @@ from meseventool.patches import (
     ALL_PATCHES, ALL_SCALAR_PATCHES, detect_all,
     PatchDef, ScalarPatchDef, PatchState, PatchCategory,
 )
-from meseventool.profiles import detect_profile
+from meseventool.profiles import detect_rom_profile
 from meseventool.known_roms import lookup_rom, is_known_stock
 from meseventool import __version__
 
@@ -377,7 +377,7 @@ class PatchesWidget(QWidget):
         for scalar in ALL_SCALAR_PATCHES:
             if self._profile and not self._profile.patch_applies(scalar):
                 continue
-            current = scalar.read(rom, searcher)
+            current = scalar.read(rom, searcher, profile=self._profile)
             if current is None:
                 continue  # needle not found — hide
             cat = scalar.category.value if isinstance(scalar.category, PatchCategory) else str(scalar.category)
@@ -472,7 +472,7 @@ class PatchesWidget(QWidget):
         """Re-run detection and update checkbox states without rebuilding UI."""
         if not self._rom or not self._searcher:
             return
-        results = detect_all(self._rom, self._searcher)
+        results = detect_all(self._rom, self._searcher, self._profile)
         for r in results:
             cb  = self._checks.get(r.patch.name)
             lbl = self._status_labels.get(r.patch.name)
@@ -879,6 +879,7 @@ class MESevenWindow(QMainWindow):
         self._rom:     ROMImage | None = None
         self._searcher: Searcher | None = None
         self._dpp:     DPPValues = DPPValues()
+        self._profile  = None
         self._dirty:   bool = False
 
         self.setWindowTitle(f"MESevenTool  v{__version__}")
@@ -1170,6 +1171,7 @@ class MESevenWindow(QMainWindow):
 
         self._rom      = rom
         self._searcher = Searcher(rom)
+        self._profile  = None
         self._dirty    = False
 
         try:
@@ -1184,8 +1186,10 @@ class MESevenWindow(QMainWindow):
             cs_mgr  = ChecksumManager(rom)
             cs_result = cs_mgr.verify()
 
-            # Profile detection
-            profile = detect_profile(ident, self._dpp)
+            # Profile detection — tagged with this ROM's part number so
+            # part-number-gated patches are offered
+            profile = detect_rom_profile(ident, self._dpp)
+            self._profile = profile
             if profile is None:
                 QMessageBox.warning(self, "Unknown ECU",
                     f"Could not detect an ME7 profile for this ROM.\n"
@@ -1275,7 +1279,7 @@ class MESevenWindow(QMainWindow):
                                 result.summary())
         # Refresh info panel
         ident   = identify(self._rom)
-        profile = detect_profile(ident, self._dpp)
+        profile = detect_rom_profile(ident, self._dpp)
         self._w_info.update(self._rom, ident, self._dpp, result, profile)
 
     # ── Patch handlers ────────────────────────────────────────────────────────
@@ -1283,7 +1287,7 @@ class MESevenWindow(QMainWindow):
     def _on_patch_toggled(self, patch: PatchDef, apply: bool):
         if not self._rom or not self._searcher:
             return
-        result = patch.detect(self._rom, self._searcher)
+        result = patch.detect(self._rom, self._searcher, self._profile)
         ok = patch.apply(self._rom, result) if apply else patch.revert(self._rom, result)
         if ok:
             self._dirty = True
@@ -1296,7 +1300,7 @@ class MESevenWindow(QMainWindow):
     def _on_scalar_changed(self, patch: ScalarPatchDef, value: float):
         if not self._rom or not self._searcher:
             return
-        ok = patch.write(self._rom, value, self._searcher)
+        ok = patch.write(self._rom, value, self._searcher, profile=self._profile)
         if ok:
             self._dirty = True
             self._set_status(

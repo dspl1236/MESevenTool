@@ -29,6 +29,7 @@ from typing import Optional, Sequence, List, Set, TYPE_CHECKING
 
 from .rom import ROMImage
 from .needle import Searcher
+from .ecu_id import is_part_number_tag
 
 if TYPE_CHECKING:
     from .profiles import ROMProfile
@@ -272,8 +273,11 @@ class ScalarPatchDef:
         return hit.file_offset + self.offset
 
     def read(self, rom: ROMImage,
-             searcher: Optional[Searcher] = None) -> Optional[float]:
+             searcher: Optional[Searcher] = None,
+             profile=None) -> Optional[float]:
         """Read current physical value. Returns None if needle missing."""
+        if profile is not None and not self.check_applicable(profile):
+            return None
         addr = self._find_addr(rom, searcher)
         if addr == 0 or addr + self.size > rom.size:
             return None
@@ -282,9 +286,12 @@ class ScalarPatchDef:
         return raw * self.scale + self.offset_val
 
     def write(self, rom: ROMImage, value: float,
-              searcher: Optional[Searcher] = None) -> bool:
+              searcher: Optional[Searcher] = None,
+              profile=None) -> bool:
         """Write a physical value. Rejects out-of-range values."""
         if value < self.min_val or value > self.max_val:
+            return False
+        if profile is not None and not self.check_applicable(profile):
             return False
         addr = self._find_addr(rom, searcher)
         if addr == 0 or addr + self.size > rom.size:
@@ -414,16 +421,14 @@ class FixedAddressPatchDef:
     requires_family:    list = field(default_factory=list)
 
     def check_applicable(self, profile=None) -> bool:
-        if not self.applies_to or profile is None:
-            return True
-        # Use .platforms (same as PatchDef) — .tags doesn't exist on ROMProfile
-        platforms = getattr(profile, 'platforms', set())
-        return self.applies_to.issubset(platforms)
+        return _fixed_addr_applicable(self.applies_to, profile)
 
     def detect(self, rom: ROMImage,
                searcher=None, profile=None) -> 'PatchResult':
-        if profile is not None and not self.check_applicable(profile):
-            return PatchResult(self, PatchState.NOT_APPLICABLE, 0, "N/A")
+        if not self.check_applicable(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
+                               "N/A" if profile is not None
+                               else "N/A: needs the ROM's ECU part number")
 
         addr = self.fixed_addr
         if addr + len(self.stock_bytes) > rom.size:
@@ -454,6 +459,84 @@ class FixedAddressPatchDef:
 
     def __repr__(self) -> str:
         return f"FixedAddressPatchDef(name={self.name!r}, addr=0x{self.fixed_addr:06X})"
+
+
+def _fixed_addr_applicable(applies_to: Set[str], profile) -> bool:
+    """Applicability for patches written at a hard-coded address.
+
+    Nothing at a fixed address proves the ROM is the right one, so a patch
+    gated on a part number is never applicable without a profile carrying
+    that part number (see ROMProfile.with_part_number).  Family-gated and
+    universal fixed-address patches keep the no-profile = applicable rule.
+    """
+    if not applies_to:
+        return True
+    if profile is None:
+        return not any(is_part_number_tag(t) for t in applies_to)
+    # Use .platforms (same as PatchDef) — .tags doesn't exist on ROMProfile
+    return applies_to.issubset(getattr(profile, 'platforms', set()))
+
+
+@dataclass
+class FixedAddressScalarDef:
+    """A single numeric value at a known fixed address — no needle search.
+
+    Counterpart of FixedAddressPatchDef for scalars.  min_val/max_val double
+    as the sanity window: if the value currently in the ROM falls outside it,
+    the address is assumed not to hold this parameter, so read() returns None
+    (hidden in the UI) and write() refuses.
+    """
+    name:       str
+    description:str
+    category:   PatchCategory | str
+    fixed_addr: int
+    size:       int
+    big_endian: bool  = True
+    scale:      float = 1.0
+    offset_val: float = 0.0
+    unit:       str   = ""
+    min_val:    float = 0.0
+    max_val:    float = 65535.0
+    warning:    str   = ""
+    confidence: str   = "UNCONFIRMED"
+    notes:      str   = ""
+    applies_to: Set[str] = field(default_factory=set)
+
+    def check_applicable(self, profile=None) -> bool:
+        return _fixed_addr_applicable(self.applies_to, profile)
+
+    def read(self, rom: ROMImage,
+             searcher: Optional[Searcher] = None,
+             profile=None) -> Optional[float]:
+        """Current physical value, or None if not applicable / implausible."""
+        if not self.check_applicable(profile):
+            return None
+        addr = self.fixed_addr
+        if addr + self.size > rom.size:
+            return None
+        raw = int.from_bytes(rom.data[addr : addr + self.size],
+                             'big' if self.big_endian else 'little')
+        value = raw * self.scale + self.offset_val
+        if value < self.min_val or value > self.max_val:
+            return None
+        return value
+
+    def write(self, rom: ROMImage, value: float,
+              searcher: Optional[Searcher] = None,
+              profile=None) -> bool:
+        """Write a physical value. Refuses if the site fails the sanity check."""
+        if value < self.min_val or value > self.max_val:
+            return False
+        if self.read(rom, searcher, profile) is None:
+            return False
+        raw = round((value - self.offset_val) / self.scale)
+        raw = max(0, min((1 << (self.size * 8)) - 1, raw))
+        rom.write(self.fixed_addr, raw.to_bytes(self.size,
+                                                'big' if self.big_endian else 'little'))
+        return True
+
+    def __repr__(self) -> str:
+        return f"FixedAddressScalarDef(name={self.name!r}, addr=0x{self.fixed_addr:06X})"
 
 
 @dataclass
@@ -561,6 +644,11 @@ MM = 0xFF   # must-match
 
 
 # ── Patch catalogue ────────────────────────────────────────────────────────────
+
+# Shared warning for entries sourced only from the M38x M592 Function Datasheet.
+_M38X_WARNING = ("Address taken from the M38x M592 Function Datasheet only — not "
+                 "yet verified against a real ROM dump. Keep a backup of the "
+                 "original file before flashing.")
 
 ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
 
@@ -1543,6 +1631,9 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # Source: M38x M592 Function Datasheet.xlsx (s4wiki.com), cross-referenced
     # against TunerPro XDF definitions. Addresses are flat ROM file offsets.
     #
+    # PROVISIONAL: addresses come from the datasheet only — none of these have
+    # been checked against a real ROM dump yet.
+    #
     # CDHSH = Codewort Heizerdiagnose hinter Kat (downstream O2 heater diag)
     # CDHSV = Codewort Heizerdiagnose vor Kat   (upstream O2 heater diag)
     # 0 = keine Diagnose (disabled), 1 = Diagnose aktiv (active)
@@ -1557,7 +1648,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07CD1,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSH at 0x07CD1, CDHSV at 0x07CD0 (adjacent). "
                       "Source: M38x M592 Function Datasheet.xlsx (s4wiki.com). "
                       "AEB 1.8T 150hp, 4B0907557B ECU, M382 firmware.",
@@ -1573,7 +1665,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07CD0,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSV at 0x07CD0. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557b"},
     ),
@@ -1587,7 +1680,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07867,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSH at 0x07867, CDHSV at 0x07866. "
                       "Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557p"},
@@ -1601,7 +1695,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07866,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSV at 0x07866. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557p"},
     ),
@@ -1615,7 +1710,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x0720B,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSH at 0x0720B, CDHSV at 0x0720A. "
                       "Same addresses for 06A906018CJ (confirmed from xlsx). "
                       "Source: M38x M592 Function Datasheet.xlsx.",
@@ -1630,7 +1726,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x0720A,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSV at 0x0720A. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018r"},
     ),
@@ -1644,7 +1741,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07275,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSH at 0x07275, CDHSV at 0x07274. NMAXDV at 0x0693A, NMAXF at 0x069EC. "
                       "Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
@@ -1658,7 +1756,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07274,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDHSV at 0x07274. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
@@ -1679,7 +1778,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07D00,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSH at 0x07D00. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557b"},
     ),
@@ -1692,7 +1792,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07D11,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSV at 0x07D11. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557b"},
     ),
@@ -1705,7 +1806,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07D4A,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDTES at 0x07D4A. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557b"},
     ),
@@ -1719,7 +1821,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07896,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSH at 0x07896. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557p"},
     ),
@@ -1732,7 +1835,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x078A7,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSV at 0x078A7. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557p"},
     ),
@@ -1745,7 +1849,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x078E0,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDTES at 0x078E0. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "4b0907557p"},
     ),
@@ -1759,7 +1864,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x0723A,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSH at 0x0723A. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018r"},
     ),
@@ -1772,7 +1878,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x0724B,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSV at 0x0724B. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018r"},
     ),
@@ -1785,7 +1892,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x07284,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDTES at 0x07284. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018r"},
     ),
@@ -1799,7 +1907,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x072A4,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSH at 0x072A4. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
@@ -1812,7 +1921,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x072B5,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDLSV at 0x072B5. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
@@ -1825,7 +1935,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x072EE,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDTES at 0x072EE. Source: M38x M592 Function Datasheet.xlsx.",
         applies_to  = {"me7.1", "1.8t", "06a906018cg"},
     ),
@@ -1840,7 +1951,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr  = 0x0798C,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
+        confidence  = "PROVISIONAL",
+        warning     = _M38X_WARNING,
         notes       = "CDTES at 0x0798C. Source: M38x M592 Function Datasheet.xlsx. "
                       "Note: 4B0907558M has CDTES only — no CDLSH/CDLSV in datasheet.",
         applies_to  = {"me7.1", "1.8t", "4b0907558m"},
@@ -2037,7 +2149,7 @@ ALL_PATCHES.extend(IMMO_PATCHES)
 
 # ── Scalar patch catalogue ─────────────────────────────────────────────────────
 
-ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
+ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
 
     # ── Hard Rev Limit (ME7.5 1.8T — universal) ─────────────────────────────────
     # The rev limiter in ME7.5 1.8T is stored as a 2-byte LE immediate in code
@@ -2228,23 +2340,22 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef] = [
 
 # 4B0907557B M382 — AEB 1.8T 150hp
 # NMAXDV at $0743A (BE u16, ×40 RPM), NMAXF at $074C6 (BE u16, ×0.25 RPM)
-ALL_SCALAR_PATCHES.append(ScalarPatchDef(
+ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
     name          = "Rev Limit NMAXDV (4B0907557B M382 AEB)",
     description   = ("RPM limiter codeword. Generates DTC + MIL when engine speed exceeds "
                      "this value. NMAXF should be set to NMAXDV + 300 RPM. "
                      "Encoding: BE uint16, 40 RPM per count. "
                      "At $0743A in 4B0907557B (AEB 1.8T M382)."),
     category      = PatchCategory.PERFORMANCE,
-    needle        = bytes.fromhex("000000000000000000000000"),  # placeholder — use fixed
-    mask          = bytes.fromhex("000000000000000000000000"),
-    offset        = 0x0743A,  # used as fixed address via zero-mask needle
+    fixed_addr    = 0x0743A,
     size          = 2,
     big_endian    = True,
     scale         = 40.0,
     unit          = "RPM",
     min_val       = 4000.0,
     max_val       = 9000.0,
-    confidence    = "CONFIRMED",
+    confidence    = "PROVISIONAL",
+    warning       = _M38X_WARNING,
     notes         = ("NMAXDV at flat 0x0743A (BE u16 × 40 RPM/count). "
                      "NMAXF at flat 0x074C6 (BE u16 × 0.25 RPM/count). "
                      "OEM: NMAXF = NMAXDV + 300 RPM. "
@@ -2252,22 +2363,21 @@ ALL_SCALAR_PATCHES.append(ScalarPatchDef(
     applies_to    = {"me7.1", "1.8t", "4b0907557b"},
 ))
 
-ALL_SCALAR_PATCHES.append(ScalarPatchDef(
+ALL_SCALAR_PATCHES.append(FixedAddressScalarDef(
     name          = "Rev Limit NMAXDV (06A906018CG M383 AGU)",
     description   = ("RPM limiter codeword. Generates DTC + MIL when exceeded. "
                      "Encoding: BE uint16, 40 RPM per count. "
                      "At $0693A in 06A906018CG (AGU 1.8T M383)."),
     category      = PatchCategory.PERFORMANCE,
-    needle        = bytes.fromhex("000000000000000000000000"),
-    mask          = bytes.fromhex("000000000000000000000000"),
-    offset        = 0x0693A,
+    fixed_addr    = 0x0693A,
     size          = 2,
     big_endian    = True,
     scale         = 40.0,
     unit          = "RPM",
     min_val       = 4000.0,
     max_val       = 9000.0,
-    confidence    = "CONFIRMED",
+    confidence    = "PROVISIONAL",
+    warning       = _M38X_WARNING,
     notes         = ("NMAXDV at flat 0x0693A (BE u16 × 40 RPM). "
                      "NMAXF at flat 0x069EC. OEM: NMAXF = NMAXDV + 300 RPM. "
                      "Source: M38x M592 Function Datasheet.xlsx."),

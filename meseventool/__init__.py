@@ -20,10 +20,11 @@ from .maps      import (MapDef, AxisDef, MapFinder, make_awp_maps,
                         _rpm, _deg, _pct, _lambda)
 from .patches   import (PatchDef, PatchResult, PatchState, PatchCategory,
                         FixedAddressPatchDef, OffsetPatchDef,
-                        ScalarPatchDef, MultiOffsetPatchDef,
+                        ScalarPatchDef, FixedAddressScalarDef, MultiOffsetPatchDef,
                         ALL_PATCHES, detect_all)
 from .profiles  import (ROMProfile, PROFILE_AWP, PROFILE_UNKNOWN,
-                        ALL_PROFILES, PROFILES, detect_profile, get_profile)
+                        ALL_PROFILES, PROFILES, detect_profile, detect_rom_profile,
+                        get_profile)
 from .known_roms import (KnownROM, KNOWN_ROMS, lookup_rom, is_known_stock)
 from .ecu_id    import (ECUIdentity, identify, identify_from_filename,
                         _clean_string)
@@ -48,13 +49,14 @@ __all__ = [
     # Patches
     "PatchDef", "PatchResult", "PatchState", "PatchCategory",
     "FixedAddressPatchDef", "OffsetPatchDef",
-    "ScalarPatchDef", "MultiOffsetPatchDef",
+    "ScalarPatchDef", "FixedAddressScalarDef", "MultiOffsetPatchDef",
     "ALL_PATCHES", "detect_all",
     # Known ROMs
     "KnownROM", "KNOWN_ROMS", "lookup_rom", "is_known_stock",
     # Profiles
     "ROMProfile", "PROFILE_AWP", "PROFILE_UNKNOWN",
-    "ALL_PROFILES", "PROFILES", "detect_profile", "get_profile",
+    "ALL_PROFILES", "PROFILES", "detect_profile", "detect_rom_profile",
+    "get_profile",
     # ECU ID
     "ECUIdentity", "identify", "identify_from_filename", "_clean_string",
     # XDF

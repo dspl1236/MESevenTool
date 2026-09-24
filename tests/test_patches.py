@@ -1226,8 +1226,12 @@ class TestRealROM4B0906018(unittest.TestCase):
 
     def _detect(self, patch_name, rom):
         from meseventool.patches import ALL_PATCHES
+        from meseventool.profiles import get_profile
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
-        return p.detect(rom)
+        # These patches are gated on the 4B0906018 part number, so they need
+        # a profile tagged with it
+        profile = get_profile("4B0906018CM").with_part_number("4B0906018CM")
+        return p.detect(rom, profile=profile)
 
     # ── CDKAT ────────────────────────────────────────────────────────────
     def test_cdkat_stock_in_18cm(self):
