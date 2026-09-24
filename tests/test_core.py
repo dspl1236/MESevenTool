@@ -336,7 +336,14 @@ class TestPatches:
         rom = make_rom(fill=0xFF)
         s = Searcher(rom)
         results = detect_all(rom, s)
+        from meseventool.patches import FixedAddressPatchDef
+        from meseventool.ecu_id import is_part_number_tag
         for r in results:
+            # Part-number-gated fixed-address patches need a profile
+            if (isinstance(r.patch, FixedAddressPatchDef)
+                    and any(is_part_number_tag(t) for t in r.patch.applies_to)):
+                assert r.state == PatchState.NOT_APPLICABLE
+                continue
             assert r.state in (PatchState.MISSING, PatchState.UNKNOWN,
                                PatchState.STOCK, PatchState.PATCHED)
 

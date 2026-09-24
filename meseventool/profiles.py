@@ -49,11 +49,11 @@ This design means:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Optional, Set
 
 from .maps import MapDef, make_awp_maps, make_v6_biturbo_maps
-from .ecu_id import ECUIdentity
+from .ecu_id import ECUIdentity, part_number_tags
 from .dpp import DPPValues
 
 
@@ -106,6 +106,19 @@ class ROMProfile:
                     auto.add(tag)
                     break
         self.platforms = self.platforms | auto
+
+    def with_part_number(self, part_number: str) -> "ROMProfile":
+        """Return a copy of this profile tagged with the loaded ROM's part number.
+
+        Profiles describe a whole platform family, so they can't carry
+        ECU-specific tags themselves.  Patches gated on a part number
+        (applies_to={"06a906018cg", ...}) only match a profile returned here.
+        The shared PROFILE_* objects are left untouched.
+        """
+        tags = part_number_tags(part_number)
+        if not tags or tags <= self.platforms:
+            return self
+        return replace(self, platforms=self.platforms | tags)
 
     def patch_applies(self, patch_or_induction=None,
                       lambda_req=None, fuel_req=None, family_req=None) -> bool:
@@ -638,6 +651,15 @@ def detect_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
                 return profile
 
     return PROFILE_UNKNOWN
+
+
+def detect_rom_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
+    """detect_profile() plus the ROM's own part-number tags.
+
+    Use this when the profile will drive patch filtering, so part-number-gated
+    patches are offered on the ECU they were written for.
+    """
+    return detect_profile(ecu_id, dpp).with_part_number(ecu_id.vmecuhn)
 
 
 def get_profile(part_number: str) -> ROMProfile:

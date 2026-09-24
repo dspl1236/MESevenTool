@@ -57,6 +57,27 @@ _PN_RE = re.compile(rb'(?:'
 # Bosch number pattern: 0261 followed by 6 digits
 _BOSCH_RE = re.compile(rb'0261\d{6}')
 
+# Lowercase VAG part-number tag as used in patch applies_to sets:
+# 9-char base ("4b0906018", "4z7907551") plus optional suffix ("06a906018cg").
+_PN_TAG_RE = re.compile(r'^[0-9][0-9a-z]{2}9[0-9]{5}[a-z]{0,4}$')
+
+
+def part_number_tags(part_number: str) -> set[str]:
+    """Platform tags for a VAG part number: the full number and its 9-char base.
+
+    "06A906018CG" → {"06a906018cg", "06a906018"}, so a patch can be gated
+    on one exact ECU or on a whole part-number family.
+    """
+    pn = re.sub(r'[^0-9a-z]', '', (part_number or "").lower())
+    if not _PN_TAG_RE.match(pn):
+        return set()
+    return {pn, pn[:9]}
+
+
+def is_part_number_tag(tag: str) -> bool:
+    """True if an applies_to tag names an ECU part number (not a platform trait)."""
+    return bool(_PN_TAG_RE.match(tag))
+
 
 def _clean_string(raw: bytes) -> str:
     """Replace non-printable bytes with spaces."""
