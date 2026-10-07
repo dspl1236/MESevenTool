@@ -74,8 +74,12 @@ _CATALOG: list[KnownROM] = [
 
     # NOTE: 0x427BF20B (ABA 2.0 8v, Bosch 0261204634, 512KB) removed.
     # Originally mislabeled "ME7.5 M3.8 board" — actually Bosch M5.9.x
-    # (flash-based, 512KB). Bosch 026120 4xxx + 512KB = M5.9 flash, not
-    # ME7 or M3.8 EPROM. Out of scope for both MESevenTool and M35Tool.
+    # (flash-based, 512KB). A Bosch 026120 4xxx number alone does NOT mean
+    # M5.9: the 1.8T AGU ME7.1 ROMs below (06A906018AQ/R, 0261204673/678,
+    # 256KB) are also 4xxx and are ME7. Classify by the internal version
+    # string ("ME7.x" vs "M5.9"), not by the Bosch number. M5.9 flash is
+    # out of scope for MESevenTool; it belongs in M35Tool
+    # (see M35Tool docs/M38X_1.8T_CODEWORDS.md).
 
     # ── ME7.1 — 8D0907551 S4 B5 2.7T biturbo ────────────────────────────────
     KnownROM(0xb8c7dbce, "8D0907551A",  "0261206110", "42/1/ME7.1/5/6005.01//X22k6/Dstc2g/310599",
