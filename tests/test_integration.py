@@ -39,21 +39,7 @@ def make_rom(size=0x80000, fill=0xFF):
     return ROMImage(data=bytearray([fill] * size))
 
 
-def make_rom_with_checksum(size=0x80000) -> ROMImage:
-    """Build a synthetic ROM with a valid main checksum."""
-    data = bytearray([0xAA] * size)
-    cal_off = size - 0x10000
-    storage = cal_off + 0xFFF8
-    data[storage:storage + 8] = b'\x00' * 8
-    total = 0
-    for i in range(cal_off, storage - 1, 2):
-        word = data[i] | (data[i + 1] << 8)
-        total += word
-    total &= 0xFFFFFFFF
-    comp = (~total) & 0xFFFFFFFF
-    struct.pack_into('<I', data, storage, total)
-    struct.pack_into('<I', data, storage + 4, comp)
-    return ROMImage(data=data)
+from tests.synthetic_rom import make_rom_with_checksum  # shared real-layout builder
 
 
 def inject_needle(rom: ROMImage, patch: PatchDef, offset: int = 0x1000):

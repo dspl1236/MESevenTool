@@ -164,6 +164,7 @@ class ROMInfoWidget(QWidget):
         right_rows = [
             ("Main cksum",  "_f_cksum_main"),
             ("Multipoint",  "_f_cksum_multi"),
+            ("Main CRC32",  "_f_cksum_crc"),
             ("DPP0",        "_f_dpp0"),
             ("DPP1",        "_f_dpp1"),
             ("DPP2",        "_f_dpp2"),
@@ -223,22 +224,24 @@ class ROMInfoWidget(QWidget):
         self._f_hw.setText(profile.ecu_hw if profile else "—")
         self._f_prof.setText(profile.name if profile else "Unknown")
 
-        # Checksum
-        if cksum_result.main_found:
-            ok = cksum_result.main_ok
-            self._f_cksum_main.setText("✓ OK" if ok else "✗ BAD")
-            self._f_cksum_main.setStyleSheet(
-                f"color:{'#3ddc84' if ok else '#ff5252'}; font-weight:bold;")
-        else:
-            self._f_cksum_main.setText("not found")
-            self._f_cksum_main.setStyleSheet(f"color:{C_DIM};")
+        # Checksum layers.  A layer whose needles are missing is "not
+        # verified" (red) unless it is legitimately absent on this ROM.
+        def show_layer(label: QLabel, layer, absent_ok: bool):
+            if layer.found:
+                ok = layer.all_ok
+                label.setText("✓ OK" if ok else "✗ BAD")
+                label.setStyleSheet(
+                    f"color:{'#3ddc84' if ok else '#ff5252'}; font-weight:bold;")
+            elif absent_ok and not getattr(layer, "note", ""):
+                label.setText("not present")
+                label.setStyleSheet(f"color:{C_DIM};")
+            else:
+                label.setText("✗ not verified")
+                label.setStyleSheet("color:#ff5252;")
 
-        multi_ok = cksum_result.multipoint_ok
-        self._f_cksum_multi.setText(
-            "✓ OK" if multi_ok and cksum_result.multipoint_found
-            else ("not present" if not cksum_result.multipoint_found else "✗ BAD"))
-        self._f_cksum_multi.setStyleSheet(
-            f"color:{'#3ddc84' if multi_ok else '#ff5252'};")
+        show_layer(self._f_cksum_main,  cksum_result.main,  absent_ok=False)
+        show_layer(self._f_cksum_multi, cksum_result.multi, absent_ok=True)
+        show_layer(self._f_cksum_crc,   cksum_result.crc,   absent_ok=True)
 
         # DPP
         for attr, val in [("_f_dpp0", dpp.dpp0), ("_f_dpp1", dpp.dpp1),
@@ -1108,7 +1111,7 @@ class MESevenWindow(QMainWindow):
         self.btn_fix_checksums.setStyleSheet(btn_style(C_AMBER))
         self.btn_fix_checksums.setEnabled(False)
         self.btn_fix_checksums.setToolTip(
-            "Recompute and write all ME7 checksums (main + multipoint CRC32).\n"
+            "Recompute and write all ME7 checksums (main sum, multipoint sums, main CRC32).\n"
             "Must be done after any ROM modification before flashing.")
         tb_lay.addWidget(self.btn_fix_checksums)
 
@@ -1244,9 +1247,28 @@ class MESevenWindow(QMainWindow):
             f"Loaded {name}  ·  {rom.size_kb} KB  ·  "
             f"{ident.display_name}  ·  {cs_txt}")
 
+    def _confirm_checksums_before_save(self) -> bool:
+        """
+        Verify every checksum layer and, if any is bad or unverified, ask
+        before writing a file that an ECU would reject (or worse).
+        """
+        result = ChecksumManager(self._rom).verify()
+        if result.all_ok:
+            return True
+        reply = QMessageBox.warning(
+            self, "Checksums not OK",
+            "This ROM's checksums are not all valid:\n\n"
+            f"{result.summary()}\n\n"
+            "An ECU will not run a file with bad checksums. "
+            "Use 'Fix Checksums' first.\n\nSave anyway?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        return reply == QMessageBox.Yes
+
     def _on_save(self):
         if not self._rom or not self._rom.path:
             self._on_save_as()
+            return
+        if not self._confirm_checksums_before_save():
             return
         try:
             self._rom.save()
@@ -1257,6 +1279,8 @@ class MESevenWindow(QMainWindow):
 
     def _on_save_as(self):
         if not self._rom:
+            return
+        if not self._confirm_checksums_before_save():
             return
         path, _ = QFileDialog.getSaveFileName(
             self, "Save ROM As",

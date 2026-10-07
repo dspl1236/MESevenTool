@@ -12,7 +12,7 @@ it by running code; "plausible" means it was read from the source only.
 
 ## A. Stop-ship: can brick an ECU or silently corrupt a file
 
-- [ ] **A1. Checksum module does not implement the ME7 algorithm**
+- [x] **A1. Checksum module does not implement the ME7 algorithm**
   (`meseventool/checksum.py:188-221`, confirmed). It sums the last 64 KB and
   stores `[sum, ~sum]` at `cal_page + 0xFFF8`. The vendored reference
   (`reference/me7romtool/fixsums.c`) instead needle-locates a region table
@@ -20,15 +20,17 @@ it by running code; "plausible" means it was read from the source only.
   in `needle.py`. The code itself notes the real 06A906032DL checksum is at
   `0x0FFFE0`. On every real ROM, `verify()` reports BAD and `fix()` writes
   8 meaningless bytes while leaving the real checksum stale.
-  **Do not flash a file saved after "Fix checksums" until this is rebuilt.**
-- [ ] **A2. Multipoint "fix" overwrites the CRC32 polynomial table**
+  *Fixed Oct 2026: rebuilt from `fixsums.c` + ME7Sum, all three layers
+  needle-located; `fix(adam.bin)` reproduces `me7sum`'s output byte for
+  byte. See `docs/checksum_port_handoff.md`.*
+- [x] **A2. Multipoint "fix" overwrites the CRC32 polynomial table**
   (`checksum.py:278-291`, confirmed). It uses `NEEDLE_CRC32`, which in the
   reference locates the 256-entry CRC lookup table, not the multipoint block
   list (`needle_4/4aa/4b`). Fed a standard CRC table, `fix()` changed 510
   bytes of it. The walk also has no entry count (`:300-337`) and wrote 252
   bytes past a 2-entry table. Blocks use `zlib.crc32`; the reference uses the
   16-bit word sum.
-- [ ] **A3. Fallback checksum scan is dead code** (`checksum.py:249-251`,
+- [x] **A3. Fallback checksum scan is dead code** (`checksum.py:249-251`,
   confirmed). The standard-offset branch returns unconditionally, so the scan
   that would find `0x0FFFE0` never runs.
 - [ ] **A4. `MapDef.write` has no bounds check and grows the ROM**
@@ -135,9 +137,11 @@ it by running code; "plausible" means it was read from the source only.
 
 ## E. GUI: losing or mis-saving work
 
-- [ ] **E1. Save / Save As / close-Save write a stale checksum with no warning**
+- [x] **E1. Save / Save As / close-Save write a stale checksum with no warning**
   (`app/main.py:1243-1266, 1317-1330`, confirmed). No save path calls
   `verify()`. (Moot until A1 is fixed, then essential.)
+  *Fixed Oct 2026: Save and Save As verify first and ask before writing a
+  ROM whose checksums are bad or unverified.*
 - [ ] **E2. Opening another ROM while dirty discards edits silently**
   (`main.py:1159-1175`, confirmed).
 - [ ] **E3. Analysis exception leaves the window half-switched**
@@ -189,9 +193,10 @@ it by running code; "plausible" means it was read from the source only.
 
 ## H. Tests that can't catch the above
 
-- The checksum tests (`tests/test_checksum.py`, `test_integration.py`) build
-  ROMs with the same invented formula the checker uses, so they're
-  tautological. No multipoint coverage.
+- ~~The checksum tests build ROMs with the same invented formula the checker
+  uses, so they're tautological. No multipoint coverage.~~ *Fixed Oct 2026:
+  `tests/synthetic_rom.py` embeds the real needles and tables;
+  `tests/test_checksum_real.py` runs against the real corpus when present.*
 - All 149 skipped tests are the real-ROM tests; they have never run in CI
   because the corpus isn't in the repo. They are the only tests that would
   have caught A1/A2.

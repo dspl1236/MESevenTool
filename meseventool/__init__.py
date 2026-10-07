@@ -12,8 +12,9 @@ from .dpp       import (DPPValues, DPPInfo, DPPExtractor, SEGMENT_SIZE,
                         extract_dpp)
 from .checksum  import (ChecksumManager, ChecksumChecker, ChecksumResult,
                         MainChecksumResult, MultiChecksumResult, MultiBlock,
+                        CrcChecksumResult, CrcBlock,
                         calc_sum_block, calc_crc32, verify_and_fix,
-                        _le16, _le32, CAL_CKSUM_OFFSET)
+                        _le16, _le32)
 from .maps      import (MapDef, AxisDef, MapFinder, make_awp_maps,
                         AXIS_RPM, AXIS_LOAD, AXIS_IGN_DEG,
                         U8, U16, S8, S16,
@@ -40,8 +41,9 @@ __all__ = [
     # Checksum
     "ChecksumManager", "ChecksumChecker", "ChecksumResult",
     "MainChecksumResult", "MultiChecksumResult", "MultiBlock",
+    "CrcChecksumResult", "CrcBlock",
     "calc_sum_block", "calc_crc32", "verify_and_fix",
-    "_le16", "_le32", "CAL_CKSUM_OFFSET",
+    "_le16", "_le32",
     # Maps
     "MapDef", "AxisDef", "MapFinder", "make_awp_maps",
     "AXIS_RPM", "AXIS_LOAD", "AXIS_IGN_DEG",
