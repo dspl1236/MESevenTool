@@ -1230,7 +1230,7 @@ class TestRealROM4B0906018(unittest.TestCase):
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
         # These patches are gated on the 4B0906018 part number, so they need
         # a profile tagged with it
-        profile = get_profile("4B0906018CM").with_part_number("4B0906018CM")
+        profile = get_profile("4B0906018CM")
         return p.detect(rom, profile=profile)
 
     # ── CDKAT ────────────────────────────────────────────────────────────

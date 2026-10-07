@@ -1190,16 +1190,20 @@ class MESevenWindow(QMainWindow):
             # part-number-gated patches are offered
             profile = detect_rom_profile(ident, self._dpp)
             self._profile = profile
-            if profile is None:
+            if profile.unknown:
+                # Not identified: no patches (profile.unknown makes every
+                # patch NOT_APPLICABLE) and no maps (the fallback map set
+                # would be the wrong family's offsets). ID/DPP/checksum info
+                # is still shown.
                 QMessageBox.warning(self, "Unknown ECU",
                     f"Could not detect an ME7 profile for this ROM.\n"
                     f"ECU ID: {ident.display_name if ident else 'unknown'}\n\n"
                     "The ROM loaded but patches and maps will not be available.")
-                return
-
-            # Maps — use confirmed XDF offsets if we know the exact part number
-            xdf_pn = ident.vmecuhn or None
-            maps = profile.make_maps(xdf_pn=xdf_pn)
+                maps = []
+            else:
+                # Maps — use confirmed XDF offsets if we know the exact part number
+                xdf_pn = ident.vmecuhn or None
+                maps = profile.make_maps(xdf_pn=xdf_pn)
 
             # Update UI panels
             self._w_info.update(rom, ident, self._dpp, cs_result, profile)
