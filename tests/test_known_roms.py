@@ -2,11 +2,10 @@
 tests/test_known_roms.py
 Tests for KNOWN_ROMS catalog and VR6 profile detection.
 """
-import sys, zlib, os
-sys.path.insert(0, '/home/claude/MESevenTool')
 import pytest
+from tests.rom_corpus import find_rom
 from meseventool.known_roms import (
-    KNOWN_ROMS, lookup_rom, is_known_stock, KnownROM, _CATALOG
+    KNOWN_ROMS, lookup_rom, is_known_stock, _CATALOG
 )
 from meseventool.profiles import (
     detect_profile, PROFILE_VR6_ME71, PROFILE_V5_ME75, ALL_PROFILES
@@ -206,24 +205,23 @@ class TestECUIdVR6Regex:
         return bytes(data)
 
     @pytest.mark.skipif(
-        not os.path.exists("/tmp/me7_scan/206619.ori"),
+        not find_rom("206619.ori"),
         reason="VR6 ROM file not available"
     )
     def test_golf4_vr6_pn_detected(self):
-        import zlib
         from meseventool.rom import ROMImage
         from meseventool.ecu_id import identify
-        rom = ROMImage.load("/tmp/me7_scan/206619.ori")
+        rom = ROMImage.load(find_rom("206619.ori"))
         ecu = identify(rom)
         assert ecu.vmecuhn == "022906032E"
 
     @pytest.mark.skipif(
-        not os.path.exists("/tmp/me7_scan/VW golf 3.2 VR6 250HP 022906032EG 0261208344 373693.ori"),
+        not find_rom("VW golf 3.2 VR6 250HP 022906032EG 0261208344 373693.ori"),
         reason="R32 ROM file not available"
     )
     def test_r32_pn_detected(self):
         from meseventool.rom import ROMImage
         from meseventool.ecu_id import identify
-        rom = ROMImage.load("/tmp/me7_scan/VW golf 3.2 VR6 250HP 022906032EG 0261208344 373693.ori")
+        rom = ROMImage.load(find_rom("VW golf 3.2 VR6 250HP 022906032EG 0261208344 373693.ori"))
         ecu = identify(rom)
         assert ecu.vmecuhn == "022906032EG"

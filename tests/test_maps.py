@@ -3,12 +3,11 @@ tests/test_maps.py
 Tests for MapDef read/write, make_awp_maps confirmed addresses,
 and signed value handling (KFZW S8 roundtrip).
 """
-import sys, os
-sys.path.insert(0, '/home/claude/MESevenTool')
+import os
 import pytest
 from meseventool.maps import (
-    MapDef, AxisDef, make_awp_maps, make_v6_biturbo_maps,
-    S8, U8, U16, AXIS_RPM, AXIS_LOAD,
+    MapDef, make_awp_maps, make_v6_biturbo_maps,
+    S8, U8, U16,
 )
 from meseventool.rom import ROMImage
 
@@ -137,9 +136,10 @@ class TestAWPMapsAddresses:
 
 # ── Real ROM (skipped if file absent) ─────────────────────────────────────────
 
-_DL = "/tmp/me7_scan/VW Golf4 1.8T 06A906032DL 0261206890 354821 Original.bin"
+from tests.rom_corpus import find_rom
+_DL = find_rom("VW Golf4 1.8T 06A906032DL 0261206890 354821 Original.bin") or find_rom("06A906032DL_0261206890_v360227_MT_OEM.bin")
 
-@pytest.mark.skipif(not os.path.exists(_DL), reason="DL ROM not present")
+@pytest.mark.skipif(not _DL, reason="DL ROM not present")
 class TestRealROM:
     def test_kfzw_plausible(self):
         rom = ROMImage.load(_DL)
@@ -147,7 +147,9 @@ class TestRealROM:
         data = kfzw.read(rom)
         assert len(data) == 12 and all(len(r)==16 for r in data)
         flat = [v for row in data for v in row]
-        assert -25.0 <= min(flat) and max(flat) <= 25.0
+        # Physically plausible ignition window.  The 354821 dump peaks near
+        # 25 degrees; the v360227 MT OEM dump reaches 42 at light load.
+        assert -25.0 <= min(flat) and max(flat) <= 48.0
 
     def test_mlhfm_512(self):
         rom = ROMImage.load(_DL)
