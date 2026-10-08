@@ -232,14 +232,39 @@ rom.save("my_awp_patched.bin")
 
 ## Version History
 
-| Version | Changes |
-|---------|---------|
-| v0.1.5 (current) | VR6 profile (022906032/021906018), V5 profile, KNOWN_ROMS catalog (25 entries), 5 immo patches (PROVISIONAL), ecu_id VR6 PN regex, 316 tests |
-| v0.1.4 | P1681 scope fix, CDNWS 4B0906018CM patch, 427 tests |
-| v0.1.3 | MAF Delete Alpha-N (5 variants), Fuel Cut Resume RPM scalar |
-| v0.1.2 | 2.7T biturbo patches, ME7.1.1 Allroad variants, K-box logging |
-| v0.1.1 | Vmax disable (ME7.5 + ME7.1), 5th-gear torque mode |
-| v0.1.0 | Initial release: emissions patches, checksum, DPP, ECU ID |
+Reconstructed from git in October 2026. `meseventool/version.py` reports
+0.1.16; the rows above it have not been given a version number yet.
+
+| Version | Date | Changes |
+|---------|------|---------|
+| Unreleased (main) | 2026-10 | Checksum module rebuilt from me7romtool + ME7Sum: all three layers needle-located, `fix(adam.bin)` reproduces me7sum byte for byte; Save warns on bad checksums; no patches or maps on an unidentified ROM; whole-tool review (`docs/review_findings_2026-10.md`) |
+| | 2026-09 | Fixed-address patches gated on the ROM's part number; NMAXF kept at NMAXDV + 300 RPM; M3.8/M5.9 datasheet entries moved out of the ME7 catalogue |
+| v0.1.16 (version.py) | 2026-04-15 | 4B0907558M CDTES patch |
+| v0.1.17 | 2026-03-20 | Universal Vmax hits VR6 ME7.1; 6 patches for the VR6 profile |
+| v0.1.16 | 2026-03-20 | Universal patch fixes, Vmax VR6 support, 342 tests |
+| v0.1.15 | 2026-03-20 | KFDLULS scale fix (S4M U8 not U16), DigiTool scan |
+| v0.1.14 | 2026-03-20 | XDF routing fix, 2.7T axis labels, 12-map S4M pipeline |
+| v0.1.13 | 2026-03-20 | 119 known ROMs, axis labels in map table, PROFILE_V8_S4_B6; single-job CI (03-29) |
+| v0.1.12 | 2026-03-20 | 17 profiles; only applicable patches shown for the loaded ROM (03-27) |
+| v0.1.11 | 2026-03-20 | 106 known ROMs: VW collection complete, DSG/fw4518/T4/Phaeton |
+| v0.1.10 | 2026-03-20 | 89 known ROMs, map diff/compare view |
+| v0.1.9 | 2026-03-20 | 73 known ROMs, 16 profiles, V8/RS6/W12 families |
+| v0.1.8 | 2026-03-20 | 49 known ROMs, confirmed 2.7T map addresses from XDF, 342 tests |
+| v0.1.7 | 2026-03-20 | S8 write fix, maps test suite, Ghidra import tool, 339 tests |
+| v0.1.6 | 2026-03-20 | 40 known ROMs, confirmed map addresses, heatmap UI, biturbo routing |
+| v0.1.5 | 2026-03-20 | VR6 profile (022906032/021906018), V5 profile, KNOWN_ROMS catalog, immo patches (UNCONFIRMED), 316 tests |
+| v0.1.4 | 2026-03-16 | ESKONF rear O2 heater patches, P1681 scope fix, CDNWS 4B0906018CM, 262 tests |
+| v0.1.3 | 2026-03-16 | OffsetPatchDef + MultiOffsetPatchDef, confirmed O2 delete patches, MAF Delete Alpha-N, Fuel Cut Resume RPM scalar |
+| v0.1.2 | 2026-03-16 | Correct ME7.5 flash size (1 MB native, not 512 KB); 2.7T biturbo patches, ME7.1.1 Allroad variants, K-box logging |
+| v0.1.1 | 2026-03-16 | KWP integration + Tools menu; Vmax disable (ME7.5 + ME7.1), 5th-gear torque mode |
+| v0.1.0 | 2026-03-16 | Initial release: emissions patches, checksum, DPP, ECU ID, 136 tests |
+
+Note: the March commit messages counted up to v0.1.17 while `version.py`
+lagged behind and was later set to 0.1.16, so "v0.1.16" appears twice.
+The next release should bump `version.py` past 0.1.17.
+
+Current counts: 118 known ROMs, 17 profiles, 41 patches, 590 tests
+(441 run without the real-ROM corpus; 149 need it).
 
 ---
 
