@@ -86,6 +86,9 @@ class ROMProfile:
     platforms:     Set[str]  = field(default_factory=set)
     # platforms is auto-populated from induction/o2_system/fuel_system/ecu_hw
     # in __post_init__ so profiles don't need to repeat themselves.
+    unknown:       bool      = False           # True only for PROFILE_UNKNOWN:
+                                               # the ROM was not identified, so
+                                               # no patch applies to it
 
     def __post_init__(self):
         # Build the platforms tag set from structured fields
@@ -136,6 +139,11 @@ class ROMProfile:
             profile.patch_applies(ind_list, lambda_list, fuel_list, family_list)
             Translates to tag checks against self.platforms.
         """
+        # An unidentified ROM gets no patches at all — the auto-populated
+        # default tags (me7.5/turbo/...) say nothing about what it really is.
+        if self.unknown:
+            return False
+
         # New-style: patch object with applies_to set
         if hasattr(patch_or_induction, 'applies_to'):
             applies_to = patch_or_induction.applies_to or set()
@@ -487,6 +495,7 @@ PROFILE_UNKNOWN = ROMProfile(
     part_prefixes = [],
     rom_size      = 0x100000,
     notes         = "Drop a known ROM to improve detection.",
+    unknown       = True,
 )
 
 PROFILE_V8_D2 = ROMProfile(
@@ -663,5 +672,6 @@ def detect_rom_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
 
 
 def get_profile(part_number: str) -> ROMProfile:
+    """Profile for a part number, tagged with it (see detect_rom_profile)."""
     ecu = ECUIdentity(vmecuhn=part_number)
-    return detect_profile(ecu, DPPValues())
+    return detect_rom_profile(ecu, DPPValues())

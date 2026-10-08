@@ -346,6 +346,8 @@ class OffsetPatchDef:
             f"OffsetPatch '{self.name}': anchor_bytes must not be empty"
 
     def check_applicable(self, profile) -> bool:
+        if _profile_unknown(profile):
+            return False
         if not self.applies_to:
             return True
         return self.applies_to.issubset(set(profile.platforms))
@@ -461,6 +463,11 @@ class FixedAddressPatchDef:
         return f"FixedAddressPatchDef(name={self.name!r}, addr=0x{self.fixed_addr:06X})"
 
 
+def _profile_unknown(profile) -> bool:
+    """True when the profile says the ROM was not identified (PROFILE_UNKNOWN)."""
+    return bool(getattr(profile, 'unknown', False))
+
+
 def _fixed_addr_applicable(applies_to: Set[str], profile) -> bool:
     """Applicability for patches written at a hard-coded address.
 
@@ -469,6 +476,8 @@ def _fixed_addr_applicable(applies_to: Set[str], profile) -> bool:
     that part number (see ROMProfile.with_part_number).  Family-gated and
     universal fixed-address patches keep the no-profile = applicable rule.
     """
+    if _profile_unknown(profile):
+        return False
     if not applies_to:
         return True
     if profile is None:
@@ -599,6 +608,8 @@ class MultiOffsetPatchDef:
     applies_to:    Set[str] = field(default_factory=set)
 
     def check_applicable(self, profile) -> bool:
+        if _profile_unknown(profile):
+            return False
         if not self.applies_to:
             return True
         return self.applies_to.issubset(set(profile.platforms))

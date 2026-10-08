@@ -285,39 +285,7 @@ MASK_DPP_DIRECT = [
     MASK, MASK, XXXX, XXXX,
 ]
 
-# ── CRC32 polynomial table setup ──────────────────────────────────────────────
-# Finds the multipoint-checksum CRC32 table used by the second checksum layer.
-# Extracting the table offset gives us the multipoint checksum block address.
-NEEDLE_CRC32 = [
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #lo_word_of_poly
-    0xE6, 0xF2, XXXX, XXXX,   # MOV R2, #hi_word (upper 16 bits to separate reg)
-    0x60, 0x20,                # ADD R0, R0        (shift left by 1 — CRC step)
-    0x8D, XXXX,                # JMPR cc_C, rel    (conditional jump on carry)
-    0x00, 0xF0,                # XOR R0, R0        (XOR with poly — wrong; real = XOR with R2)
-]
-MASK_CRC32 = [
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-    MASK, XXXX,
-    MASK, MASK,
-]
-
-# ── Main ROM checksum region count ────────────────────────────────────────────
-# Finds the routine that iterates over checksum regions.
-# The immediate operand encodes how many regions exist (1, 2, or 3).
-# Byte at offset +27 in the hit encodes the count:
-#   0xA2 → 1 region, 0xA4 → 2, 0xA6 → 3
-NEEDLE_MAIN_CKSUM = [
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #num_regions (LE 16-bit)
-    0xA9, 0x00,                # MOV RL0, R0
-    0xDB, 0x00,                # RETS
-]
-MASK_MAIN_CKSUM = [
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-    MASK, MASK,
-]
+# Checksum needles live in checksum.py (ported from me7romtool and ME7Sum).
 
 # ── SSTB — shared axis-lookup subroutine ─────────────────────────────────────
 # Called by KFZW (ignition) and other 2D maps.  Finding SSTB gives the

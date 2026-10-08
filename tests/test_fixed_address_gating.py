@@ -241,3 +241,36 @@ def test_setup_version_matches_package():
     out = subprocess.run([sys.executable, "setup.py", "--version"],
                          cwd=REPO_ROOT, capture_output=True, text=True, check=True)
     assert out.stdout.strip().splitlines()[-1] == __version__
+
+
+# ── Unidentified ROMs get no patches ─────────────────────────────────────────
+
+class TestUnknownProfile:
+
+    def test_unknown_profile_rejects_every_patch(self):
+        """PROFILE_UNKNOWN's auto tags (me7.5/turbo/...) must not offer patches."""
+        from meseventool.profiles import PROFILE_UNKNOWN
+        assert PROFILE_UNKNOWN.unknown
+        for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
+            assert not PROFILE_UNKNOWN.patch_applies(p), p.name
+
+    def test_detect_all_with_unknown_profile_is_all_not_applicable(self):
+        from meseventool.profiles import PROFILE_UNKNOWN
+        rom = ROMImage(data=bytearray(0x100000))
+        p5 = _patch("5th-Gear Torque Mode Disable")
+        rom.data[p5.fixed_addr] = 0x0F          # would be STOCK on a known ROM
+        for r in detect_all(rom, profile=PROFILE_UNKNOWN):
+            assert r.state == PatchState.NOT_APPLICABLE, r.patch.name
+        for s in ALL_SCALAR_PATCHES:
+            assert s.read(rom, profile=PROFILE_UNKNOWN) is None, s.name
+
+    def test_unknown_survives_part_number_tagging(self):
+        prof = detect_rom_profile(ECUIdentity(vmecuhn="9Z9999999ZZ"), DPPValues())
+        assert prof.unknown
+        assert not prof.patch_applies(_patch("5th-Gear Torque Mode Disable"))
+
+    def test_get_profile_carries_part_number_tags(self):
+        from meseventool.profiles import get_profile
+        prof = get_profile("4B0906018CM")
+        assert {"4b0906018cm", "4b0906018"} <= prof.platforms
+        assert prof.patch_applies(_patch("Catalyst Monitor Disable CDKAT (4B0906018"))

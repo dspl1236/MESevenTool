@@ -1230,7 +1230,7 @@ class TestRealROM4B0906018(unittest.TestCase):
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
         # These patches are gated on the 4B0906018 part number, so they need
         # a profile tagged with it
-        profile = get_profile("4B0906018CM").with_part_number("4B0906018CM")
+        profile = get_profile("4B0906018CM")
         return p.detect(rom, profile=profile)
 
     # ── CDKAT ────────────────────────────────────────────────────────────
@@ -2325,6 +2325,7 @@ import struct
 import tempfile
 import os
 from meseventool.checksum import ChecksumManager
+from tests.synthetic_rom import make_rom_with_checksum
 
 
 def _make_workflow_rom(needle_in_cal=True):
@@ -2339,7 +2340,10 @@ def _make_workflow_rom(needle_in_cal=True):
     cal_off = size - 0x10000   # 0x70000
     patch  = ALL_PATCHES[0]    # Knock Retard Disable
 
-    needle_addr = (cal_off + 0x1000) if needle_in_cal else 0x20000
+    # 0x10000 lies between main region 1 (ends 0xFBFF) and region 2
+    # (starts 0x20000) and outside every multipoint block: the only area a
+    # real ME7.5 layout leaves unchecked.
+    needle_addr = (cal_off + 0x1000) if needle_in_cal else 0x10000
 
     data = bytearray([0xAA] * size)
     for i, b in enumerate(patch.needle):
@@ -2347,18 +2351,7 @@ def _make_workflow_rom(needle_in_cal=True):
     for i, b in enumerate(patch.stock_bytes):
         data[needle_addr + patch.offset + i] = b
 
-    # Compute valid checksum
-    storage = cal_off + 0xFFF8
-    data[storage:storage + 8] = b'\x00' * 8
-    total = 0
-    for i in range(cal_off, storage - 1, 2):
-        total += data[i] | (data[i + 1] << 8)
-    total &= 0xFFFFFFFF
-    comp = (~total) & 0xFFFFFFFF
-    struct.pack_into('<I', data, storage, total)
-    struct.pack_into('<I', data, storage + 4, comp)
-
-    return ROMImage(data=data), patch
+    return make_rom_with_checksum(data=data), patch
 
 
 class TestPatchWorkflowE2E:
@@ -2562,18 +2555,7 @@ def _make_multi_patch_rom():
             for i, b in enumerate(fp.stock_bytes):
                 data[fp.fixed_addr + i] = b
 
-    # Compute valid checksum
-    storage = cal_off + 0xFFF8
-    data[storage:storage + 8] = b'\x00' * 8
-    total = 0
-    for i in range(cal_off, storage - 1, 2):
-        total += data[i] | (data[i + 1] << 8)
-    total &= 0xFFFFFFFF
-    comp = (~total) & 0xFFFFFFFF
-    struct.pack_into('<I', data, storage, total)
-    struct.pack_into('<I', data, storage + 4, comp)
-
-    return ROMImage(data=data)
+    return make_rom_with_checksum(data=data)
 
 
 class TestMultiPatchWorkflow:
