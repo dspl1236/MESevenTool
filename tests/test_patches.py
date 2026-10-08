@@ -1,4 +1,5 @@
 """Tests for patch detection/apply/revert — uses synthetic ROMs."""
+from tests.rom_corpus import find_rom
 import pytest
 from meseventool.rom import ROMImage
 from meseventool.needle import MASK, XXXX
@@ -383,8 +384,8 @@ class TestMultiOffsetPatchDef:
 # ── Real ROM integration tests ────────────────────────────────────────────────
 
 import os as _os
-_DL_OEM = '/mnt/user-data/uploads/06A906032DL_0261206890_v360227_MT_OEM.bin'
-_REAL_ROM_AVAILABLE = _os.path.exists(_DL_OEM)
+_DL_OEM = find_rom('06A906032DL_0261206890_v360227_MT_OEM.bin')
+_REAL_ROM_AVAILABLE = _DL_OEM is not None
 
 
 @pytest.mark.skipif(not _REAL_ROM_AVAILABLE,
@@ -989,13 +990,11 @@ class TestRearO2Disable27T(unittest.TestCase):
 class TestRealROM27T(unittest.TestCase):
     """Integration tests against real ROM files from the stock corpus."""
 
-    S4WIKI = '/home/claude/s4wiki_stock'
-
     def _load(self, fname):
         import os
         from meseventool.rom import ROMImage
-        path = os.path.join(self.S4WIKI, fname)
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         return ROMImage.load(path)
 
@@ -1159,8 +1158,8 @@ class TestGearModePatch(unittest.TestCase):
         import os, tempfile
         from meseventool.patches import PatchState
         from meseventool.rom import ROMImage
-        path = '/mnt/user-data/uploads/1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'
-        if not os.path.exists(path):
+        path = find_rom('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        if not path:
             self.skipTest("DL ROM not available")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1171,8 +1170,8 @@ class TestGearModePatch(unittest.TestCase):
         import os, tempfile
         from meseventool.patches import PatchState
         from meseventool.rom import ROMImage
-        path = '/mnt/user-data/uploads/1773719274820_uni870_032pl.bin'
-        if not os.path.exists(path):
+        path = find_rom('1773719274820_uni870_032pl.bin')
+        if not path:
             self.skipTest("uni870 ROM not available")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1183,8 +1182,8 @@ class TestGearModePatch(unittest.TestCase):
         import os, tempfile
         from meseventool.patches import PatchState
         from meseventool.rom import ROMImage
-        path = '/mnt/user-data/uploads/18CM.Bin'
-        if not os.path.exists(path):
+        path = find_rom('18CM.Bin')
+        if not path:
             self.skipTest("18CM ROM not available")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1195,8 +1194,8 @@ class TestGearModePatch(unittest.TestCase):
         import os, tempfile
         from meseventool.patches import PatchState
         from meseventool.rom import ROMImage
-        path = '/mnt/user-data/uploads/170hp_018cm_PassatUNI2.bin'
-        if not os.path.exists(path):
+        path = find_rom('170hp_018cm_PassatUNI2.bin')
+        if not path:
             self.skipTest("18CM uni2 ROM not available")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1210,13 +1209,11 @@ class TestGearModePatch(unittest.TestCase):
 class TestRealROM4B0906018(unittest.TestCase):
     """Integration tests against real 4B0906018 ROM files."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1313,13 +1310,11 @@ class TestRealROM4B0906018(unittest.TestCase):
 class TestMAFDeleteAllVariants(unittest.TestCase):
     """MAF Delete patches cover all ME7.5 1.8T firmware variants."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1386,13 +1381,11 @@ class TestMAFDeleteAllVariants(unittest.TestCase):
 class TestVmaxFw4013CodeImmediate(unittest.TestCase):
     """VMAX code-immediate: E6 FD A8 61 → E6 FD FF FF, exactly 2 hits per file."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1457,13 +1450,11 @@ class TestVmaxFw4013CodeImmediate(unittest.TestCase):
 class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
     """Both VMAX call sites patched by applying twice on real RN ROM."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -1532,13 +1523,11 @@ class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
 class TestHardRevLimitScalar1p8T(unittest.TestCase):
     """Hard Rev Limit ScalarPatchDef reads correct RPM from ME7.5 1.8T ROMs."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path, 'rb').read()); tmp = f.name
@@ -1617,13 +1606,11 @@ class TestHardRevLimitScalar1p8T(unittest.TestCase):
 class TestOverrevProtectionScalar1p8T(unittest.TestCase):
     """Overrev protection RPM scalar reads correct values from ME7.5 MT ROMs."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path, 'rb').read()); tmp = f.name
@@ -1677,13 +1664,11 @@ class TestOverrevProtectionScalar1p8T(unittest.TestCase):
 class TestHardRevAltPathScalar1p8T(unittest.TestCase):
     """Alt-path hard rev scalar: 1 hit per file in all variants including SL DSG."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path, 'rb').read()); tmp = f.name
@@ -1749,13 +1734,11 @@ class TestHardRevAltPathScalar1p8T(unittest.TestCase):
 class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
     """Emergency RPM cut (NKILL) scalar reads correct values across ME7.5 1.8T ROMs."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path, 'rb').read()); tmp = f.name
@@ -1826,8 +1809,8 @@ class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
             '1773719274810_06A906032RN.bin',
             '18CM.Bin',
         ]:
-            path = f'{self.UPLOADS}/{fname}'
-            if not os.path.exists(path):
+            path = find_rom(fname)
+            if not path:
                 continue
             with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
                 f.write(open(path,'rb').read()); tmp = f.name
@@ -1845,13 +1828,11 @@ class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
 class TestFuelCutResumeScalar1p8T(unittest.TestCase):
     """Fuel cut resume RPM scalar — universal across all ME7.5 1.8T variants."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f"ROM not available: {fname}")
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path, 'rb').read()); tmp = f.name
@@ -1917,16 +1898,12 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
     """Tests for CDLSH, CDLSHV, CDLSV, CDKAT (universal), CDEHFM patches
     using the stable codeword block at 0x018190+."""
 
-    UPLOADS     = '/mnt/user-data/uploads'
-    STOCK_EXTRA = '/home/claude/chiptuning_stock'
-    S4WIKI      = '/home/claude/s4wiki_stock'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        for d in [self.UPLOADS, self.STOCK_EXTRA, self.S4WIKI]:
-            path = f'{d}/{fname}'
-            if os.path.exists(path):
+        if True:
+            path = find_rom(fname)
+            if path:
                 with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
                     f.write(open(path, 'rb').read()); tmp = f.name
                 rom = ROMImage.load(tmp)
@@ -2015,16 +1992,12 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
 class TestCDNWSVVTDisable(unittest.TestCase):
     """CDNWS cam position monitor disable at 0x0181AF."""
 
-    UPLOADS  = '/mnt/user-data/uploads'
-    S4WIKI   = '/home/claude/s4wiki_stock'
-    EXTRA    = '/home/claude/chiptuning_stock'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        for d in [self.UPLOADS, self.S4WIKI, self.EXTRA]:
-            path = f'{d}/{fname}'
-            if os.path.exists(path):
+        if True:
+            path = find_rom(fname)
+            if path:
                 with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
                     f.write(open(path,'rb').read()); tmp = f.name
                 rom = ROMImage.load(tmp)
@@ -2079,13 +2052,11 @@ class TestCDNWSVVTDisable(unittest.TestCase):
 class TestAFPVR6Family(unittest.TestCase):
     """AFP 12V VR6 (021906018xx) — ME7.1 fw6228, confirmed stock corpus."""
 
-    EXTRA = '/home/claude/chiptuning_stock'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.EXTRA}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f'ROM not available: {fname}')
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -2136,13 +2107,11 @@ class TestAFPVR6Family(unittest.TestCase):
 class Test022906032CSFamily(unittest.TestCase):
     """022906032CS fw6428 — ME7.1.1 Passat B5.5 2.8V6 / VVT-equipped."""
 
-    EXTRA = '/home/claude/chiptuning_stock'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.EXTRA}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f'ROM not available: {fname}')
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -2179,15 +2148,13 @@ class Test022906032CSFamily(unittest.TestCase):
 
 class TestAFP021906018M(unittest.TestCase):
     """AFP 021906018M — earliest known AFP stock file, August 1999."""
-
-    EXTRA = '/home/claude/chiptuning_stock'
     ROM   = '021906018M_Jetta_AFP_12V_fw6228_1999.bin'
 
     def _load(self):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.EXTRA}/{self.ROM}'
-        if not os.path.exists(path):
+        path = find_rom(self.ROM)
+        if not path:
             self.skipTest('ROM not available')
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name
@@ -2229,15 +2196,12 @@ class TestAFP021906018M(unittest.TestCase):
 class TestCDNWSME75VVTDisable(unittest.TestCase):
     """CDNWS 0x03→0x00 — ME7.5 1.8T AWW/AWP/AUM/AUQ VVT disable."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-    EXTRA   = '/home/claude/chiptuning_stock'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        for d in [self.UPLOADS, self.EXTRA]:
-            path = f'{d}/{fname}'
-            if os.path.exists(path):
+        if True:
+            path = find_rom(fname)
+            if path:
                 with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
                     f.write(open(path,'rb').read()); tmp = f.name
                 rom = ROMImage.load(tmp); os.unlink(tmp); return rom
@@ -2291,13 +2255,11 @@ class TestCDNWSME75VVTDisable(unittest.TestCase):
 class TestCDNWS4B0906018CM(unittest.TestCase):
     """CDNWS 0x02→0x00 — 4B0906018CM Passat/A6 AWM VVT disable."""
 
-    UPLOADS = '/mnt/user-data/uploads'
-
     def _load(self, fname):
         import os, tempfile
         from meseventool.rom import ROMImage
-        path = f'{self.UPLOADS}/{fname}'
-        if not os.path.exists(path):
+        path = find_rom(fname)
+        if not path:
             self.skipTest(f'ROM not available: {fname}')
         with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as f:
             f.write(open(path,'rb').read()); tmp = f.name

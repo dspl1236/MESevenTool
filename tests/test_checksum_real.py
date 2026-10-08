@@ -1,31 +1,22 @@
 """
 Checksum tests against real ME7.5 ROMs.  Skipped when the files are absent.
 
-Looks in $MESEVENTOOL_ROM_DIR, then /mnt/user-data/uploads, then the
-archive folder noted in docs/checksum_port_handoff.md.
+Files are located with tests/rom_corpus.py ($MESEVENTOOL_ROM_DIR,
+D:/ME7_corpus, the cloud-session paths, the Z: archive).
 """
-import os
 import pytest
 from meseventool.rom import ROMImage
 from meseventool.checksum import ChecksumManager
 
-_DIRS = [d for d in [
-    os.environ.get("MESEVENTOOL_ROM_DIR"),
-    "/mnt/user-data/uploads",
-    r"Z:\Archive\Google Drive\home flashing\ME7",
-] if d]
+from tests.rom_corpus import find_rom as _find
 
 
-def _find(name: str):
-    for d in _DIRS:
-        p = os.path.join(d, name)
-        if os.path.exists(p):
-            return p
-    return None
+def _find_or_none(name: str):
+    return _find(name)
 
 
 def _load(name: str) -> ROMImage:
-    p = _find(name)
+    p = _find_or_none(name)
     if p is None:
         pytest.skip(f"{name} not available")
     return ROMImage.load(p)
@@ -68,7 +59,7 @@ class TestRealROMs:
     def test_fix_adam_equals_adamfixed(self):
         """Acceptance test: our fix() must reproduce me7sum's output exactly."""
         rom = _load("adam.bin")
-        with open(_find("adamfixed.bin") or pytest.skip("adamfixed.bin"), "rb") as f:
+        with open(_find_or_none("adamfixed.bin") or pytest.skip("adamfixed.bin"), "rb") as f:
             expected = f.read()
         result = ChecksumManager(rom).fix()
         assert result.all_ok

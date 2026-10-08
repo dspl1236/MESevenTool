@@ -263,8 +263,11 @@ Note: the March commit messages counted up to v0.1.17 while `version.py`
 lagged behind and was later set to 0.1.16, so "v0.1.16" appears twice.
 The next release should bump `version.py` past 0.1.17.
 
-Current counts: 118 known ROMs, 17 profiles, 41 patches, 590 tests
-(441 run without the real-ROM corpus; 149 need it).
+Current counts: 118 known ROMs, 17 profiles, 41 patches, 608 tests.
+The real-ROM tests find their files through `tests/rom_corpus.py`: set
+`MESEVENTOOL_ROM_DIR` to a folder of `.bin` dumps (the test names list the
+files they want; upload-timestamp prefixes and spacing differences are
+ignored). Without a corpus they skip.
 
 ---
 
