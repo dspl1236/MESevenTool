@@ -106,7 +106,8 @@ class TestFixedAddressGating:
     def test_matching_part_number_applies(self):
         """Previously hidden in the GUI even on the ECU it was written for."""
         rom = _rom()
-        prof = detect_rom_profile(ECUIdentity(vmecuhn="4B0906018CM"), DPPValues())
+        prof = detect_rom_profile(ECUIdentity(vmecuhn="4B0906018CM",
+                                              version_string="40/1/ME7.5/3/4012.31"), DPPValues())
         p = _patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018")
         r = p.detect(rom, profile=prof)
         assert r.state == PatchState.STOCK
@@ -130,7 +131,8 @@ class TestFixedAddressGating:
         rom = ROMImage(data=bytearray(0x100000))
         p = _patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018")
         rom.data[p.fixed_addr] = p.stock_bytes[0]
-        prof = PROFILE_06B.with_part_number("4B0906018CM")
+        prof = PROFILE_06B.with_rom_identity(
+            ECUIdentity(vmecuhn="4B0906018CM", version_string="40/1/ME7.5/3/4012.31"))
         assert p.detect(rom, profile=prof).state == PatchState.STOCK
 
     def test_family_gated_fixed_patch_unchanged_without_profile(self):
@@ -272,6 +274,6 @@ class TestUnknownProfile:
 
     def test_get_profile_carries_part_number_tags(self):
         from meseventool.profiles import get_profile
-        prof = get_profile("4B0906018CM")
-        assert {"4b0906018cm", "4b0906018"} <= prof.platforms
+        prof = get_profile("4B0906018CM", "40/1/ME7.5/3/4012.31")
+        assert {"4b0906018cm", "4b0906018", "cw_4b0"} <= prof.platforms
         assert prof.patch_applies(_patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018"))

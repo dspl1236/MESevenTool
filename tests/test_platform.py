@@ -246,6 +246,7 @@ class TestCataloguePatches:
             "4b0906018", "me7.1.1", "2.7t", "4z7907551",
             "me7.1x",                      # ME7.1 or ME7.1.1 (shared codebase)
             "transverse", "longitudinal",  # 06A family vs 06B/4B0/8E family
+            "cw_me71", "cw_4b0", "cw_06a", "cw_me711",   # codeword block layouts
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
             for tag in p.applies_to:
@@ -316,14 +317,23 @@ class TestDetectAllWithProfile:
         should be for patches that explicitly require 'dual_bank'."""
         from meseventool.patches import ALL_PATCHES
         rom     = make_rom()
-        results = detect_all(rom, profile=PROFILE_AWP)
+        from meseventool.ecu_id import ECUIdentity
+        from meseventool.patches import FixedAddressPatchDef
+        # A concrete AWP ROM identity: codeword patches resolve their address
+        # from the build's layout (review A7), so the profile needs one.
+        awp = PROFILE_AWP.with_rom_identity(
+            ECUIdentity(vmecuhn="06A906032DL", version_string="40/1/ME7.5/3/4019.20"))
+        results = detect_all(rom, profile=awp)
         for r in results:
             if r.state == PatchState.NOT_APPLICABLE:
                 # Patches are N/A on AWP when they require a platform tag not in AWP.
                 # Valid reasons: 'dual_bank', or any platform tag (e.g. '2.7t') that
                 # AWP doesn't carry.
-                awp_platforms = set(PROFILE_AWP.platforms)
+                awp_platforms = set(awp.platforms)
                 patch_requires = set(r.patch.applies_to)
+                if (isinstance(r.patch, FixedAddressPatchDef) and r.patch.codeword
+                        and r.patch.resolve(awp)[0] is None):
+                    continue   # codeword absent from this build's layout
                 assert patch_requires and not patch_requires.issubset(awp_platforms), \
                     (f"Patch '{r.patch.name}' returned NOT_APPLICABLE for AWP "
                      f"but applies_to={r.patch.applies_to} should match AWP platforms {awp_platforms}")

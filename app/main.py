@@ -165,6 +165,7 @@ class ROMInfoWidget(QWidget):
             ("Main cksum",  "_f_cksum_main"),
             ("Multipoint",  "_f_cksum_multi"),
             ("Main CRC32",  "_f_cksum_crc"),
+            ("CW layout",   "_f_cw_layout"),
             ("DPP0",        "_f_dpp0"),
             ("DPP1",        "_f_dpp1"),
             ("DPP2",        "_f_dpp2"),
@@ -242,6 +243,22 @@ class ROMInfoWidget(QWidget):
         show_layer(self._f_cksum_main,  cksum_result.main,  absent_ok=False)
         show_layer(self._f_cksum_multi, cksum_result.multi, absent_ok=True)
         show_layer(self._f_cksum_crc,   cksum_result.crc,   absent_ok=True)
+
+        # Codeword block layout (per software build). Unknown means every
+        # codeword patch is withheld for this ROM.
+        layout = getattr(profile, "codeword_layout", None) if profile else None
+        if layout:
+            self._f_cw_layout.setText(layout)
+            self._f_cw_layout.setStyleSheet(f"color:{C_FG};")
+            self._f_cw_layout.setToolTip(
+                "Emissions codeword block layout for this software build "
+                "(see docs/me7_stable_codeword_block.md).")
+        else:
+            self._f_cw_layout.setText("unknown — codeword patches withheld")
+            self._f_cw_layout.setStyleSheet(f"color:{C_AMBER};")
+            self._f_cw_layout.setToolTip(
+                "This software build's codeword layout has not been verified "
+                "against a definition, so CD*/CW* patches are not offered.")
 
         # DPP
         for attr, val in [("_f_dpp0", dpp.dpp0), ("_f_dpp1", dpp.dpp1),

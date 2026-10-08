@@ -1,38 +1,46 @@
-# ME7 Emissions Codeword Block — Stable Addresses
+# ME7 Emissions Codeword Block — Layouts by Software Build
 
-## Finding
+> **Correction (October 2026).** This block is *not* one layout. The byte
+> order depends on the Bosch software build named in the ROM's version string
+> (e.g. `40/1/ME7.5/3/4019.20` → build 4019), and the "universal" addresses
+> below are only right for the ME7.1 2.7T builds they were taken from.
+> `meseventool/codewords.py` is the authoritative table; every codeword patch
+> resolves its address through it and is withheld on unverified builds
+> (review item A7). Evidence: files.s4wiki.com `defs/` XDFs (06A906032HS/LP,
+> 8N0906018CB, 8D0907551M/F/G/H/K, 4Z7907551R/AA, 4D1907558; all BASEOFFSET
+> 0) cross-checked against the stock bytes of ~290 corpus images.
 
-The Bosch ME7.x firmware contains a tightly-packed block of single-byte emissions
-configuration codewords at a **fixed flat-file offset** that is consistent across all
-ME7.1 and ME7.5 variants, regardless of software version.
+## Layouts
 
-**Block location:** `0x018194–0x0181C4` (49 bytes)
+| Layout | Builds (version-string field 5) | ECUs seen | CDKAT | CDLSH | CDLSHV | CDLSV | CDNWS | CDSLS | CDTES | CDEHFM |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `me71`  | `40/1/ME7.1/5/` 6001, 6005, 6010, 6025 | 8D0907551 G/H/J/L/M/N/T/AA, 4B0907551 M/R/S/T/AA/AH/AL, 4Z7907551 –/D/E/K/L/M | 0x1A2 | 0x1AA | 0x1AB | 0x1AC | 0x1AF | 0x1B0 | 0x1B2 | 0x19C |
+| `4b0`   | ME7.5 4012.xx, 4016.xx | 4B0906018 (not R), 06B906018, 8E0909518, 8E0906018 | same as `me71` (validated on 18CM tuned files; CDKVS=0x03 at 0x1A3) | | | | | | | |
+| `06a`   | ME7.5 4013, 4018, 4019, 4518 (field 3 = 120) | 06A906032, 8N0906018, 8L0906018 | **0x1A3** | **0x1AB** | absent | 0x1AC | 0x1AF | 0x1B0 | 0x1B2 | 0x19C |
+| `me711` | ME7.1.1 6030, 6011, 8001, 8542; ME7.1 6024 (RS4 K/Q) | 4Z7907551 N/Q/R/S/AA, 4D1907558 –/B/C/F, 4D0907559E, 4D0907560AE/AF, 8D0907551K/Q | **0x1A0** | **0x1A8** | 0x1A9 | 0x1AA | **0x1AD** | 0x1AE | 0x1B0 | 0x19A |
 
-This was confirmed by cross-referencing the `8D0907551M` XDF (TunerPro definition
-file) against three ECU families:
+The `06a` layout inserts **CDHSVSA at 0x0181A2** (between CDHSVE and CDKAT)
+and has no CDLSHV, so everything from CDKAT to CDLSVV sits one byte later
+than in `me71` while CDNWS onward lines up again. The `me711` layout is the
+whole `me71` block two bytes earlier (0x0181AF is CDTANKL there, 0x0181B2 is
+CWADRES — the value 2 seen on every late Allroad is CWADRES, not CDTES).
 
-| ECU | Family | Engine | CDLSH | CWKONLS | CDSLS | CWDLSAHK |
-|-----|--------|--------|-------|---------|-------|----------|
-| `8D0907551M` | ME7.1 2.7T S4 B5 | AGB/ARE/BES | `0x01` | `0x33` | `0x00` | `0x03` |
-| `4B0907551AA` | ME7.1 2.7T A6 C5 | AGB/ARE | `0x01` | `0x33` | `0x00` | `0x03` |
-| `06A906032DL` | ME7.5 1.8T | AWP/AUM | `0x01` | `0x03`  | `0x01` | `0x3F` |
+Independent confirmation on 06A: two copies of the 06A906032DL v360227 dump
+differ in exactly one byte, 0x0181A3, and the one with 0x00 is a catalyst
+delete; the HN "no cat" and FC "SAI and rear O2 delete" tunes clear 0x1A3,
+0x1A5 and 0x1AB (CDKAT, CDLASH, CDLSH in the `06a` layout).
 
-All three ECU families have their codewords at **identical flat file offsets**, despite
-different engine families, different ME7 sub-versions, and different SW calibrations.
+**Unverified builds (no layout, codeword patches withheld):** early 2.7T
+`42/1/ME7.1/5/` 6001/6005/6010 (8D0907551 A/B/D, 4B0907551 F/G/K/L — their
+bytes fit none of the above), 8D0907551F (its XDF is shifted five bytes),
+06A906032 X505R (SL/SK/SM: CDNWS-like 3 at 0x1B1) and 4220 (DS/MS),
+4B0906018R, 4D1907558D, 4D0907560BR, every VR6 (022906032/021906018), the
+Touareg/Phaeton and W12 builds, and the Golf 5 R32 S1103A builds, where
+0x018194 holds code, not codewords.
 
-## Why It's Stable
+---
 
-The C167CR accesses these codewords via `EXTP + MOV` sequences in the firmware code.
-The code is compiled to reference a specific data page (DPP1 = `0x0206` in ME7.5,
-equivalent page in ME7.1) plus a fixed offset within that page. Since all ME7 variants
-share the same Bosch Funktionsrahmen (function framework) ABI, the codeword layout
-within the cal page is fixed — it's part of the Bosch calibration data structure
-definition, not something that floats with SW version.
-
-Flat file offset `0x018194` maps to:
-- C167 data page: `0x0206` (= `0x018000 >> 14` = page 97)
-- Page offset: `0x0194`
-- Physical address: `0x0206 << 14 | 0x0194 = 0x81'9194H`
+The remainder of this document is the original ME7.1 2.7T (`me71`) map.
 
 ## Complete Codeword Map
 

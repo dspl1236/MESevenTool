@@ -41,7 +41,7 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **A5. `rom.write()` with a negative offset inserts bytes**
   (`meseventool/rom.py:174-180`, confirmed). Only `end > size` is checked.
   Reject `offset < 0`. *Fixed Oct 2026.*
-- [ ] **A7. The "stable codeword block" is not one layout — fixed-address
+- [x] **A7. The "stable codeword block" is not one layout — fixed-address
   codeword patches write the wrong byte on 06A906032 and on ME7.1.1**
   (found 2026-10-08 from the files.s4wiki.com XDFs for 06A906032HS/LP,
   8N0906018CB, 8D0907551M/F/G, 4Z7907551R/AA, 4D1907558; base offsets all 0;
@@ -74,6 +74,10 @@ it by running code; "plausible" means it was read from the source only.
   ME7.1.1 → me7.1.1 layout; everything else validated → me7.1 layout),
   and must be NOT_APPLICABLE where the layout is unknown. Until then the
   universal entries should be gated to the layout they were validated on.
+  *Fixed Oct 2026: `meseventool/codewords.py` holds the four verified layouts
+  keyed on the version-string build; `FixedAddressPatchDef.codeword/layouts`
+  resolve the address per ROM; unverified builds get NOT_APPLICABLE and the
+  ROM Info panel shows the layout. See `docs/me7_stable_codeword_block.md`.*
 - [x] **A6. Fallback map widths are wrong for several maps**
   (`maps.py:197-199, 292-336, 490-503`, confirmed against
   `reference/xdf_tables.json`). KFLBTS, LAMFA and KFDLULS (1.8T) and KFDLULS

@@ -55,6 +55,7 @@ from typing import List, Optional, Set
 from .maps import MapDef, make_awp_maps, make_v6_biturbo_maps
 from .ecu_id import ECUIdentity, part_number_tags
 from .dpp import DPPValues
+from .codewords import codeword_layout, layout_tag
 
 
 @dataclass
@@ -124,6 +125,22 @@ class ROMProfile:
         if not tags or tags <= self.platforms:
             return self
         return replace(self, platforms=self.platforms | tags)
+
+    def with_rom_identity(self, ecu_id: ECUIdentity) -> "ROMProfile":
+        """with_part_number() plus the codeword-layout tag ("cw_06a", ...)
+        derived from the ROM's version string and part number.  Without a
+        recognised build no layout tag is added and codeword patches stay
+        NOT_APPLICABLE (review A7)."""
+        prof = self.with_part_number(ecu_id.vmecuhn)
+        tag = layout_tag(codeword_layout(ecu_id.version_string, ecu_id.vmecuhn))
+        if tag and tag not in prof.platforms:
+            prof = replace(prof, platforms=prof.platforms | {tag})
+        return prof
+
+    @property
+    def codeword_layout(self) -> Optional[str]:
+        from .codewords import layout_from_tags
+        return layout_from_tags(self.platforms)
 
     def patch_applies(self, patch_or_induction=None,
                       lambda_req=None, fuel_req=None, family_req=None) -> bool:
@@ -689,10 +706,11 @@ def detect_rom_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
     Use this when the profile will drive patch filtering, so part-number-gated
     patches are offered on the ECU they were written for.
     """
-    return detect_profile(ecu_id, dpp).with_part_number(ecu_id.vmecuhn)
+    return detect_profile(ecu_id, dpp).with_rom_identity(ecu_id)
 
 
-def get_profile(part_number: str) -> ROMProfile:
-    """Profile for a part number, tagged with it (see detect_rom_profile)."""
-    ecu = ECUIdentity(vmecuhn=part_number)
+def get_profile(part_number: str, version_string: str = "") -> ROMProfile:
+    """Profile for a part number (and optionally its version string, which
+    is what selects the codeword layout), tagged like detect_rom_profile."""
+    ecu = ECUIdentity(vmecuhn=part_number, version_string=version_string)
     return detect_rom_profile(ecu, DPPValues())
