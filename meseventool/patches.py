@@ -432,6 +432,15 @@ class FixedAddressPatchDef:
     # shown as modified (review B9).  Elsewhere the value means PATCHED.
     factory_off:      tuple = ()
     factory_off_ecus: tuple = ()
+    # Codeword patches: the byte lives at a different address per software
+    # build (meseventool.codewords).  ``codeword`` names it, ``layouts`` lists
+    # the layouts this entry is validated on, and the address comes from
+    # codewords.LAYOUTS[layout][codeword].  ``fixed_addr`` then only documents
+    # the primary layout's address.  A profile without a recognised layout tag
+    # makes the patch NOT_APPLICABLE (review A7).
+    codeword:         str   = ""
+    layouts:          tuple = ()
+    layout_stock:     dict  = field(default_factory=dict)   # layout → stock bytes
 
     # Stub fields for compatibility with PatchDef callers
     requires_induction: list = field(default_factory=list)
@@ -446,6 +455,21 @@ class FixedAddressPatchDef:
         tags = getattr(profile, 'platforms', set()) or set()
         return any(t in tags for t in self.factory_off_ecus)
 
+    def resolve(self, profile=None):
+        """(address, stock_bytes) for this ROM, or (None, reason)."""
+        if not self.codeword:
+            return self.fixed_addr, self.stock_bytes
+        from .codewords import layout_from_tags, address
+        layout = layout_from_tags(getattr(profile, 'platforms', set()) or set())
+        if layout is None:
+            return None, "N/A: codeword layout unknown for this ROM build"
+        if layout not in self.layouts:
+            return None, f"N/A: not validated on the '{layout}' codeword layout"
+        addr = address(layout, self.codeword)
+        if addr is None:
+            return None, f"N/A: {self.codeword} does not exist in the '{layout}' layout"
+        return addr, self.layout_stock.get(layout, self.stock_bytes)
+
     def detect(self, rom: ROMImage,
                searcher=None, profile=None) -> 'PatchResult':
         if not self.check_applicable(profile):
@@ -457,12 +481,14 @@ class FixedAddressPatchDef:
             return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
                                f"N/A: fixed address only valid on a {self.rom_size // 1024} KB image")
 
-        addr = self.fixed_addr
-        if addr + len(self.stock_bytes) > rom.size:
+        addr, stock = self.resolve(profile)
+        if addr is None:
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0, stock)
+        if addr + len(stock) > rom.size:
             return PatchResult(self, PatchState.MISSING, 0, "Address outside ROM")
 
-        current = bytes(rom.data[addr : addr + len(self.stock_bytes)])
-        if current == self.stock_bytes:
+        current = bytes(rom.data[addr : addr + len(stock)])
+        if current == stock:
             return PatchResult(self, PatchState.STOCK,   addr, "Stock")
         elif current in self.factory_off and self._factory_off_ecu(profile):
             return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
@@ -484,7 +510,15 @@ class FixedAddressPatchDef:
         if result.addr == 0 or result.state in (PatchState.MISSING,
                                                   PatchState.NOT_APPLICABLE):
             return False
-        rom.write(result.addr, self.stock_bytes)
+        stock = self.stock_bytes
+        if self.codeword and self.layout_stock:
+            # The stock value can differ per layout: pick the one whose
+            # address matches where this result was detected.
+            from .codewords import LAYOUTS
+            for layout, override in self.layout_stock.items():
+                if LAYOUTS.get(layout, {}).get(self.codeword) == result.addr:
+                    stock = override
+        rom.write(result.addr, stock)
         return True
 
     def __repr__(self) -> str:
@@ -1266,6 +1300,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "block pre-padding in 4B0906018 vs 06A906032."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181B0,
+        codeword      = "CDSLS",
+        layouts       = ('4b0',),
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1309,6 +1345,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "fw4013 (RN/LP/SL), fw4012 (4B0906018CM)."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181B0,
+        codeword      = "CDSLS",
+        layouts       = ('06a',),      # 4b0 builds use the 4B0906018-specific entry
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1338,6 +1376,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "fw4013 (RN/LP/SL), fw4012 (4B0906018CM)."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181B2,
+        codeword      = "CDTES",
+        layouts       = ('06a',),      # 4b0 builds use the 4B0906018-specific entry
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1402,7 +1442,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "Anchor FF FF FF FF 00 00 01 01 at 0x018190 appears exactly once "
                          "in every tested 1MB ME7 file. Offset 26 from anchor = CDLSH. "
                          "Front O2 codewords at other offsets are untouched."),
-        applies_to    = {"me7.1x", "2.7t"},
+        applies_to    = {"2.7t", "cw_me71"},   # anchor+26 is CDLSH only in this layout
     ),
 
 
@@ -1475,6 +1515,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "catalyst is removed."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181A1,
+        codeword      = "CDHSVE",
+        layouts       = ('4b0',),
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1491,6 +1533,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "0x00 here, so this patch is specific to the 4B0 family)."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181A3,
+        codeword      = "CDKVS",
+        layouts       = ('4b0',),
         stock_bytes = bytes([0x03]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1509,6 +1553,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                        "so the anchor-based EVAP patch does not match."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181B2,
+        codeword      = "CDTES",
+        layouts       = ('4b0',),
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
@@ -1520,13 +1566,15 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # ── Universal codeword block patches (fixed addresses, stable across all ME7) ──
 
     FixedAddressPatchDef(
-        name          = "Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)",
+        name          = "Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)",
         description   = ("Disables the rear (post-cat) O2 sensor heater diagnosis by "
                          "setting CDLSH=0 at fixed address 0x0181AA. Prevents heater "
                          "fault codes when rear O2 sensor is removed. Address is stable "
                          "across all ME7.1, ME7.1.1, and ME7.5 variants."),
         category      = PatchCategory.EMISSIONS,
         fixed_addr    = 0x0181AA,
+        codeword      = "CDLSH",
+        layouts       = ('me71', '4b0', '06a', 'me711'),
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
@@ -1538,13 +1586,15 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     ),
 
     FixedAddressPatchDef(
-        name          = "Rear O2 Interchange Diagnosis Disable — CDLSHV (universal ME7)",
+        name          = "Rear O2 Interchange Diagnosis Disable — CDLSHV (ME7, per-build address)",
         description   = ("Disables the rear O2 sensor interchange / switching "
                          "diagnosis by setting CDLSHV=0 at 0x0181AB. Prevents "
                          "P0141/P0161 (heater performance) and interchange faults "
                          "when rear O2 is removed. Apply together with CDLSH and CDLSV."),
         category      = PatchCategory.EMISSIONS,
         fixed_addr    = 0x0181AB,
+        codeword      = "CDLSHV",
+        layouts       = ('me71', '4b0', 'me711'),
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
@@ -1555,13 +1605,15 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     ),
 
     FixedAddressPatchDef(
-        name          = "Rear O2 Voltage Diagnosis Disable — CDLSV (universal ME7)",
+        name          = "Rear O2 Voltage Diagnosis Disable — CDLSV (ME7, per-build address)",
         description   = ("Disables rear O2 sensor voltage / activity diagnosis by "
                          "setting CDLSV=0 at 0x0181AC. Prevents P0136/P0156 (O2 "
                          "sensor circuit) faults when rear O2 is removed. "
                          "Third byte of the standard rear O2 full-delete trio."),
         category      = PatchCategory.EMISSIONS,
         fixed_addr    = 0x0181AC,
+        codeword      = "CDLSV",
+        layouts       = ('me71', '4b0', '06a', 'me711'),
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
@@ -1572,13 +1624,15 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     ),
 
     FixedAddressPatchDef(
-        name          = "Catalyst Monitor Disable — CDKAT (universal ME7)",
+        name          = "Catalyst Monitor Disable — CDKAT (ME7, per-build address)",
         description   = ("Disables catalyst efficiency monitoring by setting CDKAT=0 "
                          "at fixed address 0x0181A2. Prevents P0420/P0430 catalyst "
                          "efficiency codes when cat is removed or replaced with "
                          "high-flow unit. Address stable across all ME7 families."),
         category      = PatchCategory.EMISSIONS,
         fixed_addr    = 0x0181A2,
+        codeword      = "CDKAT",
+        layouts       = ('me71', '4b0', '06a', 'me711'),
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
@@ -1597,10 +1651,12 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "is physically removed. Apply alongside the MAF Delete patch."),
         category      = PatchCategory.FUELLING,
         fixed_addr    = 0x01819C,
+        codeword      = "CDEHFM",
+        layouts       = ('06a', '4b0'),
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
-        factory_off   = (bytes([0x00]),),   # these ECUs ship 0x00: nothing to do
-        factory_off_ecus = ("06a906032dl", "06a906032rn", "06a906032lp", "06a906032hn"),
+        factory_off   = (bytes([0x00]),),   # 06a-layout builds ship 0x00: nothing to do
+        factory_off_ecus = ("cw_06a",),
         confidence    = "CONFIRMED",
         notes         = ("STOCK=0x00 (already disabled) in DL/RN/LP stock ROMs — "
                          "these ECUs do not need this patch. "
@@ -1624,10 +1680,16 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "and do not need this patch."),
         category      = PatchCategory.DIAGNOSTICS,
         fixed_addr    = 0x0181AF,
+        codeword      = "CDNWS",
+        layouts       = ('me71', 'me711'),
+        layout_stock  = {'me711': b'\x03'},
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
-        notes         = ("STOCK=0x01 confirmed in: 39/57 2.7T corpus files (late 8D/4B/4Z7), "
+        notes         = ("me71 layout: CDNWS at 0x0181AF, stock 0x01. me711 layout (4Z7 N+, "
+                         "4D1, RS4 K/Q): CDNWS at 0x0181AD, stock 0x03 (0x0181AF is CDTANKL "
+                         "there; earlier notes read that byte). "
+                         "STOCK=0x01 confirmed in: 39/57 2.7T corpus files (late 8D/4B/4Z7), "
                          "VR6 R32 022EG/022GE fw6432, Touareg 022FT C1103A, V8 fw8000 (4D0907558/559G). "
                          "Already 0x00 in: early 8D0907551A-F (pre-VVT), 4D1907558xx RS4, "
                          "V8 fw8001 559E, S4 B7 C1105B. "
@@ -1649,6 +1711,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "Engines WITHOUT VVT (do not need this): AEB, AGU, AWD, APH, ATW."),
         category      = PatchCategory.DIAGNOSTICS,
         fixed_addr    = 0x0181AF,
+        codeword      = "CDNWS",
+        layouts       = ('06a',),
         stock_bytes   = bytes([0x03]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",
@@ -1673,6 +1737,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "emissions hardware on this platform."),
         category      = PatchCategory.DIAGNOSTICS,
         fixed_addr    = 0x0181AF,
+        codeword      = "CDNWS",
+        layouts       = ('4b0',),
         stock_bytes   = bytes([0x02]),
         patch_bytes   = bytes([0x00]),
         confidence    = "CONFIRMED",

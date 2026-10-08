@@ -43,10 +43,11 @@ class TestFixedAddressNeeds1MB:
             assert not rom.is_modified
 
     def test_applicable_on_1mb(self):
-        p = _patch("Rear O2 Heater Diagnosis Disable — CDLSH (universal")
+        p = _patch("Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build")
         rom = ROMImage(data=bytearray([0xAA]) * FIXED_ADDR_ROM_SIZE)
         rom.data[p.fixed_addr] = p.stock_bytes[0]
-        assert p.detect(rom).state == PatchState.STOCK
+        prof = get_profile("8D0907551M", "40/1/ME7.1/5/6005.01")   # me71 layout
+        assert p.detect(rom, profile=prof).state == PatchState.STOCK
 
     def test_agu_profile_is_256k(self):
         assert PROFILE_AGU_ME71.rom_size == 0x40000
@@ -60,15 +61,14 @@ class TestFixedAddressNeeds1MB:
 
 class TestCodewordNamesConsistent:
     def test_same_address_same_codeword(self):
-        """Two entries at one fixed address must name the same codeword."""
-        import re
-        by_addr = {}
-        for p in _fixed():
-            m = re.search(r"\b(C[DW][A-Z0-9]+)\b", p.name)
-            if m:
-                by_addr.setdefault(p.fixed_addr, set()).add(m.group(1))
-        clashes = {hex(a): n for a, n in by_addr.items() if len(n) > 1}
-        assert not clashes, clashes
+        """Within one layout, one address must mean one codeword."""
+        from meseventool.codewords import LAYOUTS
+        for layout, table in LAYOUTS.items():
+            by_addr = {}
+            for cw, addr in table.items():
+                by_addr.setdefault(addr, set()).add(cw)
+            clashes = {hex(a): n for a, n in by_addr.items() if len(n) > 1}
+            assert not clashes, (layout, clashes)
 
     def test_4b0_entries_match_xdf_map(self):
         names = {p.fixed_addr: p.name for p in _fixed() if "4b0906018" in p.applies_to}
@@ -82,15 +82,15 @@ class TestCodewordNamesConsistent:
 class TestCDNWSFamilies:
     def test_06a_entry_only_on_transverse(self):
         p = _patch("VVT Cam Position Monitor Disable — CDNWS (ME7.5 1.8T AWW")
-        assert get_profile("06A906032DL").patch_applies(p)
-        assert not get_profile("4B0906018CM").patch_applies(p)
-        assert not get_profile("8E0906018B").patch_applies(p)
+        assert get_profile("06A906032DL", "40/1/ME7.5/3/4019.20").patch_applies(p)
+        assert not get_profile("4B0906018CM", "40/1/ME7.5/3/4012.31").patch_applies(p)
+        assert not get_profile("8E0906018B", "40/1/ME7.5/5/4016.32").patch_applies(p)
 
     def test_4b0_entry_only_on_longitudinal(self):
         p = _patch("VVT Cam Position Monitor Disable — CDNWS (4B0906018CM")
-        assert get_profile("4B0906018CM").patch_applies(p)
-        assert get_profile("8E0909518AK").patch_applies(p)
-        assert not get_profile("06A906032DL").patch_applies(p)
+        assert get_profile("4B0906018CM", "40/1/ME7.5/3/4012.31").patch_applies(p)
+        assert get_profile("8E0909518AK", "40/1/ME7.5/5/4012.31").patch_applies(p)
+        assert not get_profile("06A906032DL", "40/1/ME7.5/3/4019.20").patch_applies(p)
 
     def test_exactly_one_cdnws_applies_per_me75_ecu(self):
         both = [_patch("VVT Cam Position Monitor Disable — CDNWS (ME7.5 1.8T AWW"),
@@ -141,11 +141,11 @@ class TestFactoryOff:
         p = _patch("MAF Sensor Diagnosis Disable — CDEHFM")
         rom = ROMImage(data=bytearray([0xAA]) * FIXED_ADDR_ROM_SIZE)
         rom.data[p.fixed_addr] = 0x00
-        r = p.detect(rom, profile=get_profile("06A906032DL"))
+        r = p.detect(rom, profile=get_profile("06A906032DL", "40/1/ME7.5/3/4019.20"))
         assert r.state == PatchState.NOT_APPLICABLE
         assert not p.apply(rom, r)
         rom.data[p.fixed_addr] = 0x01
-        assert p.detect(rom, profile=get_profile("06A906032SL")).state == PatchState.STOCK
+        assert p.detect(rom, profile=get_profile("4B0906018CM", "40/1/ME7.5/3/4012.31")).state == PatchState.STOCK
 
 
 # ── C1 / C2 / C3: profile reachability and ME7.1.1 detection ──────────────────

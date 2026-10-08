@@ -1,5 +1,13 @@
 """Tests for patch detection/apply/revert — uses synthetic ROMs."""
 from tests.rom_corpus import find_rom
+
+
+def _rom_profile(rom):
+    """The profile detect_rom_profile() gives this ROM (part number + build)."""
+    from meseventool.ecu_id import identify
+    from meseventool.dpp import extract_dpp
+    from meseventool.profiles import detect_rom_profile
+    return detect_rom_profile(identify(rom), extract_dpp(rom))
 import pytest
 from meseventool.rom import ROMImage
 from meseventool.needle import MASK, XXXX
@@ -1227,7 +1235,7 @@ class TestRealROM4B0906018(unittest.TestCase):
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
         # These patches are gated on the 4B0906018 part number, so they need
         # a profile tagged with it
-        profile = get_profile("4B0906018CM")
+        profile = get_profile("4B0906018CM", "40/1/ME7.5/3/4012.31")
         return p.detect(rom, profile=profile)
 
     # ── CDHSVE (0x0181A1; was mislabelled "CDKAT" — review B2) ──────────
@@ -1246,13 +1254,13 @@ class TestRealROM4B0906018(unittest.TestCase):
     # ── CDKAT (0x0181A2) is the universal entry; it must cover 18CM ───────
     def test_cdkat_universal_stock_in_18cm(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          self._load('18CM.Bin'))
         assert r.state == PatchState.STOCK and r.addr == 0x0181A2
 
     def test_cdkat_universal_patched_in_18cm_uni2(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          self._load('170hp_018cm_PassatUNI2.bin'))
         assert r.state == PatchState.PATCHED
 
@@ -1261,7 +1269,7 @@ class TestRealROM4B0906018(unittest.TestCase):
         from meseventool.patches import FixedAddressPatchDef
         at_a2 = [p for p in ALL_PATCHES
                  if isinstance(p, FixedAddressPatchDef) and p.fixed_addr == 0x0181A2]
-        assert [p.name for p in at_a2] == ['Catalyst Monitor Disable — CDKAT (universal ME7)']
+        assert [p.name for p in at_a2] == ['Catalyst Monitor Disable — CDKAT (ME7, per-build address)']
 
     # ── CDKVS (0x0181A3; was "CDKVS2") ───────────────────────────────────
     def test_cdkvs_stock_in_18cm(self):
@@ -1285,7 +1293,7 @@ class TestRealROM4B0906018(unittest.TestCase):
         p = next(p for p in ALL_PATCHES
                  if p.name == 'Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)')
         rom = self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
-        assert p.detect(rom, profile=get_profile("06A906032DL")).state == PatchState.NOT_APPLICABLE
+        assert p.detect(rom, profile=get_profile("06A906032DL", "40/1/ME7.5/3/4019.20")).state == PatchState.NOT_APPLICABLE
 
     # ── EVAP ─────────────────────────────────────────────────────────────
     def test_evap_stock_in_18cm(self):
@@ -1919,67 +1927,72 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
 
     def _detect(self, patch_name, fname):
         from meseventool.patches import ALL_PATCHES
+        from meseventool.ecu_id import identify
+        from meseventool.dpp import extract_dpp
+        from meseventool.profiles import detect_rom_profile
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
-        return p.detect(rom)
+        # codeword patches resolve their address from the ROM's build
+        return p.detect(rom, profile=detect_rom_profile(identify(rom), extract_dpp(rom)))
 
     # CDLSH ────────────────────────────────────────────────────────────────
     def test_cdlsh_stock_dl(self):
         from meseventool.patches import PatchState
-        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)',
                          '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
         assert r.state == PatchState.STOCK
 
     def test_cdlsh_stock_rn(self):
         from meseventool.patches import PatchState
-        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)',
                          '1773719274810_06A906032RN.bin')
         assert r.state == PatchState.STOCK
 
-    def test_cdlsh_stock_sl(self):
+    def test_cdlsh_withheld_on_sl(self):
+        """SL (build X505R) has no verified codeword layout (review A7)."""
         from meseventool.patches import PatchState
-        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)',
                          '1773719274817_032sl_auto_revo_1.bin')
-        assert r.state == PatchState.STOCK
+        assert r.state == PatchState.NOT_APPLICABLE
 
     def test_cdlsh_stock_8d(self):
         from meseventool.patches import PatchState
-        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)',
+        r = self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)',
                          '8D0907551M-0001.bin')
         assert r.state == PatchState.STOCK
 
     # CDKAT universal ──────────────────────────────────────────────────────
     def test_cdkat_universal_stock_dl(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
         assert r.state == PatchState.STOCK
 
     def test_cdkat_universal_stock_rn(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          '1773719274810_06A906032RN.bin')
         assert r.state == PatchState.STOCK
 
     def test_cdkat_universal_stock_8d(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          '8D0907551M-0001.bin')
         assert r.state == PatchState.STOCK
 
     def test_cdkat_universal_patched_in_20th_anni_pl(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          '1773719274814_20th_180hp_032pl.bin')
         assert r.state == PatchState.PATCHED
 
     # CDEHFM ───────────────────────────────────────────────────────────────
-    def test_cdehfm_stock_sl_dsg(self):
+    def test_cdehfm_withheld_on_sl_dsg(self):
+        # SL (build X505R) has a different, unverified block layout: withheld (review A7)
         from meseventool.patches import PatchState
-        # SL DSG has CDEHFM=0x01 in stock — needs patching for MAF Delete
         r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
                          '1773719274817_032sl_auto_revo_1.bin')
-        assert r.state == PatchState.STOCK
+        assert r.state == PatchState.NOT_APPLICABLE
 
     def test_cdehfm_stock_18cm(self):
         from meseventool.patches import PatchState
@@ -1995,7 +2008,7 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
         p = next(p for p in ALL_PATCHES
                  if p.name == 'MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)')
         rom = self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
-        r = p.detect(rom, profile=get_profile("06A906032DL"))
+        r = p.detect(rom, profile=get_profile("06A906032DL", "40/1/ME7.5/3/4019.20"))
         assert r.state == PatchState.NOT_APPLICABLE
         assert 'factory' in r.detail
 
@@ -2020,7 +2033,7 @@ class TestCDNWSVVTDisable(unittest.TestCase):
         from meseventool.patches import ALL_PATCHES
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if 'CDNWS' in p.name)
-        return p.detect(rom)
+        return p.detect(rom, profile=_rom_profile(rom))
 
     # 2.7T late — CDNWS=0x01, patchable
     def test_stock_4b0907551aa(self):
@@ -2034,30 +2047,34 @@ class TestCDNWSVVTDisable(unittest.TestCase):
     # Early 2.7T — CDNWS=0x00, already disabled
     def test_early_8d_already_off(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('8D0907551A-0002.bin').state, PatchState.PATCHED)
+        # early 42/1/ME7.1 build: no verified codeword layout (review A7)
+        self.assertEqual(self._detect('8D0907551A-0002.bin').state, PatchState.NOT_APPLICABLE)
 
     # V8 fw8000 — CDNWS=0x01, patchable
     def test_stock_s8_4d559g_fw8000(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('4D0907559G_S8_fw8000.bin').state, PatchState.STOCK)
+        # fw8000 V8 builds have no verified codeword layout
+        self.assertEqual(self._detect('4D0907559G_S8_fw8000.bin').state, PatchState.NOT_APPLICABLE)
 
     def test_stock_s6_4d558_fw8000(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('4D0907558_S6_fw8000.bin').state, PatchState.STOCK)
+        self.assertEqual(self._detect('4D0907558_S6_fw8000.bin').state, PatchState.NOT_APPLICABLE)
 
     # V8 fw8001 — already 0x00
     def test_fw8001_already_off(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('4D0907559E_S6_fw8001.bin').state, PatchState.PATCHED)
+        # me711 layout: CDNWS is 0x02 at 0x0181AD on 559E (neither the 0x03 stock nor 0x00)
+        self.assertEqual(self._detect('4D0907559E_S6_fw8001.bin').state, PatchState.UNKNOWN)
 
     # R32/TT 3.2 fw6432 — CDNWS=0x01, patchable
     def test_stock_r32_022eg(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('022906032EG_Golf4_R32_3.2_fw6432.bin').state, PatchState.STOCK)
+        # VR6 builds have no verified codeword layout
+        self.assertEqual(self._detect('022906032EG_Golf4_R32_3.2_fw6432.bin').state, PatchState.NOT_APPLICABLE)
 
     def test_stock_tt32_022ge(self):
         from meseventool.patches import PatchState
-        self.assertEqual(self._detect('022906032GE_TT_3.2_fw6432.bin').state, PatchState.STOCK)
+        self.assertEqual(self._detect('022906032GE_TT_3.2_fw6432.bin').state, PatchState.NOT_APPLICABLE)
 
 
 class TestAFPVR6Family(unittest.TestCase):
@@ -2077,9 +2094,13 @@ class TestAFPVR6Family(unittest.TestCase):
 
     def _detect(self, patch_name, fname):
         from meseventool.patches import ALL_PATCHES
+        from meseventool.ecu_id import identify
+        from meseventool.dpp import extract_dpp
+        from meseventool.profiles import detect_rom_profile
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
-        return p.detect(rom)
+        # codeword patches resolve their address from the ROM's build
+        return p.detect(rom, profile=detect_rom_profile(identify(rom), extract_dpp(rom)))
 
     # KRMXN confirmed STOCK on AFP
     def test_krmxn_stock_afp_golf_r(self):
@@ -2110,7 +2131,7 @@ class TestAFPVR6Family(unittest.TestCase):
     # CDKAT on AFP Jetta (Q) — already patched in this file
     def test_cdkat_patched_afp_jetta(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+        r = self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)',
                          '021906018Q_Jetta_AFP_12V_fw6228.bin')
         self.assertEqual(r.state, PatchState.PATCHED)
 
@@ -2132,9 +2153,13 @@ class Test022906032CSFamily(unittest.TestCase):
 
     def _detect(self, patch_name, fname):
         from meseventool.patches import ALL_PATCHES
+        from meseventool.ecu_id import identify
+        from meseventool.dpp import extract_dpp
+        from meseventool.profiles import detect_rom_profile
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if p.name == patch_name)
-        return p.detect(rom)
+        # codeword patches resolve their address from the ROM's build
+        return p.detect(rom, profile=detect_rom_profile(identify(rom), extract_dpp(rom)))
 
     # CDNWS=0x01 on 022CS — VVT monitored, patchable
     def test_cdnws_stock_022cs_0006(self):
@@ -2193,14 +2218,14 @@ class TestAFP021906018M(unittest.TestCase):
         from meseventool.patches import PatchState
         # Very early AFP (1999) — cat monitor was factory-disabled on this variant
         self.assertEqual(
-            self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)').state,
+            self._detect('Catalyst Monitor Disable — CDKAT (ME7, per-build address)').state,
             PatchState.PATCHED)
 
     def test_cdlsh_stock(self):
         from meseventool.patches import PatchState
         # Rear O2 heater diag — stock on M (unlike Q which has it pre-patched)
         self.assertEqual(
-            self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (universal ME7)').state,
+            self._detect('Rear O2 Heater Diagnosis Disable — CDLSH (ME7, per-build address)').state,
             PatchState.STOCK)
 
 
@@ -2222,7 +2247,7 @@ class TestCDNWSME75VVTDisable(unittest.TestCase):
         from meseventool.patches import ALL_PATCHES
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if 'CDNWS' in p.name and 'ME7.5' in p.name)
-        return p.detect(rom)
+        return p.detect(rom, profile=_rom_profile(rom))
 
     # VVT-equipped: STOCK=0x03 on all these
     def test_stock_dl_aww(self):
@@ -2256,11 +2281,12 @@ class TestCDNWSME75VVTDisable(unittest.TestCase):
             PatchState.STOCK)
 
     # SL DSG has CDNWS=0x00 — shows PATCHED (already off, no solenoid on DSG variant)
-    def test_sl_already_off(self):
+    def test_sl_withheld(self):
+        # SL build X505R has no verified codeword layout (review A7)
         from meseventool.patches import PatchState
         self.assertEqual(self._detect(
             '1773719274817_032sl_auto_revo_1.bin').state,
-            PatchState.PATCHED)
+            PatchState.NOT_APPLICABLE)
 
 
 class TestCDNWS4B0906018CM(unittest.TestCase):
@@ -2280,7 +2306,7 @@ class TestCDNWS4B0906018CM(unittest.TestCase):
         from meseventool.patches import ALL_PATCHES
         rom = self._load(fname)
         p = next(p for p in ALL_PATCHES if '4B0906018CM' in p.name)
-        return p.detect(rom)
+        return p.detect(rom, profile=_rom_profile(rom))
 
     def test_stock_18cm(self):
         from meseventool.patches import PatchState

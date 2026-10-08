@@ -341,7 +341,9 @@ class TestPatches:
         for r in results:
             # Part-number-gated fixed-address patches need a profile
             if (isinstance(r.patch, FixedAddressPatchDef)
-                    and any(is_part_number_tag(t) for t in r.patch.applies_to)):
+                    and (any(is_part_number_tag(t) for t in r.patch.applies_to)
+                         or r.patch.codeword)):
+                # Part-number-gated and codeword patches need a profile
                 assert r.state == PatchState.NOT_APPLICABLE
                 continue
             assert r.state in (PatchState.MISSING, PatchState.UNKNOWN,
