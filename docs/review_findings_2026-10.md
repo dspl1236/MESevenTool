@@ -199,21 +199,30 @@ it by running code; "plausible" means it was read from the source only.
   `verify()`. (Moot until A1 is fixed, then essential.)
   *Fixed Oct 2026: Save and Save As verify first and ask before writing a
   ROM whose checksums are bad or unverified.*
-- [ ] **E2. Opening another ROM while dirty discards edits silently**
-  (`main.py:1159-1175`, confirmed).
-- [ ] **E3. Analysis exception leaves the window half-switched**
+- [x] **E2. Opening another ROM while dirty discards edits silently**
+  (`main.py:1159-1175`, confirmed). *Fixed Oct 2026: `_confirm_discard()`
+  asks Save/Discard/Cancel; Save must succeed before the new ROM loads.*
+- [x] **E3. Analysis exception leaves the window half-switched**
   (`main.py:1172-1175` vs `1222-1227`, confirmed). `self._rom/_searcher/
   _profile` are replaced before the `try`; on failure the widgets still
   describe the old ROM while Save writes the new one. Assign after success.
-- [ ] **E4. Failed patch apply leaves the checkbox out of sync**
+  *Fixed Oct 2026: analysis runs on locals and the window switches only
+  after it succeeds.*
+- [x] **E4. Failed patch apply leaves the checkbox out of sync**
   (`main.py:1297-1298`, confirmed). Call `refresh_states()` on failure.
-- [ ] **E5. `refresh_states` never updates scalar spinners; scalar writes
-  don't refresh at all** (`main.py:471-486, 1300-1310`).
-- [ ] **E6. Close accepts even when the save failed or was cancelled**
-  (`main.py:1325-1330`, confirmed). Edits are lost.
-- [ ] **E7. Save As doesn't retarget later Saves** (`rom.py:212-216`,
+  *Fixed Oct 2026: always refreshed; apply/revert exceptions are caught.*
+- [x] **E5. `refresh_states` never updates scalar spinners; scalar writes
+  don't refresh at all** (`main.py:471-486, 1300-1310`). *Fixed Oct 2026:
+  `refresh_states()` re-reads every spinner from the ROM; scalar writes call it.*
+- [x] **E6. Close accepts even when the save failed or was cancelled**
+  (`main.py:1325-1330`, confirmed). Edits are lost. *Fixed Oct 2026: close is
+  refused unless nothing is dirty, Discard was chosen, or the save succeeded.
+  The KWP monitor is stopped on close (G3).*
+- [x] **E7. Save As doesn't retarget later Saves** (`rom.py:212-216`,
   `main.py:1254-1264`, confirmed). The next Ctrl+S overwrites the original
   file, often the stock dump.
+  *Fixed Oct 2026: `ROMImage.save_as()` retargets `path` and clears the
+  modified flag; the window title and path label follow.*
 - [ ] **E8. Cell display `.2f` is coarser than the raw step** (`main.py:767,
   825-831`, confirmed for KFMIOP/KFLBTS/LAMFA). Re-committing the displayed
   text shifts the raw value by up to ±3 counts. Unedited cells round-trip
@@ -244,7 +253,7 @@ it by running code; "plausible" means it was read from the source only.
   stalls the UI each tick while KWPBridge is absent.
 - [ ] **G2.** After a drop, `_poll` builds a new `KWPClient` without
   disconnecting the old one; a client leaks per reconnect.
-- [ ] **G3.** `KWPMonitor.stop()` is never called on close.
+- [x] **G3.** `KWPMonitor.stop()` is never called on close. *Fixed Oct 2026 (in closeEvent).*
 - [ ] **G4.** `LiveValues` cell indices are hard-coded to group 0 and nothing
   maps them to ROM axis units yet.
 
