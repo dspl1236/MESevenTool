@@ -41,6 +41,39 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **A5. `rom.write()` with a negative offset inserts bytes**
   (`meseventool/rom.py:174-180`, confirmed). Only `end > size` is checked.
   Reject `offset < 0`. *Fixed Oct 2026.*
+- [ ] **A7. The "stable codeword block" is not one layout — fixed-address
+  codeword patches write the wrong byte on 06A906032 and on ME7.1.1**
+  (found 2026-10-08 from the files.s4wiki.com XDFs for 06A906032HS/LP,
+  8N0906018CB, 8D0907551M/F/G, 4Z7907551R/AA, 4D1907558; base offsets all 0;
+  cross-checked against stock bytes). `docs/me7_stable_codeword_block.md`
+  describes only the ME7.1 2.7T layout. Three layouts exist for the
+  `0x0181A0–0x0181B2` range:
+
+  | codeword | ME7.1 2.7T (8D0907551M/G, 4B0907551), 4B0906018, 8N0906018CB | 06A906032 (HS/LP XDF) | ME7.1.1 (4Z7 N+, 4D1907558, 4D0907559E) |
+  |---|---|---|---|
+  | CDKAT  | 0x1A2 | **0x1A3** (0x1A2 is CDHSVSA) | **0x1A0** |
+  | CDKVS  | 0x1A3 | 0x1A4 | 0x1A1 |
+  | CDLSH  | 0x1AA | **0x1AB** (0x1AA is CDLSA) | 0x1A8 |
+  | CDLSHV | 0x1AB | absent | 0x1A9 |
+  | CDLSV  | 0x1AC | 0x1AC | 0x1AA |
+  | CDNWS  | 0x1AF | 0x1AF | **0x1AD** (0x1AF is CDTANKL) |
+  | CDSLS  | 0x1B0 | 0x1B0 | 0x1AE |
+  | CDTES  | 0x1B2 | 0x1B2 | 0x1B0 (0x1B2 is CWADRES) |
+  | CDEHFM | 0x19C | 0x19C | 0x19A |
+
+  Stock bytes agree: late 4Z7/4D1 show CDNWS=3 at `0x1AD` and CWADRES=2 at
+  `0x1B2`; 06A files show CDNWS=3 at `0x1AF`; 18CM shows CDKVS=3 at `0x1A3`.
+  8D0907551F (RS4 B5) is a fourth layout, shifted −5. Consequences today:
+  the "universal" CDKAT entry clears CDHSVSA on 06A and CDLASH on ME7.1.1;
+  the CDLSH/CDLSHV/CDLSV trio clears CDLSA/CDLSH/CDLSV on 06A and
+  CDLSV/CDLSVV/CDMD on ME7.1.1; the ME7.1/ME7.1.1 CDNWS entry clears
+  CDTANKL on ME7.1.1; CDTES clears CWADRES on ME7.1.1. The 4B0906018
+  entries and the 2.7T ME7.1 anchors are correct. **Fix:** codeword
+  patches need a per-layout address table selected by a layout tag derived
+  from the part-number prefix (06A906032 → 06a layout; 4Z7 N+/4D1/4D0
+  ME7.1.1 → me7.1.1 layout; everything else validated → me7.1 layout),
+  and must be NOT_APPLICABLE where the layout is unknown. Until then the
+  universal entries should be gated to the layout they were validated on.
 - [x] **A6. Fallback map widths are wrong for several maps**
   (`maps.py:197-199, 292-336, 490-503`, confirmed against
   `reference/xdf_tables.json`). KFLBTS, LAMFA and KFDLULS (1.8T) and KFDLULS
