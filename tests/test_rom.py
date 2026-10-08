@@ -306,3 +306,40 @@ class TestOneMBROMNormalisation:
         assert rom.size_kb == 512
         assert rom.is_512k
         assert rom.cal_page_offset == 0x70000
+
+
+# ── Write guards (review A5, D3) ──────────────────────────────────────────────
+
+class TestWriteGuards:
+    def test_negative_offset_rejected(self):
+        """A negative slice index would insert bytes from the end."""
+        rom = make_rom(0x80000)
+        with pytest.raises(ValueError, match="negative"):
+            rom.write(-1, b'\x00')
+        assert rom.size == 0x80000
+        assert not rom.is_modified
+
+    def test_write_never_grows_rom(self):
+        rom = make_rom(0x40000)
+        with pytest.raises(ValueError):
+            rom.write(0x3FFFC, b'\x00' * 8)
+        assert rom.size == 0x40000
+
+    @pytest.mark.parametrize("fn,bad", [
+        ("write_u16_be", 0x10000), ("write_u16_le", 0x10000),
+        ("write_u16_le", -1),
+        ("write_u32_le", 0x100000000), ("write_u32_be", -1),
+    ])
+    def test_out_of_range_value_raises(self, fn, bad):
+        """Out-of-range values must not be silently masked into a wrong value."""
+        rom = make_rom()
+        with pytest.raises(ValueError, match="does not fit"):
+            getattr(rom, fn)(0x100, bad)
+        assert not rom.is_modified
+
+    def test_max_values_accepted(self):
+        rom = make_rom()
+        rom.write_u16_le(0x100, 0xFFFF)
+        rom.write_u32_be(0x200, 0xFFFFFFFF)
+        assert rom.read_u16_le(0x100) == 0xFFFF
+        assert rom.read_u32_be(0x200) == 0xFFFFFFFF

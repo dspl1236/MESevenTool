@@ -33,19 +33,22 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **A3. Fallback checksum scan is dead code** (`checksum.py:249-251`,
   confirmed). The standard-offset branch returns unconditionally, so the scan
   that would find `0x0FFFE0` never runs.
-- [ ] **A4. `MapDef.write` has no bounds check and grows the ROM**
+- [x] **A4. `MapDef.write` has no bounds check and grows the ROM**
   (`meseventool/maps.py:137-141`, confirmed). Slice-assigning past the end of
   a `bytearray` appends. A 256 KB ROM with a map at `0x3FFFC` becomes
   `0x40004` bytes; saving gives an invalid-size file. Use `rom.write()`.
-- [ ] **A5. `rom.write()` with a negative offset inserts bytes**
+  *Fixed Oct 2026: `MapDef.write` bounds-checks and goes through `rom.write()`.*
+- [x] **A5. `rom.write()` with a negative offset inserts bytes**
   (`meseventool/rom.py:174-180`, confirmed). Only `end > size` is checked.
-  Reject `offset < 0`.
-- [ ] **A6. Fallback map widths are wrong for several maps**
+  Reject `offset < 0`. *Fixed Oct 2026.*
+- [x] **A6. Fallback map widths are wrong for several maps**
   (`maps.py:197-199, 292-336, 490-503`, confirmed against
   `reference/xdf_tables.json`). KFLBTS, LAMFA and KFDLULS (1.8T) and KFDLULS
   (2.7T) are declared U16 but the XDF says U8. Reads show garbage; a write
   clobbers the bytes after the map. Hits every part number without an exact
   XDF match (e.g. 06A906032HN, every 2.7T PN except 8D0907551M/557P).
+  *Fixed Oct 2026: all four are U8; `tests/test_maps.py` now checks every
+  fallback map's width and shape against `xdf_tables.json`.*
 
 ## B. Wrong patch on the wrong ECU
 
@@ -123,9 +126,9 @@ it by running code; "plausible" means it was read from the source only.
   pair.
 - [ ] **D2. Two scalars resolve to the same byte** (`patches.py:1928` Hard Rev
   Limit alt path and `:1999` Fuel Cut Resume, confirmed). One name is wrong.
-- [ ] **D3. `write_u16/u32` silently truncate out-of-range values**
+- [x] **D3. `write_u16/u32` silently truncate out-of-range values**
   (`rom.py:182-198`, confirmed). A bad scaling result becomes a plausible
-  wrong value.
+  wrong value. *Fixed Oct 2026: `write_u16/u32` raise `ValueError` instead.*
 - [ ] **D4. `dpp1_to_file` double-corrects** (`needle.py:222-234`,
   `dpp.py:26-35`, plausible). Subtracts a page and masks; correct only
   because ME7 always has dpp0 = dpp1 − 1.

@@ -172,30 +172,41 @@ class ROMImage:
         return (d[offset] << 24) | (d[offset+1] << 16) | (d[offset+2] << 8) | d[offset+3]
 
     def write(self, offset: int, data: bytes | bytearray) -> None:
-        """Write bytes at file offset. Marks ROM as modified."""
+        """
+        Write bytes at file offset. Marks ROM as modified.
+
+        The write must lie entirely inside the image: a negative offset
+        would index from the end and a slice assignment past the end would
+        grow the bytearray, either of which silently corrupts the file.
+        """
+        if offset < 0:
+            raise ValueError(f"Write at negative offset {offset}")
         end = offset + len(data)
         if end > self.size:
             raise ValueError(f"Write at 0x{offset:X}+{len(data)} exceeds ROM size 0x{self.size:X}")
         self.data[offset:end] = data
         self._modified = True
 
+    @staticmethod
+    def _check_unsigned(value: int, bits: int) -> None:
+        if not 0 <= value < (1 << bits):
+            raise ValueError(f"Value {value} does not fit in {bits} bits")
+
     def write_u16_be(self, offset: int, value: int) -> None:
-        self.write(offset, bytes([(value >> 8) & 0xFF, value & 0xFF]))
+        self._check_unsigned(value, 16)
+        self.write(offset, value.to_bytes(2, 'big'))
 
     def write_u16_le(self, offset: int, value: int) -> None:
-        self.write(offset, bytes([value & 0xFF, (value >> 8) & 0xFF]))
+        self._check_unsigned(value, 16)
+        self.write(offset, value.to_bytes(2, 'little'))
 
     def write_u32_le(self, offset: int, value: int) -> None:
-        self.write(offset, bytes([
-             value & 0xFF,        (value >>  8) & 0xFF,
-            (value >> 16) & 0xFF, (value >> 24) & 0xFF,
-        ]))
+        self._check_unsigned(value, 32)
+        self.write(offset, value.to_bytes(4, 'little'))
 
     def write_u32_be(self, offset: int, value: int) -> None:
-        self.write(offset, bytes([
-            (value >> 24) & 0xFF, (value >> 16) & 0xFF,
-            (value >>  8) & 0xFF,  value & 0xFF,
-        ]))
+        self._check_unsigned(value, 32)
+        self.write(offset, value.to_bytes(4, 'big'))
 
     # ── Save ───────────────────────────────────────────────────────────────────
 
