@@ -333,7 +333,7 @@ class TestPatches:
                 assert len(p.stock_bytes) == len(p.patch_bytes)
 
     def test_detect_missing_when_needle_absent(self):
-        rom = make_rom(fill=0xFF)
+        rom = make_rom(size=0x100000, fill=0xFF)   # fixed addresses need a 1 MB image
         s = Searcher(rom)
         results = detect_all(rom, s)
         from meseventool.patches import FixedAddressPatchDef

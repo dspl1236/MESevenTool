@@ -397,6 +397,14 @@ class OffsetPatchDef:
         return True
 
 
+# Every fixed address in this catalogue is a flat offset into a full 1 MB
+# ME7.5 / ME7.1 flash image.  On a 256 KB ME7.1 dump (cal page at 0x30000)
+# or a 512 KB ECUFlash extract the same offset lands in code or in the wrong
+# half of the image, so fixed-address patches are never applicable there
+# (review B1).
+FIXED_ADDR_ROM_SIZE = 0x100000
+
+
 @dataclass
 class FixedAddressPatchDef:
     """Patch at a known fixed address in the ROM — no anchor search needed.
@@ -415,6 +423,15 @@ class FixedAddressPatchDef:
     confidence:    str    = "UNCONFIRMED"
     notes:         str    = ""
     applies_to:    set    = field(default_factory=set)
+    # Image size the fixed address was taken from.  A 256 KB ME7.1 dump or a
+    # 512 KB extract puts the same offset somewhere else (review B1).
+    rom_size:      int    = FIXED_ADDR_ROM_SIZE
+    # Values that equal the patched state but are factory on the ECUs named
+    # in factory_off_ecus (part-number tags).  On those ECUs the patch is
+    # reported NOT_APPLICABLE instead of PATCHED, so a stock ROM is never
+    # shown as modified (review B9).  Elsewhere the value means PATCHED.
+    factory_off:      tuple = ()
+    factory_off_ecus: tuple = ()
 
     # Stub fields for compatibility with PatchDef callers
     requires_induction: list = field(default_factory=list)
@@ -425,12 +442,20 @@ class FixedAddressPatchDef:
     def check_applicable(self, profile=None) -> bool:
         return _fixed_addr_applicable(self.applies_to, profile)
 
+    def _factory_off_ecu(self, profile) -> bool:
+        tags = getattr(profile, 'platforms', set()) or set()
+        return any(t in tags for t in self.factory_off_ecus)
+
     def detect(self, rom: ROMImage,
                searcher=None, profile=None) -> 'PatchResult':
         if not self.check_applicable(profile):
             return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
                                "N/A" if profile is not None
                                else "N/A: needs the ROM's ECU part number")
+
+        if rom.size != self.rom_size:
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
+                               f"N/A: fixed address only valid on a {self.rom_size // 1024} KB image")
 
         addr = self.fixed_addr
         if addr + len(self.stock_bytes) > rom.size:
@@ -439,6 +464,9 @@ class FixedAddressPatchDef:
         current = bytes(rom.data[addr : addr + len(self.stock_bytes)])
         if current == self.stock_bytes:
             return PatchResult(self, PatchState.STOCK,   addr, "Stock")
+        elif current in self.factory_off and self._factory_off_ecu(profile):
+            return PatchResult(self, PatchState.NOT_APPLICABLE, 0,
+                               f"N/A: already {current.hex().upper()} from the factory on this ECU")
         elif current == self.patch_bytes:
             return PatchResult(self, PatchState.PATCHED, addr, "Patched")
         else:
@@ -515,6 +543,7 @@ class FixedAddressScalarDef:
     confidence: str   = "UNCONFIRMED"
     notes:      str   = ""
     applies_to: Set[str] = field(default_factory=set)
+    rom_size:   int      = FIXED_ADDR_ROM_SIZE   # image size the address is valid for
     linked_name:  str           = ""
     linked_addr:  Optional[int] = None
     linked_scale: float         = 1.0
@@ -548,7 +577,7 @@ class FixedAddressScalarDef:
              searcher: Optional[Searcher] = None,
              profile=None) -> Optional[float]:
         """Current physical value, or None if not applicable / implausible."""
-        if not self.check_applicable(profile):
+        if not self.check_applicable(profile) or rom.size != self.rom_size:
             return None
         value = self._read_at(rom, self.fixed_addr, self.scale, self.offset_val)
         if value is None or value < self.min_val or value > self.max_val:
@@ -799,7 +828,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "but the content anchor is stable. "
                          "KRMXN rows 8-15 (65535=no limit at high RPM) are left untouched. "
                          "4D1907558 RS4/S8 V8 uses different KRMXN values — not covered."),
-        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
+        applies_to    = {"me7.1x", "2.7t"},
     ),
 
     # ── Confirmed needle patches — 2.7T/V8 corpus validated ─────────────────
@@ -959,7 +988,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "Stock block: 0f 01 05 0d fe 08 19.  "
                          "Anchor b'\x0f\x01\x05' appears exactly once per file and "
                          "never contains any patch-target byte."),
-        applies_to    = {"me7.1", "2.7t", "dual_bank"},
+        applies_to    = {"me7.1x", "2.7t", "dual_bank"},
     ),
 
     MultiOffsetPatchDef(
@@ -1373,7 +1402,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "Anchor FF FF FF FF 00 00 01 01 at 0x018190 appears exactly once "
                          "in every tested 1MB ME7 file. Offset 26 from anchor = CDLSH. "
                          "Front O2 codewords at other offsets are untouched."),
-        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
+        applies_to    = {"me7.1x", "2.7t"},
     ),
 
 
@@ -1426,56 +1455,47 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
     # Confirmed from: 18CM.Bin (stock), 170hp_018cm_PassatUNI2.bin (tuned),
     #   dpffiles_com_EVAP_no_chk.bin (EVAP+SAP delete).
 
-    # ── Catalyst + Knock Monitor Disable (CDKAT/CDKVS/CDKVS2) ────────────────
-    # CDKAT  0x0181A1: stock=0x01 — catalyst efficiency monitoring
-    # CDKVS  0x0181A2: stock=0x01 — knock sensor monitoring
-    # CDKVS2 0x0181A3: stock=0x03 — knock sensor variant (unique 0x03 in 18CM!)
-    # All three patched to 0x00 in 18CM_uni2 and dpf_evap.
-    # Anchor: the stable block preamble FF FF FF FF 00 00 01 01 at 0x018190.
-    # CDKAT is at anchor+17 (0x018190+17=0x0181A1), CDKVS at +18, CDKVS2 at +19.
+    # ── Rear O2 after-cat voltage + knock monitor (CDHSVE / CDKVS) ───────────
+    # The 4B0906018 block has the same layout as every other 1 MB ME7 image
+    # (docs/me7_stable_codeword_block.md, from the 8D0907551M XDF):
+    #   CDHSVE 0x0181A1: stock=0x01 — rear O2 (after-cat) voltage diagnosis
+    #   CDKAT  0x0181A2: stock=0x01 — catalyst efficiency (universal entry below)
+    #   CDKVS  0x0181A3: stock=0x03 on 18CM (06A has 0x00) — knock sensor monitor
+    # All three are 0x00 in 18CM_uni2 and dpf_evap.  Earlier releases labelled
+    # 0x0181A1 "CDKAT" and 0x0181A3 "CDKVS2" (review B2); fixed here.
 
     # 4B0906018 codewords use FixedAddressPatchDef: codeword block fixed at 0x018194.
     # 18CM anchor layout differs from 06A so OffsetPatchDef anchors don't work.
 
     FixedAddressPatchDef(
-        name        = "Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)",
-        description = ("Disables catalyst efficiency monitoring (P0420) by setting "
-                       "CDKAT=0 at fixed address 0x0181A1 in 4B0906018 AWM ECU."),
+        name        = "Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018 A6/Passat)",
+        description = ("Disables the rear (after-cat) O2 sensor voltage diagnosis by "
+                       "setting CDHSVE=0 at fixed address 0x0181A1 in 4B0906018 AWM "
+                       "ECUs. Tuned 18CM files clear it together with CDKAT when the "
+                       "catalyst is removed."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181A1,
         stock_bytes = bytes([0x01]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
         notes       = ("18CM stock=0x01, uni2=0x00, evap=0x00. "
-                       "Address 0x0181A1 fixed in all 4B0906018 variants."),
+                       "Catalyst monitoring itself (CDKAT, 0x0181A2) is the "
+                       "universal ME7 entry, which covers 4B0906018 too."),
         applies_to  = {"me7.5", "1.8t", "4b0906018"},
     ),
 
     FixedAddressPatchDef(
         name        = "Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)",
-        description = ("Disables knock sensor monitoring by setting CDKVS=0 "
-                       "at fixed address 0x0181A2 in 4B0906018 AWM ECU."),
-        category    = PatchCategory.EMISSIONS,
-        fixed_addr  = 0x0181A2,
-        stock_bytes = bytes([0x01]),
-        patch_bytes = bytes([0x00]),
-        confidence  = "CONFIRMED",
-        notes       = ("18CM stock=0x01, uni2=0x00, evap=0x00."),
-        applies_to  = {"me7.5", "1.8t", "4b0906018"},
-    ),
-
-    FixedAddressPatchDef(
-        name        = "Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)",
-        description = ("Disables knock sensor variant monitoring by setting CDKVS2=0 "
-                       "at fixed address 0x0181A3. Stock=0x03 in 4B0906018 (unique -- "
-                       "06A906032 already has 0x00 here so this patch won't fire there)."),
+        description = ("Disables knock sensor monitoring by setting CDKVS=0 at fixed "
+                       "address 0x0181A3. Stock=0x03 in 4B0906018 (06A906032 ships "
+                       "0x00 here, so this patch is specific to the 4B0 family)."),
         category    = PatchCategory.EMISSIONS,
         fixed_addr  = 0x0181A3,
         stock_bytes = bytes([0x03]),
         patch_bytes = bytes([0x00]),
         confidence  = "CONFIRMED",
         notes       = ("18CM stock=0x03 (not 0x01), uni2=0x00, evap=0x00. "
-                       "The 0x03 stock value is the discriminator: won't match 06A files."),
+                       "Was listed as 'CDKVS2' at 0x0181A3 before the XDF map was applied."),
         applies_to  = {"me7.5", "1.8t", "4b0906018"},
     ),
 
@@ -1579,6 +1599,8 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
         fixed_addr    = 0x01819C,
         stock_bytes   = bytes([0x01]),
         patch_bytes   = bytes([0x00]),
+        factory_off   = (bytes([0x00]),),   # these ECUs ship 0x00: nothing to do
+        factory_off_ecus = ("06a906032dl", "06a906032rn", "06a906032lp", "06a906032hn"),
         confidence    = "CONFIRMED",
         notes         = ("STOCK=0x00 (already disabled) in DL/RN/LP stock ROMs — "
                          "these ECUs do not need this patch. "
@@ -1611,7 +1633,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "V8 fw8001 559E, S4 B7 C1105B. "
                          "VR5 AQN shows 0x07 (multi-mode cam ctrl) — different semantics, "
                          "not a simple binary disable on that variant."),
-        applies_to    = {"me7.1", "me7.1.1", "2.7t"},
+        applies_to    = {"me7.1x", "2.7t"},
     ),
 
     FixedAddressPatchDef(
@@ -1637,7 +1659,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "those use the ME7.1/ME7.1.1 patch (0x01→0x00) if relevant, "
                          "but those ECUs have no cam solenoid so the patch is not needed. "
                          "DISTINCT from the ME7.1/ME7.1.1 CDNWS patch which targets 0x01."),
-        applies_to    = {"me7.5", "1.8t"},
+        applies_to    = {"me7.5", "1.8t", "transverse"},
     ),
 
     FixedAddressPatchDef(
@@ -1661,7 +1683,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "NefMoto community confirmation: 'CDNWS set to 2 on the AK file' "
                          "corroborates the 0x02 value on Passat/A6 4B platform. "
                          "Setting to 0x00 = keine Diagnose (no diagnostic) per Golf DAMOS."),
-        applies_to    = {"me7.5", "1.8t"},
+        applies_to    = {"me7.5", "1.8t", "longitudinal"},
     ),
 
 ]  # end ALL_PATCHES
@@ -1812,7 +1834,7 @@ IMMO_PATCHES: list[PatchDef] = [
         notes       = ("Confirmed needle from 4Z7907551 fw6030/6032 disassembly. "
                        "DPP1=0x0205 across all ME7.1.1 variants.  "
                        "Validation with bench test pending."),
-        applies_to  = {"me7.1"},   # applies_to covers ME7.1.1 via ecu_hw prefix check
+        applies_to  = {"me7.1.1"},
     ),
 
     # ── SKC Accept — force ECU to accept any key code ────────────────────────

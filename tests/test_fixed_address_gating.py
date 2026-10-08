@@ -25,7 +25,7 @@ from meseventool.version import __version__
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _rom(fill=0x01, size=0x40000):
+def _rom(fill=0x01, size=0x100000):
     return ROMImage(data=bytearray([fill] * size))
 
 
@@ -100,14 +100,14 @@ class TestFixedAddressGating:
 
     def test_family_profile_without_part_number_not_applicable(self):
         rom = _rom()
-        p = _patch("Catalyst Monitor Disable CDKAT (4B0906018")
+        p = _patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018")
         assert p.detect(rom, profile=PROFILE_06B).state == PatchState.NOT_APPLICABLE
 
     def test_matching_part_number_applies(self):
         """Previously hidden in the GUI even on the ECU it was written for."""
         rom = _rom()
         prof = detect_rom_profile(ECUIdentity(vmecuhn="4B0906018CM"), DPPValues())
-        p = _patch("Catalyst Monitor Disable CDKAT (4B0906018")
+        p = _patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018")
         r = p.detect(rom, profile=prof)
         assert r.state == PatchState.STOCK
         assert prof.patch_applies(p)
@@ -128,7 +128,7 @@ class TestFixedAddressGating:
     def test_base_part_number_tag_matches_suffixed_ecu(self):
         """4B0906018 patches are gated on the 9-char base; a CM ROM must match."""
         rom = ROMImage(data=bytearray(0x100000))
-        p = _patch("Catalyst Monitor Disable CDKAT (4B0906018")
+        p = _patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018")
         rom.data[p.fixed_addr] = p.stock_bytes[0]
         prof = PROFILE_06B.with_part_number("4B0906018CM")
         assert p.detect(rom, profile=prof).state == PatchState.STOCK
@@ -151,6 +151,7 @@ def _scalar():
         fixed_addr=0x0693A, size=2, big_endian=True, scale=40.0, unit="RPM",
         min_val=4000.0, max_val=9000.0,
         applies_to={"me7.1", "1.8t", "06a906018cg"},
+        rom_size=0x40000,
         linked_name="NMAXF", linked_addr=0x069EC,
         linked_scale=0.25, linked_delta=300.0)
 
@@ -162,7 +163,7 @@ class TestFixedAddressScalar:
 
     def _rom_with_raw(self, raw, nmaxf_raw=None):
         """Rev-limit raw count (×40 RPM); linked value defaults to +300 RPM."""
-        rom = _rom(0x00)
+        rom = _rom(0x00, size=0x40000)   # AGU ME7.1: 256 KB image
         s = _scalar()
         if nmaxf_raw is None:
             nmaxf_raw = int((raw * 40 + 300) / 0.25)
@@ -273,4 +274,4 @@ class TestUnknownProfile:
         from meseventool.profiles import get_profile
         prof = get_profile("4B0906018CM")
         assert {"4b0906018cm", "4b0906018"} <= prof.platforms
-        assert prof.patch_applies(_patch("Catalyst Monitor Disable CDKAT (4B0906018"))
+        assert prof.patch_applies(_patch("Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018"))

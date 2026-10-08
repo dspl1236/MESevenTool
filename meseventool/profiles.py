@@ -98,6 +98,8 @@ class ROMProfile:
         auto.add(self.o2_system)            # "narrowband" or "wideband"
         auto.add(self.fuel_system)          # "mpi", "fsi", "tfsi"
         auto.add(self.ecu_hw.lower())       # "me7.5", "me7.1", etc.
+        if self.ecu_hw.upper().startswith("ME7.1"):
+            auto.add("me7.1x")              # ME7.1 or ME7.1.1 (shared C167 codebase)
         auto.add(self.maf_type)             # "bosch_hfm5" or "hitachi"
         if self.dual_bank:
             auto.add("dual_bank")
@@ -224,15 +226,16 @@ class ROMProfile:
 # automatically by __post_init__.
 
 PROFILE_AWP = ROMProfile(
-    name          = "ME7.5 — 1.8T 06A family (AWP/AWW/AWD/AUM/AUQ/BAM/APH/AWV/AJQ)",
+    name          = "ME7.5 — 1.8T 06A family (AWP/AWW/AWD/AUM/AUQ/AMU/BAM/APH/AWV/AJQ)",
     description   = "06A-906-032 transverse family — the most common ME7.5 platform.  "
                     "Golf IV, Jetta IV, New Beetle, TT 8N, A3 8L, A4 B5.  "
                     "Narrowband O2.  Port injection.  512 KB ROM.  "
                     "CL and CM are transmission variants of AWD — same ROM layout.  "
                     "DL/DM/GH are AWW variants.  8N0/1C0 prefixes are TT/Beetle Turbo S.",
-    part_prefixes = ["06A906032", "8N0906018", "1C0906032"],
+    part_prefixes = ["06A906032", "8N0906018", "8L0906018", "1C0906032"],
     rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
+    platforms     = {"transverse"},
     variants      = [
         # Golf/Jetta (transverse)
         "AWP 1.8T 180hp",   # 2002+ Golf/Jetta (primary US target)
@@ -241,6 +244,9 @@ PROFILE_AWP = ROMProfile(
         "AUM 1.8T 150hp",   # various markets
         "AUQ 1.8T 180hp",   # various markets
         "BAM 1.8T 190hp",   # TT Roadster / S3
+        "AMU 1.8T 225hp",   # TT Quattro 225 / S3 8L (8N0906018)
+        "APX 1.8T 225hp",   # TT Quattro 225 early
+        "BFV 1.8T 225hp",   # TT Quattro 225 late
         "AVC 1.8T 150hp",
         "AZG 1.8T 150hp",
         "AGN 1.8T 125hp",
@@ -263,40 +269,17 @@ PROFILE_AWP = ROMProfile(
                     "PassatWorld ECU list 2000-2002 US market validated against this profile.",
 )
 
-PROFILE_AMU = ROMProfile(
-    name          = "ME7.5 — 1.8T 225hp (AMU/APX/BFV)",
-    description   = "High-power 225hp 1.8T.  Audi TT Quattro 225, S3 8L.  "
-                    "Narrowband O2.  Port injection.  Higher base boost.",
-    part_prefixes = ["06A906032", "8N0906018"],
-    rom_size      = 0x100000,
-    ecu_hw        = "ME7.5",
-    variants      = ["AMU 1.8T 225hp", "APX 1.8T 225hp", "BFV 1.8T 225hp"],
-    dpp1_min      = 0x01F8,
-    dpp1_max      = 0x0208,
-    induction     = "turbo",
-    o2_system     = "narrowband",
-    fuel_system   = "mpi",
-)
-
-PROFILE_AUQ = ROMProfile(
-    name          = "ME7.5 — 1.8T 180hp Roadster (AUQ)",
-    description   = "AUQ for TT Roadster 8N and some A4 B6.  NB O2.  MPI.",
-    part_prefixes = ["06A906032", "8N0906032"],
-    rom_size      = 0x100000,
-    ecu_hw        = "ME7.5",
-    variants      = ["AUQ 1.8T 180hp"],
-    dpp1_min      = 0x01F5,
-    dpp1_max      = 0x0205,
-    induction     = "turbo",
-    o2_system     = "narrowband",
-    fuel_system   = "mpi",
-)
+# AMU/APX/BFV (225hp) and AUQ share the 06A906032 / 8N0906018 prefixes with
+# PROFILE_AWP, so they were never reachable as separate profiles (review C1).
+# Their variants live in PROFILE_AWP; the names stay as aliases.
+PROFILE_AMU = PROFILE_AWP
+PROFILE_AUQ = PROFILE_AWP
 
 PROFILE_AGU_ME71 = ROMProfile(
     name          = "ME7.1 — 1.8T 150hp (AGU/AEB/ANB)",
     description   = "Earlier ME7.1 platform: A3 8L, Golf IV, Passat B5.  "
                     "256 KB ROM — cal page at 0x30000.  NB O2.  MPI.",
-    part_prefixes = ["06A906018", "8D0906018", "8D0907557", "8D0907559", "8D0997557", "8D0997559"],
+    part_prefixes = ["06A906018", "8D0906018", "8D0907557", "8D0907558", "8D0907559", "8D0997557", "8D0997559"],
     rom_size      = 0x40000,
     ecu_hw        = "ME7.1",
     variants      = ["AGU 1.8T 150hp", "AEB 1.8T 150hp", "ANB 1.8T 150hp", "AQY 1.8T 115hp"],
@@ -314,9 +297,11 @@ PROFILE_06B = ROMProfile(
                     "06B-906-018 and 4B0-906-018 prefixes — same ME7.5 codebase, "
                     "different connectors for transverse vs longitudinal mounting.  "
                     "ATW (Passat 4B0) uses same ROM layout.  NB O2.",
-    part_prefixes = ["06B906018", "4B0906018", "4B0997019", "4B0997020", "8E0909518"],
+    part_prefixes = ["06B906018", "4B0906018", "4B0997019", "4B0997020",
+                     "8E0909518", "8E0906018"],
     rom_size      = 0x100000,
     ecu_hw        = "ME7.5",
+    platforms     = {"longitudinal"},
     variants      = [
         "AWM 1.8T 170hp",   # A6 C5, Passat B5.5 (06B)
         "AUG 1.8T 150hp",   # A6 C5 (06B)
@@ -405,6 +390,25 @@ PROFILE_BGU_FSI = ROMProfile(
     o2_system     = "wideband",    # WB — note: different O2 patch needles
     fuel_system   = "fsi",
     notes         = "FSI direct injection.  No patches or maps yet.",
+)
+
+PROFILE_VR6_ME711 = ROMProfile(
+    name          = "ME7.1.1 — 2.8/3.2 VR6 N/A (022906032 CS/CP/EG/GE — Golf4 late, R32)",
+    description   = "Same VR6 family as PROFILE_VR6_ME71 but ME7.1.1 software: "
+                    "Golf4/Jetta4 2.8 fw6428 (022906032CS/BN/GE) and R32 3.2 "
+                    "fw6428/6432 (022906032CP/CE/CD/EG).  Version string "
+                    "'44/1/ME7.1.1/' or '42/1/ME7.1.1/'.  DPP1=0x0205.",
+    part_prefixes = ["022906032", "022906019"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["AZZ 2.8 197hp", "BDE 2.8 197hp", "AXYP 3.2 240hp", "BFH 3.2 250hp"],
+    dpp1_min      = 0x0205,
+    dpp1_max      = 0x0205,
+    induction     = "na",
+    o2_system     = "narrowband",
+    fuel_system   = "mpi",
+    notes         = "Chosen over PROFILE_VR6_ME71 when the version string says ME7.1.1 "
+                    "(review C2).  Confirmed on 022906032CS fw6428 and 022906032EG fw6432.",
 )
 
 PROFILE_V6_27T_ME71 = ROMProfile(
@@ -503,7 +507,7 @@ PROFILE_V8_D2 = ROMProfile(
     description   = "Naturally aspirated 4.2 V8: S6 D2, S8 D2. "
                     "4D0907558 / 4D0907559 prefixes. NB O2. MPI. "
                     "No boost maps. DPP1=0x0205. fw8000.",
-    part_prefixes = ["4D0907558", "4D0907559"],
+    part_prefixes = ["4D0907558", "4D0907559", "4D0907560"],
     rom_size      = 0x100000,
     ecu_hw        = "ME7.1",
     variants      = ["ACQ 4.2 299hp", "AKH 4.2 300hp", "AHC 4.2 300hp"],
@@ -513,12 +517,29 @@ PROFILE_V8_D2 = ROMProfile(
     notes         = "V8 N/A. fw8000. 4D0907558S confirmed (CRC 0x509e389d).",
 )
 
+PROFILE_V8_D2_ME711 = ROMProfile(
+    name          = "ME7.1.1 — 4.2 V8 N/A (4D0907559E / 4D0907560 — S6/S8/A8 D2 late)",
+    description   = "Same V8 family as PROFILE_V8_D2 but ME7.1.1 software (fw8001): "
+                    "S6/S8 D2 4D0907559E and A8 D2 4D0907560AE/AF/BR. "
+                    "NB O2. MPI. No boost maps. DPP1=0x0205.",
+    part_prefixes = ["4D0907558", "4D0907559", "4D0907560"],
+    rom_size      = 0x100000,
+    ecu_hw        = "ME7.1.1",
+    variants      = ["AKH 4.2 300hp", "AQJ 4.2 300hp", "ARS 4.2 310hp"],
+    dpp1_min      = 0x0205, dpp1_max = 0x0205,
+    induction     = "na", o2_system = "narrowband", fuel_system = "mpi",
+    dual_bank     = True,
+    notes         = "Chosen over PROFILE_V8_D2 when the version string says ME7.1.1 "
+                    "(review C2/C3).  Confirmed on 4D0907559E fw8001.07 and "
+                    "4D0907560AF fw8001.02.",
+)
+
 PROFILE_V8_RS6 = ROMProfile(
     name          = "ME7.1.1 — RS6 C5 4.2TT biturbo (4D1907558F)",
     description   = "RS6 C5 4.2 V8 biturbo 450hp. "
                     "4D1907558F prefix. NB O2. MPI. Dual-bank lambda. "
                     "fw8542. ME7.1.1.",
-    part_prefixes = ["4D1907558"],
+    part_prefixes = ["4D1907558F"],        # RS6 only; other 4D1907558 are RS4 B5 / S8
     rom_size      = 0x100000,
     ecu_hw        = "ME7.1.1",
     variants      = ["BCY 4.2TT 450hp"],
@@ -584,19 +605,19 @@ PROFILE_V8_S4_B6 = ROMProfile(
 
 ALL_PROFILES: List[ROMProfile] = [
     PROFILE_AWP,
-    PROFILE_AMU,
-    PROFILE_AUQ,
     PROFILE_AGU_ME71,
     PROFILE_06B,
-    PROFILE_VR6_ME71,      # Golf4/Jetta4 VR6 2.8, R32 3.2
+    PROFILE_VR6_ME71,      # Golf4/Jetta4 VR6 2.8 (ME7.1)
+    PROFILE_VR6_ME711,     # late Golf4 VR6 / R32 (ME7.1.1) — needs version string
     PROFILE_V5_ME75,       # Passat/Golf V5 2.3
     PROFILE_BGU_FSI,
     PROFILE_V6_27T_ME71,
     PROFILE_V6_27T_ME711,
+    PROFILE_V8_RS6,        # 4D1907558F — must precede the broader 4D1907558 RS4 entry
     PROFILE_V8_RS4,
     PROFILE_NA_V6,
-    PROFILE_V8_D2,         # S6/S8 D2 4.2 V8 NA (4D0907558/559)
-    PROFILE_V8_RS6,        # RS6 C5 4.2TT biturbo (4D1907558F)
+    PROFILE_V8_D2,         # S6/S8 D2 4.2 V8 NA (4D0907558/559) ME7.1
+    PROFILE_V8_D2_ME711,   # S6/S8/A8 D2 4.2 V8 NA ME7.1.1 (fw8001) — needs version string
     PROFILE_V8_S4_B6,      # S4 B6 Cab / RS4 B7 4.2 V8 NA (8H0910560)
     PROFILE_W12,           # A8 D3 6.0 W12 (4E0910018)
     PROFILE_V6_24_NA,      # Passat/A6 2.4 V6 NA (3B0907552J)

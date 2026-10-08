@@ -52,50 +52,67 @@ it by running code; "plausible" means it was read from the source only.
 
 ## B. Wrong patch on the wrong ECU
 
-- [ ] **B1. Universal fixed-address patches fire on 256 KB AGU ROMs**
+- [x] **B1. Universal fixed-address patches fire on 256 KB AGU ROMs**
   (`patches.py:1491-1559`, `applies_to=set()`, confirmed). On
   `PROFILE_AGU_ME71` (cal page at `0x30000`) address `0x0181A2` is code.
-  Gate on ROM size or family.
-- [ ] **B2. 4B0906018 codeword labels are shifted one byte**
+  Gate on ROM size or family. *Fixed Oct 2026: every fixed-address patch
+  carries the image size its address is valid for (1 MB for the catalogue)
+  and is NOT_APPLICABLE on other sizes.*
+- [x] **B2. 4B0906018 codeword labels are shifted one byte**
   (`patches.py:1434, 1448, 1462`). XDF and `docs/me7_stable_codeword_block.md`
   put CDHSVE=`0x0181A1`, CDKAT=`0x0181A2`, CDKVS=`0x0181A3`. The 4B0 entries
   call `0x0181A1` "CDKAT", `0x0181A2` "CDKVS", `0x0181A3` "CDKVS2" (not a real
   name). So "Catalyst Monitor Disable CDKAT (4B0906018)" clears CDHSVE, and
   `0x0181A2` is written by two entries with different meanings. Needs an
   18CM ROM to settle which is right; the universal entry matches the docs.
-- [ ] **B3. Two CDNWS entries at `0x0181AF` with different stock bytes**
+  *Fixed Oct 2026: the 18CM dump has the same block layout as 06A, so the
+  XDF names apply: 0x0181A1 is CDHSVE, 0x0181A2 CDKAT (universal entry only),
+  0x0181A3 CDKVS (stock 0x03 on 4B0). A test rejects two names at one address.*
+- [x] **B3. Two CDNWS entries at `0x0181AF` with different stock bytes**
   (`patches.py:1606-1654`, confirmed). Both are gated `{me7.5, 1.8t}`; after
   applying either, both show PATCHED, and reverting through the other writes
-  the wrong stock byte (0x03 vs 0x02).
-- [ ] **B4. IMMO-OFF ME7.1.1 gated backwards** (`patches.py:1804`, confirmed).
+  the wrong stock byte (0x03 vs 0x02). *Fixed Oct 2026: profiles carry a
+  `transverse` (06A) or `longitudinal` (06B/4B0/8E) tag and each entry is gated
+  on one of them.*
+- [x] **B4. IMMO-OFF ME7.1.1 gated backwards** (`patches.py:1804`, confirmed).
   `applies_to={"me7.1"}`; the "prefix check" the comment mentions doesn't
   exist. Applicable on 2.7T/VR6 ME7.1, not on the 4Z7/4D1 ME7.1.1 ECUs it was
-  written for.
-- [ ] **B5. Three patches can never be offered** (`patches.py:791, 1365,
+  written for. *Fixed Oct 2026: gated `{me7.1.1}`.*
+- [x] **B5. Three patches can never be offered** (`patches.py:791, 1365,
   1603`, confirmed). `applies_to={"me7.1","me7.1.1","2.7t"}` is an AND-set and
   no profile carries both `me7.1` and `me7.1.1`. Split into two entries.
-- [ ] **B6. ESKONF "newer" excludes the ROMs it claims** (`patches.py:951`).
-  Requires `me7.1`, so NOT_APPLICABLE on ME7.1.1 4Z7 and V8.
+  *Fixed Oct 2026: ME7.1 and ME7.1.1 profiles carry a shared `me7.1x` tag and
+  the three entries are gated `{me7.1x, 2.7t}`.*
+- [x] **B6. ESKONF "newer" excludes the ROMs it claims** (`patches.py:951`).
+  Requires `me7.1`, so NOT_APPLICABLE on ME7.1.1 4Z7 and V8. *Fixed Oct 2026:
+  `me7.1x`.*
 - [ ] **B7. Readiness Flags patch is DL-specific but gated to all ME7.5 1.8T**
   (`patches.py:891`, confirmed). The anchor matches every fw40 ROM; the notes
   admit the offsets differ per version.
 - [ ] **B8. 2.7T Knock Retard alt-needle is too generic** (`patches.py:741`,
   confirmed on a synthetic site). Three `MOV R4,mem` in a row reports PATCHED
   and `revert()` writes a store into foreign code.
-- [ ] **B9. CDEHFM reports PATCHED on stock DL/RN/LP** (`patches.py:1561`),
-  which already hold 0x00.
+- [x] **B9. CDEHFM reports PATCHED on stock DL/RN/LP** (`patches.py:1561`),
+  which already hold 0x00. *Fixed Oct 2026: `factory_off` / `factory_off_ecus`
+  on the entry; DL/RN/LP/HN report NOT_APPLICABLE ("already 00 from the
+  factory"), apply/revert still round-trip elsewhere.*
 
 ## C. Detection: wrong profile, wrong family
 
-- [ ] **C1. Unreachable profiles** (`profiles.py:258-285, 599`, confirmed).
+- [x] **C1. Unreachable profiles** (`profiles.py:258-285, 599`, confirmed).
   `PROFILE_AMU` and `PROFILE_AUQ` share prefixes with `PROFILE_AWP`, listed
   first, so they're never returned. `8N0906032` in AUQ looks like a typo.
-- [ ] **C2. ME7.1.1 ROMs land on ME7.1 profiles** (confirmed). 022906032
+  *Fixed Oct 2026: AMU/APX/BFV variants folded into PROFILE_AWP, the names
+  kept as aliases; RS6 narrowed to `4D1907558F` and listed before RS4. A test
+  checks every profile is reachable for its own prefix + version string.*
+- [x] **C2. ME7.1.1 ROMs land on ME7.1 profiles** (confirmed). 022906032
   CS/CP/EG/BN/GE and 4D0907559E (all ME7.1.1 in `known_roms`) get the `me7.1`
   tag, so the ME7.1.1 Vmax patch ("confirmed on 022906032CS/EG") is
-  NOT_APPLICABLE on R32 ROMs.
-- [ ] **C3. Known ROMs with no profile:** 8L0906018 (5 entries), 8E0906018,
-  4D0907560.
+  NOT_APPLICABLE on R32 ROMs. *Fixed Oct 2026: PROFILE_VR6_ME711 and
+  PROFILE_V8_D2_ME711 are chosen when the version string says ME7.1.1.*
+- [x] **C3. Known ROMs with no profile:** 8L0906018 (5 entries), 8E0906018,
+  4D0907560. *Fixed Oct 2026: 8L0906018 → AWP, 8E0906018 → 06B, 4D0907560 →
+  V8 D2 (ME7.1 and ME7.1.1), plus 8D0907558 → AGU ME7.1.*
 - [ ] **C4. DPP fallback is meaningless** (`profiles.py:627-651`, confirmed).
   Every profile's DPP1 range overlaps; with no version string any 2.7T/VR6/V8
   ROM falls to the ME7.5 1.8T profile.

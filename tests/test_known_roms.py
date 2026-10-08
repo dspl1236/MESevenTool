@@ -171,7 +171,9 @@ class TestImmoPatchStructure:
         from meseventool.patches import ALL_PATCHES, PatchCategory
         for p in ALL_PATCHES:
             if p.category == PatchCategory.IMMOBILISER and "ME7.1" in p.name:
-                assert "me7.1" in p.applies_to, f"{p.name} missing me7.1 tag"
+                # ME7.1.1 entries are gated on me7.1.1 (review B4); ME7.1 on me7.1
+                want = "me7.1.1" if "ME7.1.1" in p.name else "me7.1"
+                assert want in p.applies_to, f"{p.name} missing {want} tag"
 
     def test_immo_patches_not_applicable_to_fsi(self):
         """FSI engines have separate immo architecture — not applicable."""
