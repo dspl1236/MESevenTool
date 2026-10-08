@@ -221,9 +221,15 @@ class ROMImage:
         return out
 
     def save_as(self, path: str) -> str:
-        """Save to a new path (leaves self.path unchanged)."""
+        """
+        Save to a new path and make it this image's path, so a later save()
+        goes to the new file rather than silently overwriting the original
+        (often the stock dump).  Clears the modified flag.
+        """
         with open(path, "wb") as f:
             f.write(self.data)
+        self.path = path
+        self._modified = False
         return path
 
     # ── Utilities ──────────────────────────────────────────────────────────────

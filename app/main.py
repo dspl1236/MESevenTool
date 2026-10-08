@@ -489,7 +489,8 @@ class PatchesWidget(QWidget):
         self._content_lay.addStretch()
 
     def refresh_states(self):
-        """Re-run detection and update checkbox states without rebuilding UI."""
+        """Re-run detection and update checkbox states and scalar spinners
+        from the ROM without rebuilding the UI."""
         if not self._rom or not self._searcher:
             return
         results = detect_all(self._rom, self._searcher, self._profile)
@@ -504,6 +505,19 @@ class PatchesWidget(QWidget):
             if lbl:
                 lbl.setText(self._state_text(r.state))
                 lbl.setStyleSheet(f"color:{self._state_colour(r.state)}; font-size:10px;")
+        # Scalars: show the value actually in the ROM (review E5)
+        for scalar in ALL_SCALAR_PATCHES:
+            spin = self._spinners.get(scalar.name)
+            if spin is None:
+                continue
+            current = scalar.read(self._rom, self._searcher, profile=self._profile)
+            spin.blockSignals(True)
+            if current is None:
+                spin.setEnabled(False)
+            else:
+                spin.setEnabled(True)
+                spin.setValue(current)
+            spin.blockSignals(False)
 
     @staticmethod
     def _state_text(state: PatchState) -> str:
@@ -1182,22 +1196,43 @@ class MESevenWindow(QMainWindow):
         if path:
             self._load_rom(path)
 
+    def _confirm_discard(self, what: str) -> bool:
+        """
+        If the ROM has unsaved edits, ask before `what` (e.g. "opening another
+        ROM").  Returns True when it is safe to proceed: nothing to lose, the
+        user chose Discard, or chose Save and the save succeeded.
+        """
+        if not self._dirty:
+            return True
+        reply = QMessageBox.question(
+            self, "Unsaved Changes",
+            f"ROM has unsaved modifications. Save before {what}?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save)
+        if reply == QMessageBox.Discard:
+            return True
+        if reply == QMessageBox.Save:
+            self._on_save()
+            return not self._dirty      # a failed or cancelled save keeps the edits
+        return False
+
     def _load_rom(self, path: str):
+        if not self._confirm_discard("opening another ROM"):
+            return
         try:
             rom = ROMImage.load(path)
         except Exception as e:
             QMessageBox.critical(self, "Load Error", str(e))
             return
 
-        self._rom      = rom
-        self._searcher = Searcher(rom)
-        self._profile  = None
-        self._dirty    = False
-
+        # Analyse into locals first.  The window switches to the new ROM only
+        # once everything succeeded, so a failure leaves the previous ROM,
+        # its widgets and its Save target all consistent (review E3).
+        searcher = Searcher(rom)
         try:
             # DPP extraction
-            ex = DPPExtractor(self._searcher)
-            self._dpp = ex.extract()
+            ex = DPPExtractor(searcher)
+            dpp = ex.extract()
 
             # ECU identification
             ident = identify(rom)
@@ -1208,8 +1243,7 @@ class MESevenWindow(QMainWindow):
 
             # Profile detection — tagged with this ROM's part number so
             # part-number-gated patches are offered
-            profile = detect_rom_profile(ident, self._dpp)
-            self._profile = profile
+            profile = detect_rom_profile(ident, dpp)
             if profile.unknown:
                 # Not identified: no patches (profile.unknown makes every
                 # patch NOT_APPLICABLE) and no maps (the fallback map set
@@ -1224,31 +1258,38 @@ class MESevenWindow(QMainWindow):
                 # Maps — use confirmed XDF offsets if we know the exact part number
                 xdf_pn = ident.vmecuhn or None
                 maps = profile.make_maps(xdf_pn=xdf_pn)
-
-            # Update UI panels
-            self._w_info.update(rom, ident, self._dpp, cs_result, profile)
-            self._w_patches.load_rom(rom, self._searcher, profile)
-            self._w_maps.load_rom(rom, self._searcher, maps)
-
-            # Auto-set stock baseline when loading a confirmed stock ROM
-            import zlib as _zlib
-            _crc = _zlib.crc32(rom.data) & 0xFFFFFFFF
-            if is_known_stock(_crc):
-                self._w_maps.set_stock_baseline(rom, maps)
-
-            # Tell KWP monitor which part numbers are valid for this ROM
-            pns = [ident.vmecuhn] if ident.vmecuhn else []
-            if ident.ssecuhn and ident.ssecuhn not in pns:
-                pns.append(ident.ssecuhn)
-            self._kwp_monitor.set_rom_part_numbers(pns)
-            self._refresh_kwp_menu_label()
-
         except Exception as e:
             QMessageBox.critical(self, "ROM Analysis Error",
                 f"Failed to analyse ROM:\n{e}\n\n"
                 "The file loaded but could not be identified. "
-                "It may be corrupt, truncated, or not an ME7 ROM.")
+                "It may be corrupt, truncated, or not an ME7 ROM.\n\n"
+                + ("The previously loaded ROM is still open."
+                   if self._rom else ""))
             return
+
+        # Analysis succeeded: switch the window to the new ROM
+        self._rom      = rom
+        self._searcher = searcher
+        self._dpp      = dpp
+        self._profile  = profile
+        self._dirty    = False
+
+        self._w_info.update(rom, ident, dpp, cs_result, profile)
+        self._w_patches.load_rom(rom, searcher, profile)
+        self._w_maps.load_rom(rom, searcher, maps)
+
+        # Auto-set stock baseline when loading a confirmed stock ROM
+        import zlib as _zlib
+        _crc = _zlib.crc32(rom.data) & 0xFFFFFFFF
+        if is_known_stock(_crc):
+            self._w_maps.set_stock_baseline(rom, maps)
+
+        # Tell KWP monitor which part numbers are valid for this ROM
+        pns = [ident.vmecuhn] if ident.vmecuhn else []
+        if ident.ssecuhn and ident.ssecuhn not in pns:
+            pns.append(ident.ssecuhn)
+        self._kwp_monitor.set_rom_part_numbers(pns)
+        self._refresh_kwp_menu_label()
 
         # Toolbar state
         self.btn_save.setEnabled(True)
@@ -1304,8 +1345,11 @@ class MESevenWindow(QMainWindow):
             self._rom.path or "", "ROM files (*.bin);;All (*)")
         if path:
             try:
-                self._rom.save_as(path)
+                self._rom.save_as(path)      # retargets rom.path (review E7)
                 self._dirty = False
+                name = Path(path).name
+                self._lbl_rom_path.setText(name)
+                self.setWindowTitle(f"MESevenTool  v{__version__}  —  {name}")
                 self._set_status(f"Saved  {path}")
             except Exception as e:
                 QMessageBox.critical(self, "Save Error", str(e))
@@ -1333,19 +1377,30 @@ class MESevenWindow(QMainWindow):
         if not self._rom or not self._searcher:
             return
         result = patch.detect(self._rom, self._searcher, self._profile)
-        ok = patch.apply(self._rom, result) if apply else patch.revert(self._rom, result)
+        try:
+            ok = patch.apply(self._rom, result) if apply else patch.revert(self._rom, result)
+        except Exception as e:                      # e.g. a write outside the image
+            ok = False
+            QMessageBox.critical(self, "Patch Error", f"{patch.name}:\n{e}")
         if ok:
             self._dirty = True
             action = "applied" if apply else "reverted"
             self._set_status(f"Patch '{patch.name}' {action}  —  fix checksums before saving")
-            self._w_patches.refresh_states()
         else:
-            self._set_status(f"Patch '{patch.name}' failed — needle not found in this variant")
+            why = result.detail or "needle not found in this variant"
+            self._set_status(f"Patch '{patch.name}' failed — {why}")
+        # Always re-sync the panel so a failed apply does not leave the
+        # checkbox ticked (review E4).
+        self._w_patches.refresh_states()
 
     def _on_scalar_changed(self, patch: ScalarPatchDef, value: float):
         if not self._rom or not self._searcher:
             return
-        ok = patch.write(self._rom, value, self._searcher, profile=self._profile)
+        try:
+            ok = patch.write(self._rom, value, self._searcher, profile=self._profile)
+        except Exception as e:
+            ok = False
+            QMessageBox.critical(self, "Scalar Error", f"{patch.name}:\n{e}")
         if ok:
             self._dirty = True
             self._set_status(
@@ -1353,6 +1408,9 @@ class MESevenWindow(QMainWindow):
                 "—  fix checksums before saving")
         else:
             self._set_status(f"Scalar '{patch.name}' write failed — out of range or needle missing")
+        # Re-read every spinner from the ROM so the panel shows what was
+        # actually written, and linked values that moved with it (review E5).
+        self._w_patches.refresh_states()
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -1360,18 +1418,16 @@ class MESevenWindow(QMainWindow):
         self._status.showMessage(msg)
 
     def closeEvent(self, event):
-        if self._dirty:
-            reply = QMessageBox.question(
-                self, "Unsaved Changes",
-                "ROM has unsaved modifications. Save before closing?",
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                QMessageBox.Save,
-            )
-            if reply == QMessageBox.Save:
-                self._on_save()
-            elif reply == QMessageBox.Cancel:
-                event.ignore()
-                return
+        # Close only when nothing is lost: no edits, Discard, or a save that
+        # actually succeeded.  A failed or cancelled save keeps the window
+        # open (review E6).
+        if not self._confirm_discard("closing"):
+            event.ignore()
+            return
+        try:
+            self._kwp_monitor.stop()
+        except Exception:
+            pass
         event.accept()
 
 
