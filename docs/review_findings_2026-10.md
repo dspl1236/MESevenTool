@@ -217,9 +217,12 @@ it by running code; "plausible" means it was read from the source only.
   uses, so they're tautological. No multipoint coverage.~~ *Fixed Oct 2026:
   `tests/synthetic_rom.py` embeds the real needles and tables;
   `tests/test_checksum_real.py` runs against the real corpus when present.*
-- All 149 skipped tests are the real-ROM tests; they have never run in CI
-  because the corpus isn't in the repo. They are the only tests that would
-  have caught A1/A2.
+- ~~All 149 skipped tests are the real-ROM tests; they have never run in CI
+  because the corpus isn't in the repo.~~ They are the only tests that would
+  have caught A1/A2. *Oct 2026: `tests/rom_corpus.py` resolves the files from
+  a local corpus (`D:\ME7_corpus`, 290 images from Z:, `D:\ECU FLASH\Bins`
+  and files.s4wiki.com `stock/`); 23 still skip for dumps not in hand
+  (06A906032HS/HN/DR/BJ stock, 021906018Q/R, 022906032CS/EG/GE, 4D0907558/559).*
 - `CONFIRMED` is documented as "tested on real ROM files", but these entries
   cite no patched reference: P1681, both CDNWS ME7.5 entries, MAF Delete
   LP/18CM and SL DSG, Knock Retard 2.7T, SAP CDSLS 4B0, KRMXN, Overrev
