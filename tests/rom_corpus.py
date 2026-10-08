@@ -44,23 +44,16 @@ def _key(name: str) -> str:
 
 @lru_cache(maxsize=None)
 def _index(directory: str) -> Dict[str, str]:
-    """Images in ``directory`` and its immediate subdirectories, by key."""
+    """Every image under ``directory`` (recursive), keyed by normalised name.
+    The first file seen for a key wins, walking top-down and sorted."""
     out: Dict[str, str] = {}
-    try:
-        names = os.listdir(directory)
-    except OSError:
+    if not os.path.isdir(directory):
         return out
-    subdirs = []
-    for n in names:
-        full = os.path.join(directory, n)
-        if os.path.isdir(full):
-            subdirs.append(full)
-        elif n.lower().endswith((".bin", ".ori", ".rom")):
-            out.setdefault(_key(n), full)
-    for sub in sorted(subdirs):
-        for n in os.listdir(sub):
+    for root, dirs, files in os.walk(directory):
+        dirs.sort()
+        for n in sorted(files):
             if n.lower().endswith((".bin", ".ori", ".rom")):
-                out.setdefault(_key(n), os.path.join(sub, n))
+                out.setdefault(_key(n), os.path.join(root, n))
     return out
 
 
