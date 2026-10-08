@@ -44,14 +44,23 @@ def _key(name: str) -> str:
 
 @lru_cache(maxsize=None)
 def _index(directory: str) -> Dict[str, str]:
+    """Images in ``directory`` and its immediate subdirectories, by key."""
     out: Dict[str, str] = {}
     try:
         names = os.listdir(directory)
     except OSError:
         return out
+    subdirs = []
     for n in names:
-        if n.lower().endswith((".bin", ".ori", ".rom")):
-            out.setdefault(_key(n), os.path.join(directory, n))
+        full = os.path.join(directory, n)
+        if os.path.isdir(full):
+            subdirs.append(full)
+        elif n.lower().endswith((".bin", ".ori", ".rom")):
+            out.setdefault(_key(n), full)
+    for sub in sorted(subdirs):
+        for n in os.listdir(sub):
+            if n.lower().endswith((".bin", ".ori", ".rom")):
+                out.setdefault(_key(n), os.path.join(sub, n))
     return out
 
 

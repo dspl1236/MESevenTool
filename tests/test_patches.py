@@ -1230,25 +1230,47 @@ class TestRealROM4B0906018(unittest.TestCase):
         profile = get_profile("4B0906018CM")
         return p.detect(rom, profile=profile)
 
-    # ── CDKAT ────────────────────────────────────────────────────────────
-    def test_cdkat_stock_in_18cm(self):
+    # ── CDHSVE (0x0181A1; was mislabelled "CDKAT" — review B2) ──────────
+    def test_cdhsve_stock_in_18cm(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)',
+        r = self._detect('Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018 A6/Passat)',
                          self._load('18CM.Bin'))
-        assert r.state == PatchState.STOCK
+        assert r.state == PatchState.STOCK and r.addr == 0x0181A1
 
-    def test_cdkat_patched_in_18cm_uni2(self):
+    def test_cdhsve_patched_in_18cm_uni2(self):
         from meseventool.patches import PatchState
-        r = self._detect('Catalyst Monitor Disable CDKAT (4B0906018 A6/Passat)',
+        r = self._detect('Rear O2 After-Cat Voltage Diagnosis Disable CDHSVE (4B0906018 A6/Passat)',
                          self._load('170hp_018cm_PassatUNI2.bin'))
         assert r.state == PatchState.PATCHED
 
-    # ── CDKVS ────────────────────────────────────────────────────────────
+    # ── CDKAT (0x0181A2) is the universal entry; it must cover 18CM ───────
+    def test_cdkat_universal_stock_in_18cm(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         self._load('18CM.Bin'))
+        assert r.state == PatchState.STOCK and r.addr == 0x0181A2
+
+    def test_cdkat_universal_patched_in_18cm_uni2(self):
+        from meseventool.patches import PatchState
+        r = self._detect('Catalyst Monitor Disable — CDKAT (universal ME7)',
+                         self._load('170hp_018cm_PassatUNI2.bin'))
+        assert r.state == PatchState.PATCHED
+
+    def test_no_second_4b0_entry_at_cdkat_address(self):
+        """0x0181A2 must be written by exactly one catalogue entry (review B2)."""
+        from meseventool.patches import FixedAddressPatchDef
+        at_a2 = [p for p in ALL_PATCHES
+                 if isinstance(p, FixedAddressPatchDef) and p.fixed_addr == 0x0181A2]
+        assert [p.name for p in at_a2] == ['Catalyst Monitor Disable — CDKAT (universal ME7)']
+
+    # ── CDKVS (0x0181A3; was "CDKVS2") ───────────────────────────────────
     def test_cdkvs_stock_in_18cm(self):
+        """18CM has the 4B0-specific stock value 0x03 for CDKVS."""
         from meseventool.patches import PatchState
         r = self._detect('Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)',
                          self._load('18CM.Bin'))
-        assert r.state == PatchState.STOCK
+        assert r.state == PatchState.STOCK and r.addr == 0x0181A3, \
+            f"Expected STOCK (0x03) in 18CM, got {r.state}"
 
     def test_cdkvs_patched_in_18cm_uni2(self):
         from meseventool.patches import PatchState
@@ -1256,30 +1278,14 @@ class TestRealROM4B0906018(unittest.TestCase):
                          self._load('170hp_018cm_PassatUNI2.bin'))
         assert r.state == PatchState.PATCHED
 
-    # ── CDKVS2 ───────────────────────────────────────────────────────────
-    def test_cdkvs2_stock_in_18cm(self):
-        """18CM has unique stock value 0x03 for CDKVS2."""
+    def test_cdkvs_not_offered_on_06a(self):
+        """06A has 0x00 at 0x0181A3 and is not a 4B0906018 ECU."""
         from meseventool.patches import PatchState
-        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
-                         self._load('18CM.Bin'))
-        assert r.state == PatchState.STOCK, \
-            f"Expected STOCK (0x03) in 18CM, got {r.state}"
-
-    def test_cdkvs2_patched_in_18cm_uni2(self):
-        from meseventool.patches import PatchState
-        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
-                         self._load('170hp_018cm_PassatUNI2.bin'))
-        assert r.state == PatchState.PATCHED
-
-    def test_cdkvs2_not_stock_in_06a(self):
-        """06A has 0x00 at 0x0181A3 (not 0x03), so NOT stock for this patch."""
-        from meseventool.patches import PatchState
-        r = self._detect('Knock Sensor Variant Disable CDKVS2 (4B0906018 A6/Passat)',
-                         self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin'))
-        # 06A has 0x00 there already — shows as PATCHED (not STOCK)
-        # With profile this would be NOT_APPLICABLE; without profile it shows PATCHED
-        assert r.state != PatchState.STOCK, \
-            "06A DL should not have CDKVS2=0x03 (the 18CM stock value)"
+        from meseventool.profiles import get_profile
+        p = next(p for p in ALL_PATCHES
+                 if p.name == 'Knock Sensor Monitor Disable CDKVS (4B0906018 A6/Passat)')
+        rom = self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        assert p.detect(rom, profile=get_profile("06A906032DL")).state == PatchState.NOT_APPLICABLE
 
     # ── EVAP ─────────────────────────────────────────────────────────────
     def test_evap_stock_in_18cm(self):
@@ -1983,10 +1989,15 @@ class TestUniversalFixedAddrPatches(unittest.TestCase):
 
     def test_cdehfm_already_off_in_dl(self):
         from meseventool.patches import PatchState
-        # DL already has CDEHFM=0x00 in stock — shows PATCHED (already disabled)
-        r = self._detect('MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)',
-                         '1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
-        assert r.state == PatchState.PATCHED
+        # DL ships CDEHFM=0x00: a stock ROM must not be reported as PATCHED (review B9)
+        from meseventool.patches import ALL_PATCHES
+        from meseventool.profiles import get_profile
+        p = next(p for p in ALL_PATCHES
+                 if p.name == 'MAF Sensor Diagnosis Disable — CDEHFM (ME7.5 SL/4B variants)')
+        rom = self._load('1773719875933_06A906032DL_0261206890_v360227_MT_OEM.bin')
+        r = p.detect(rom, profile=get_profile("06A906032DL"))
+        assert r.state == PatchState.NOT_APPLICABLE
+        assert 'factory' in r.detail
 
 
 class TestCDNWSVVTDisable(unittest.TestCase):
@@ -2495,10 +2506,10 @@ def _make_multi_patch_rom():
     """Build a ROM with multiple patch needles embedded + fixed-address sites.
 
     Embeds ALL_PATCHES[0] (Knock Retard) needle in cal page and
-    sets up fixed-address patch sites for any FixedAddressPatchDef patches
-    whose addresses fall inside 512K.
+    sets up fixed-address patch sites for every FixedAddressPatchDef patch
+    (1 MB image: fixed addresses are not applicable on smaller files).
     """
-    size    = 0x80000
+    size    = 0x100000          # fixed-address patches are gated to 1 MB images
     cal_off = size - 0x10000
     data    = bytearray([0xAA] * size)
 

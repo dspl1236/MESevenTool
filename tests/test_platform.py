@@ -36,7 +36,8 @@ MM = MASK
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def make_rom():
-    return ROMImage(data=bytearray([0xFF] * 0x80000))
+    # 1 MB: fixed-address patches are not applicable on smaller images
+    return ROMImage(data=bytearray([0xFF] * 0x100000))
 
 
 def make_profile(**kwargs) -> ROMProfile:
@@ -243,6 +244,8 @@ class TestCataloguePatches:
             "dual_bank",
             "1.8t", "2.0t", "2.7t", "3.0t", "v6", "v8",
             "4b0906018", "me7.1.1", "2.7t", "4z7907551",
+            "me7.1x",                      # ME7.1 or ME7.1.1 (shared codebase)
+            "transverse", "longitudinal",  # 06A family vs 06B/4B0/8E family
         }
         for p in ALL_PATCHES + ALL_SCALAR_PATCHES:
             for tag in p.applies_to:
