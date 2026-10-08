@@ -123,16 +123,26 @@ starts.
 
 ## Checksum
 
-Two independent checksum systems, both required:
+Three layers, all located by machine-code needles (never a fixed offset).
+Ported from me7romtool `fixsums.c` and ME7Sum; validated byte-for-byte
+against real ME7.5 ROMs (see `docs/checksum_port_handoff.md`).
 
-1. **Main ROM checksum** — 16-bit LE word accumulation over the calibration page,
-   stored as `[sum:u32][~sum:u32]` at `cal_page + 0xFFF8`.
-2. **Multipoint CRC32** — N blocks each `[start:u32][end:u32][crc32:u32][~crc32:u32]`
-   discovered by needle. Absent in some variants (OK).
+1. **Main checksum** — 16-bit LE word sum over 1-3 regions read from a table
+   in the ROM (on ME7.5: `0x00000-0x0FBFF` and `0x20000-0xFFFFF`), stored as
+   `[sum:u32][~sum:u32]` (at `0xFFFE0` on a 1 MB image).
+2. **Multipoint block sums** — a table of `[start][end][sum][~sum]` entries
+   (66 on ME7.5) using the same word sum, **not** CRC32.
+3. **Main CRC32** — up to four regions CRC32'd in a chain (a short pre-block
+   seeds region 1, each result seeds the next) against three constants
+   embedded in the verify routine. Absent on some ROMs, which is reported
+   as "not present".
 
-MESevenTool verifies and corrects both before saving.
+`ChecksumManager.verify()` reports each layer; a layer whose needles are
+missing is "not verified", never OK, and `fix()` will not write it.
+`fix()` runs CRC32 → multipoint → main and returns a fresh `verify()`.
+The GUI asks before saving a ROM whose checksums are not all OK.
 
-Calibration page offsets:
+Calibration page offsets (used for maps and patches, not checksums):
 - 256KB ROM (ME7.1 early): `0x30000`
 - 512KB ECUFlash extract: `0x70000`
 - 1MB full flash: `0xF0000`
@@ -206,13 +216,15 @@ results = detect_all(rom, profile=prof)
 for r in results:
     print(f"  {r.patch.name}: {r.state.name}")
 
-# Verify checksum
+# Verify checksums (main sum, multipoint sums, main CRC32)
 cm = ChecksumManager(rom)
-ok, msg = cm.verify()
-print(f"Checksum: {'OK' if ok else 'BAD'} — {msg}")
+result = cm.verify()
+print(result.summary())
+print("All OK" if result.all_ok else "Checksums need fixing")
 
-# Fix checksum after editing
-cm.fix()
+# Fix checksums after editing; fix() returns a fresh verify()
+result = cm.fix()
+assert result.all_ok
 rom.save("my_awp_patched.bin")
 ```
 
