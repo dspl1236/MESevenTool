@@ -197,3 +197,85 @@ class TestV6Maps:
 
     def test_boost_map_present(self):
         assert any(m.name == "KFDLULS" for m in make_v6_biturbo_maps())
+
+
+# ── Write bounds (review A4) and widths vs XDF (review A6) ───────────────────
+
+class TestMapWriteBounds:
+    def test_write_past_end_raises_and_does_not_grow(self):
+        """Slice-assigning past a bytearray's end appends; the old code did that."""
+        rom = ROMImage(data=bytearray([0xFF]) * 0x40000)
+        m = MapDef("t", rows=1, cols=4, data_width=U16, data_addr=0x3FFFC)
+        with pytest.raises(ValueError, match="exceeds ROM size"):
+            m.write(rom, [[1.0, 2.0, 3.0, 4.0]])
+        assert rom.size == 0x40000
+        assert not rom.is_modified
+
+    def test_write_marks_modified_and_writes_only_the_map(self):
+        rom = ROMImage(data=bytearray([0xFF]) * 0x40000)
+        m = MapDef("t", rows=2, cols=2, data_width=U8, data_addr=0x1000)
+        m.write(rom, [[1, 2], [3, 4]])
+        assert rom.is_modified
+        assert bytes(rom.data[0x1000:0x1004]) == b'\x01\x02\x03\x04'
+        assert rom.data[0x0FFF] == 0xFF and rom.data[0x1004] == 0xFF
+
+    def test_unchanged_values_do_not_mark_modified(self):
+        rom = ROMImage(data=bytearray([0x05]) * 0x40000)
+        m = MapDef("t", rows=2, cols=2, data_width=U8, data_addr=0x1000)
+        m.write(rom, [[5, 5], [5, 5]])
+        assert not rom.is_modified
+
+    def test_oversized_values_rejected(self):
+        rom = ROMImage(data=bytearray([0xFF]) * 0x40000)
+        m = MapDef("t", rows=1, cols=2, data_width=U8, data_addr=0x1000)
+        with pytest.raises(ValueError, match="exceed"):
+            m.write(rom, [[1, 2, 3]])
+
+
+_XDF_JSON = os.path.join(os.path.dirname(__file__), "..", "reference", "xdf_tables.json")
+
+
+class TestFallbackWidthsMatchXDF:
+    """Every fallback map must have the XDF's element size for its reference PN."""
+
+    @staticmethod
+    def _xdf_z(pn):
+        import json
+        out = {}
+        with open(_XDF_JSON, encoding="utf-8") as f:
+            for e in json.load(f):
+                z = e.get("axes", {}).get("z")
+                if e.get("pn") == pn and z:
+                    out.setdefault(e["name"], z)
+        return out
+
+    def _check(self, maps, pn):
+        xdf = self._xdf_z(pn)
+        checked = 0
+        for m in maps:
+            if not m.data_addr:
+                continue
+            # KFLBTS_0_A on 8D0907551M is the bank-1 table the fallback uses
+            z = xdf.get(m.name) or xdf.get(m.name + "_0_A")
+            if not z or z["addr"] != m.data_addr:
+                continue
+            assert z["elemsize"] == abs(m.data_width), \
+                f"{m.name}: fallback width {abs(m.data_width)} but XDF elemsize {z['elemsize']}"
+            assert {z["rows"], z["cols"]} == {m.rows, m.cols}, m.name
+            checked += 1
+        assert checked >= 5
+
+    def test_awp_dl(self):
+        self._check(make_awp_maps("06A906032DL"), "06A906032DL")
+
+    def test_v6_biturbo_551m(self):
+        self._check(make_v6_biturbo_maps(), "8D0907551M")
+
+    @pytest.mark.parametrize("name", ["KFLBTS", "LAMFA", "KFDLULS"])
+    def test_dl_single_byte_maps(self, name):
+        m = next(x for x in make_awp_maps("06A906032DL") if x.name == name)
+        assert m.data_width == U8
+
+    def test_27t_kfdluls_single_byte(self):
+        m = next(x for x in make_v6_biturbo_maps() if x.name == "KFDLULS")
+        assert m.data_width == U8

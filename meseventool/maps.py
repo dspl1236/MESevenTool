@@ -121,7 +121,14 @@ class MapDef:
         return rows
 
     def write(self, rom: ROMImage, values: List[List[float]]) -> None:
-        """Encode and write physical values back to the ROM."""
+        """
+        Encode and write physical values back to the ROM.
+
+        Raises ValueError if the map does not fit inside the image or
+        ``values`` is larger than rows × cols.  The whole block goes through
+        ``rom.write()`` so the image can never grow and the modified flag
+        is set.
+        """
         if self.data_addr == 0:
             return
         width  = abs(self.data_width)
@@ -132,13 +139,25 @@ class MapDef:
             lo, hi = -(1 << (bits - 1)), (1 << (bits - 1)) - 1
         else:
             lo, hi = 0, (1 << bits) - 1
+
+        if self.data_addr < 0 or self.data_addr + self.size > rom.size:
+            raise ValueError(
+                f"Map {self.name}: 0x{self.data_addr:X}+{self.size} "
+                f"exceeds ROM size 0x{rom.size:X}")
+        if len(values) > self.rows or any(len(row) > self.cols for row in values):
+            raise ValueError(
+                f"Map {self.name}: values exceed {self.rows}x{self.cols}")
+
+        block = bytearray(rom.data[self.data_addr:self.data_addr + self.size])
         for r, row in enumerate(values):
             for c, v in enumerate(row):
-                off = self.data_addr + (r * self.cols + c) * width
+                off = (r * self.cols + c) * width
                 raw = max(lo, min(hi, enc(v)))
                 # C167 is little-endian — always write LE
-                rom.data[off:off+width] = raw.to_bytes(width, byteorder='little',
-                                                        signed=signed)
+                block[off:off + width] = raw.to_bytes(width, byteorder='little',
+                                                      signed=signed)
+        if block != rom.data[self.data_addr:self.data_addr + self.size]:
+            rom.write(self.data_addr, block)
 
 
 class MapFinder:
@@ -194,9 +213,9 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
         'MLHFM':   (0x014574, 1,  512, U16, lambda x: x * 0.1,        lambda x: int(round(x / 0.1))),
         'KFMIRL':  (0x0150B6, 16, 16, U16, lambda x: x * 0.023438,   lambda x: int(round(x / 0.023438))),
         'KFMIOP':  (0x01656E, 16, 11, U16, lambda x: x * 0.001526,   lambda x: int(round(x / 0.001526))),
-        'KFLBTS':  (0x0192A5, 12, 16, U16, lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
-        'KFDLULS': (0x01EB91, 8,  8,  U16, lambda x: x * 5.0,        lambda x: int(round(x / 5.0))),
-        'LAMFA':   (0x01C95A, 15, 6,  U16, lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
+        'KFLBTS':  (0x0192A5, 12, 16, U8,  lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
+        'KFDLULS': (0x01EB91, 8,  8,  U8,  lambda x: x * 5.0,        lambda x: int(round(x / 5.0))),
+        'LAMFA':   (0x01C95A, 15, 6,  U8,  lambda x: x * 0.007813,   lambda x: int(round(x / 0.007813))),
     }
     conf = "CONFIRMED" if (not part_number or part_number.startswith("06A906032")) else "PROVISIONAL"
 
@@ -288,9 +307,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
         MapDef(
             name="KFLBTS",
             description="Lambda target map — closed-loop lambda setpoint vs RPM×load. "
-                        "1.0 = stoich, <1.0 = rich. 12×16 U16, scale × 0.007813.",
+                        "1.0 = stoich, <1.0 = rich. 12×16 U8, scale × 0.007813 "
+                        "(XDF elemsize 1; was wrongly U16).",
             rows=12, cols=16,
-            data_width=U16,
+            data_width=U8,
             data_addr=_DL['KFLBTS'][0],
             decode=_DL['KFLBTS'][4],
             encode=_DL['KFLBTS'][5],
@@ -305,9 +325,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
             name="LAMFA",
             description="Lambda adaptation — long-term fuel trim map vs RPM×load. "
                         "Learned trims; reflects injector wear / MAF drift. "
-                        "15×6 U16, scale × 0.007813. Reset by clearing adaptations.",
+                        "15×6 U8, scale × 0.007813 (XDF elemsize 1; was wrongly "
+                        "U16). Reset by clearing adaptations.",
             rows=15, cols=6,
-            data_width=U16,
+            data_width=U8,
             data_addr=_DL['LAMFA'][0],
             decode=_DL['LAMFA'][4],
             encode=_DL['LAMFA'][5],
@@ -323,9 +344,10 @@ def make_awp_maps(part_number: str = "") -> List[MapDef]:
         MapDef(
             name="KFDLULS",
             description="N75 boost solenoid upper limit — maximum duty cycle vs RPM×load. "
-                        "8×8 U16, scale × 5.0 = hPa. Higher values = more boost allowed.",
+                        "8×8 U8, scale × 5.0 = hPa (XDF elemsize 1; was wrongly U16). "
+                        "Higher values = more boost allowed.",
             rows=8, cols=8,
-            data_width=U16,
+            data_width=U8,
             data_addr=_DL['KFDLULS'][0],
             decode=_DL['KFDLULS'][4],
             encode=_DL['KFDLULS'][5],
@@ -490,9 +512,10 @@ def make_v6_biturbo_maps(part_number: str = "") -> List[MapDef]:
         MapDef(
             name="KFDLULS",
             description="N75 boost limit — maximum duty cycle vs RPM×boost. "
-                        "8×8 U16, scale × 5.0 = hPa. Twin turbos K03/K04.",
+                        "8×8 U8, scale × 5.0 = hPa (XDF elemsize 1; was wrongly U16). "
+                        "Twin turbos K03/K04.",
             rows=8, cols=8,
-            data_width=U16,
+            data_width=U8,
             data_addr=_M['KFDLULS'],
             decode=lambda x: x * 5.0,
             encode=lambda x: int(round(x / 5.0)),
