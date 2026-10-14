@@ -947,12 +947,13 @@ class MESevenWindow(QMainWindow):
 
         # ── KWPBridge live overlay (optional) ─────────────────────────────────
         from meseventool.kwp import (KWPMonitor,
-                                     kwpbridge_available, kwpbridge_running,
+                                     kwpbridge_available,
                                      status_label as kwp_status_label,
                                      live_summary as kwp_live_summary)
         self._KWPMonitor        = KWPMonitor
         self._kwpbridge_avail   = kwpbridge_available
-        self._kwpbridge_running = kwpbridge_running
+        # cached by the monitor's background probe — never a socket on the UI thread
+        self._kwpbridge_running = lambda: self._kwp_monitor.bridge_running
         self._kwp_status_label  = kwp_status_label
         self._kwp_live_summary  = kwp_live_summary
         self._kwp_monitor       = KWPMonitor(self)
