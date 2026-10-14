@@ -44,8 +44,10 @@ _ENGINE_CODE_RE = re.compile(
 #   06A906032xx (1.8T), 06B906018xx (2.0T) — digit-digit-letter-6digits-suffix
 #   8D0907551xx (S4 B5), 4Z7907551xx (Allroad), 4B0907551xx (A6 C5)
 #   4D1907558xx (RS4/S8 V8) — digit-letter-7digits-suffix
-# ME7.x version string: "40/1/ME7.5/..." or "42/1/ME7.1.1/..."
-_VS_RE = re.compile(rb'(?:40|42|43|44)/1/ME7[.0-9A-Za-z]{1,8}')
+# ME7.x version string: "40/1/ME7.5/..." or "42/1/ME7.1.1/...".  The leading
+# field varies more than 40-44 in practice (36, 39, 41, 45 seen on 8N0906018,
+# 06A906032RP, Unitronic 1.8T files and 06A906032RK) — review C8.
+_VS_RE = re.compile(rb'[0-9]{2}/[0-9]/ME7[.0-9A-Za-z]{1,8}')
 
 _PN_RE = re.compile(rb'(?:'
     rb'[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'   # 8D0907551M, 4Z7907551AA, 4D1907558
@@ -84,6 +86,21 @@ def _clean_string(raw: bytes) -> str:
     return "".join(chr(b) if 32 <= b < 127 else " " for b in raw)
 
 
+_DESCRIPTOR_RE = re.compile(
+    r'\d\.\d\s*[lL]\b'            # "1.8L", "2.7 l"
+    r'|\d{2,3}\s*(?:hp|HP|PS|kW)'   # "180hp", "132 kW"
+    r'|\bR[456]\b|\bV[68]\b|\bVR6\b'
+    r'|MOTRONIC|\bME7'
+)
+
+
+def _looks_like_descriptor(text: str, pn_prefix: str | None) -> bool:
+    """A printable run that plausibly names the ECU/engine, not stray text."""
+    if pn_prefix and pn_prefix in text:
+        return True
+    return bool(_DESCRIPTOR_RE.search(text))
+
+
 @dataclass
 class ECUIdentity:
     """Strings and metadata extracted from a ME7 ROM."""
@@ -100,13 +117,28 @@ class ECUIdentity:
     source:       str = "unknown"
 
     @property
+    def ecu_hw(self) -> str:
+        """"ME7.5", "ME7.1" or "ME7.1.1" from the version string, else ""."""
+        m = re.match(r'[0-9]{2}/[0-9]/(ME7(?:\.[0-9])*)', self.version_string or "")
+        return m.group(1) if m else ""
+
+    @property
     def is_me75(self) -> bool:
-        """ME7.5 ROMs are 512KB (ECUFlash extract) or 1024KB (full flash)."""
+        """True for ME7.5 software.  Decided by the version string when the
+        ROM has one; the image size (512 KB extract / 1 MB flash) is only a
+        fallback, since 1 MB ME7.1/ME7.1.1 images exist (review C9)."""
+        hw = self.ecu_hw
+        if hw:
+            return hw == "ME7.5"
         return self.rom_size_kb in (512, 1024)
 
     @property
     def is_me71(self) -> bool:
-        """ME7.1 early ROMs are 256KB."""
+        """True for ME7.1 or ME7.1.1 software (version string first, then
+        the 256 KB early-ME7.1 image size as a fallback)."""
+        hw = self.ecu_hw
+        if hw:
+            return hw.startswith("ME7.1")
         return self.rom_size_kb == 256
 
     @property
@@ -159,7 +191,15 @@ def identify(rom: ROMImage) -> ECUIdentity:
         for m in pn_matches:
             s = m.decode('ascii', errors='replace')
             seen[s] = seen.get(s, 0) + 1
-        ident.vmecuhn = max(seen, key=seen.get)
+        # Vote by 9-char family first, then by exact string within it; the
+        # bare base ("06A906032") only wins when no suffixed form occurs,
+        # because the base cannot drive part-number gating (review C6).
+        families = {}
+        for pn, n in seen.items():
+            families[pn[:9]] = families.get(pn[:9], 0) + n
+        family = max(families, key=families.get)
+        candidates = {pn: n for pn, n in seen.items() if pn[:9] == family}
+        ident.vmecuhn = max(candidates, key=lambda pn: (len(pn) > 9, candidates[pn], pn))
 
     # ── Bosch number ──────────────────────────────────────────────────────────
     bosch_matches = _BOSCH_RE.findall(raw)
@@ -171,6 +211,19 @@ def identify(rom: ROMImage) -> ECUIdentity:
         ident.bosch_number = max(seen, key=seen.get)
         if not ident.ssecuhn:
             ident.ssecuhn = ident.bosch_number
+
+    # ── Part number via the Bosch number ──────────────────────────────────────
+    # Tuners sometimes wipe the VAG part-number string but leave the Bosch
+    # number.  The known-ROM catalogue maps Bosch numbers to part numbers
+    # one-to-one, so use it rather than guessing a family from DPP values
+    # (review C4).
+    if not ident.vmecuhn and ident.bosch_number:
+        from .known_roms import KNOWN_ROMS
+        pns = {k.vmecuhn for k in KNOWN_ROMS.values()
+               if k.bosch == ident.bosch_number and k.vmecuhn}
+        if len(pns) == 1:
+            ident.vmecuhn = pns.pop()
+            ident.source = "rom+bosch"
 
     # ── EROTAN / engine code from printable runs ──────────────────────────────
     # Two capture strategies:
@@ -187,9 +240,14 @@ def identify(rom: ROMImage) -> ECUIdentity:
                 j += 1
             if j - i >= 8:
                 text = _clean_string(raw[i:j])
-                # Strategy A: engine code present
+                # Strategy A: engine code present — but only in a run that
+                # looks like an ECU descriptor (part number, displacement,
+                # power or "MOTRONIC" alongside it).  Three-letter codes such
+                # as ACK, APP, AUG or BES also occur in ordinary text, and an
+                # early spurious hit used to win and block the part-number
+                # suffix fallback (review C5).
                 m = _ENGINE_CODE_RE.search(text)
-                if m:
+                if m and _looks_like_descriptor(text, _pn_prefix):
                     ident.engine_code = m.group(1)
                     if not ident.erotan:
                         ident.erotan = text.strip()[:60]
@@ -242,7 +300,17 @@ def identify(rom: ROMImage) -> ECUIdentity:
 def identify_from_filename(filename: str) -> ECUIdentity:
     """Extract part number from a filename like '06A906032BN_OEM.bin'."""
     ident = ECUIdentity(source="filename")
-    m = re.search(r'(0[6-9][A-Z]\d{6}[A-Z]{0,4})', filename, re.IGNORECASE)
+    # Same families as _PN_RE (review C7): 06A906032DL, 8D0907551M,
+    # 4Z7907551AA, 4D1907558, 022906032CP, 021906018R.  Must not be glued to
+    # other digits/letters, so "0261206890" or "1037358134" never match.
+    m = re.search(
+        r'(?<![0-9A-Z])('
+        r'0[0-9][A-Z][0-9]{6}[A-Z]{0,4}'
+        r'|[0-9][A-Z][0-9]{6,7}[A-Z]{0,4}'
+        r'|022906032[A-Z]{0,4}'
+        r'|021906018[A-Z]{0,4}'
+        r')(?![0-9A-Z])',
+        filename, re.IGNORECASE)
     if m:
         ident.vmecuhn = m.group(1).upper()
     return ident

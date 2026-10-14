@@ -421,12 +421,14 @@ class TestProfiles:
         maps = PROFILE_AWP.make_maps()
         assert len(maps) > 0
 
-    def test_profile_matches_by_dpp_when_no_pn(self):
+    def test_no_part_number_is_unknown_even_with_dpp(self):
+        """DPP1 alone cannot tell families apart (review C4): without a
+        part number the ROM is UNKNOWN rather than guessed as 1.8T."""
         ecu = ECUIdentity()   # no part number
         dpp = DPPValues(dpp1=0x0200)
-        p = detect_profile(ecu, dpp)
-        # Should match AWP or AUM via DPP range
-        assert p is not PROFILE_UNKNOWN
+        assert detect_profile(ecu, dpp) is PROFILE_UNKNOWN
+        ecu = ECUIdentity(version_string="40/1/ME7.1/5/6005.01")
+        assert detect_profile(ecu, DPPValues(dpp1=0x0205)) is PROFILE_UNKNOWN
 
 
 # ── ECU ID tests ───────────────────────────────────────────────────────────────

@@ -150,23 +150,31 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **C3. Known ROMs with no profile:** 8L0906018 (5 entries), 8E0906018,
   4D0907560. *Fixed Oct 2026: 8L0906018 → AWP, 8E0906018 → 06B, 4D0907560 →
   V8 D2 (ME7.1 and ME7.1.1), plus 8D0907558 → AGU ME7.1.*
-- [ ] **C4. DPP fallback is meaningless** (`profiles.py:627-651`, confirmed).
+- [x] **C4. DPP fallback is meaningless** (`profiles.py:627-651`, confirmed).
   Every profile's DPP1 range overlaps; with no version string any 2.7T/VR6/V8
-  ROM falls to the ME7.5 1.8T profile.
-- [ ] **C5. Engine-code scan takes the first run with any 3-letter code**
+  ROM falls to the ME7.5 1.8T profile. *Fixed Oct 2026: the DPP fallback is
+  removed; a ROM without a part number is UNKNOWN. The Bosch number now
+  recovers the part number through `known_roms` when the PN string is gone.*
+- [x] **C5. Engine-code scan takes the first run with any 3-letter code**
   (`ecu_id.py:183-196`, confirmed). Codes like `ACK`, `APP`, `AUG`, `BES`
   collide with ordinary text; an early spurious hit beats the real descriptor
-  and blocks the part-number-suffix fallback.
-- [ ] **C6. Part-number vote prefers the suffix-less base** (`ecu_id.py:156-
+  and blocks the part-number-suffix fallback. *Fixed Oct 2026: a code is
+  accepted only from a run that looks like an ECU descriptor (part number,
+  displacement, power or MOTRONIC alongside it).*
+- [x] **C6. Part-number vote prefers the suffix-less base** (`ecu_id.py:156-
   162`, confirmed). `06A906032` and `06A906032DL` are different keys; the
-  base often wins, which defeats part-number gating.
-- [ ] **C7. `identify_from_filename` only matches `0[6-9][A-Z]…`**
+  base often wins, which defeats part-number gating. *Fixed Oct 2026: vote by
+  9-char family, then prefer a suffixed form over the bare base.*
+- [x] **C7. `identify_from_filename` only matches `0[6-9][A-Z]…`**
   (`ecu_id.py:245`, confirmed). `8D0907551M_oem.bin`, `4Z7907551AA.bin`,
-  `022906032CP.bin` return nothing.
-- [ ] **C8. Version-string regex hard-codes `40|42|43|44`** (`ecu_id.py:48`).
+  `022906032CP.bin` return nothing. *Fixed Oct 2026: same families as the ROM
+  parser, not glued to neighbouring digits.*
+- [x] **C8. Version-string regex hard-codes `40|42|43|44`** (`ecu_id.py:48`).
   A `41/1/ME7.1/…` string is missed and degrades ME7.1 vs ME7.5 detection.
-- [ ] **C9. `is_me75`/`is_me71` are size-based** (`ecu_id.py:103-110`). 1 MB
-  ME7.1/ME7.1.1 ROMs report `is_me75=True`. Only used in tests today.
+  *Fixed Oct 2026: any two-digit field. The corpus has 36, 39, 41 and 45.*
+- [x] **C9. `is_me75`/`is_me71` are size-based** (`ecu_id.py:103-110`). 1 MB
+  ME7.1/ME7.1.1 ROMs report `is_me75=True`. Only used in tests today. *Fixed
+  Oct 2026: `ECUIdentity.ecu_hw` from the version string; size is a fallback.*
 - [x] ~~Unknown ROMs were offered every ME7.5-tagged patch~~ — fixed:
   `profile.unknown` makes everything NOT_APPLICABLE and the GUI loads no maps.
 - [x] ~~`get_profile()` ignored the part number for gating~~ — fixed.

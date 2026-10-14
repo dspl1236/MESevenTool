@@ -415,16 +415,16 @@ class TestProfileVersionStringTiebreaker:
         p = self._detect('06A906032DL', '40/1/ME7.5/3/4019.20')
         assert '1.8T' in p.name
 
-    def test_me711_no_pn_uses_vs_tiebreaker(self):
-        """No PN, but ME7.1.1 version string → should prefer ME7.1.1 profiles over ME7.1."""
+    def test_me711_no_pn_is_unknown(self):
+        """No PN: the version string alone cannot pick a family (every ME7.1.1
+        profile shares DPP1=0x0205), so the ROM is UNKNOWN rather than guessed
+        (review C4)."""
         from meseventool.ecu_id import ECUIdentity
         from meseventool.dpp import DPPValues
-        from meseventool.profiles import detect_profile
+        from meseventool.profiles import detect_profile, PROFILE_UNKNOWN
         ident = ECUIdentity(vmecuhn='', version_string='43/1/ME7.1.1/5/8100.00')
         dpp   = DPPValues(dpp0=0, dpp1=0x0205, dpp2=0x00E0, dpp3=3)
-        p = detect_profile(ident, dpp)
-        assert 'ME7.1.1' in p.ecu_hw, \
-            f"Expected ME7.1.1 profile from version string, got {p.name}"
+        assert detect_profile(ident, dpp) is PROFILE_UNKNOWN
 
     def test_dual_bank_27t_profile(self):
         p = self._detect('8D0907551M', '40/1/ME7.1/5/6005.01')
