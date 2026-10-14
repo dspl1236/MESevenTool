@@ -649,9 +649,7 @@ def detect_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
     Match priority:
       1. part_prefixes match + ecu_hw matches version_string (most specific)
       2. part_prefixes match (any ecu_hw — first in ALL_PROFILES wins)
-      3. DPP1 range match filtered by ME7 hw version in version_string
-      4. DPP1 range match (unfiltered)
-      5. UNKNOWN
+      3. UNKNOWN  (DPP1 is not discriminating between families — review C4)
     """
     vs = getattr(ecu_id, "version_string", "") or ""
     hw_hint = None
@@ -671,32 +669,11 @@ def detect_profile(ecu_id: ECUIdentity, dpp: DPPValues) -> ROMProfile:
         if profile.matches(ecu_id, dpp):
             return profile
 
-    if dpp.dpp1:
-        # Use ECU version string to narrow DPP matches:
-        # "ME7.5" → prefer ME7.5 profiles; "ME7.1.1" → ME7.1.1 profiles etc.
-        vs = getattr(ecu_id, "version_string", "") or ""
-        hw_hint = None
-        for tag in ("ME7.1.1", "ME7.5", "ME7.1", "ME71"):
-            if tag.replace(".", "").lower() in vs.replace(".", "").lower():
-                hw_hint = tag.replace("ME71", "ME7.1").replace("ME7.1.1", "ME7.1.1")
-                break
-
-        if hw_hint:
-            for profile in ALL_PROFILES:
-                if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
-                    # Exact match beats prefix — "ME7.1.1" != "ME7.1"
-                    if profile.ecu_hw == hw_hint:
-                        return profile
-            # Fallback: prefix match (e.g. "ME7.1" matches "ME7.1" profiles)
-            for profile in ALL_PROFILES:
-                if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
-                    if hw_hint.startswith(profile.ecu_hw):
-                        return profile
-
-        for profile in ALL_PROFILES:
-            if profile.dpp1_min <= dpp.dpp1 <= profile.dpp1_max:
-                return profile
-
+    # No DPP1 fallback (review C4): every profile of a generation shares the
+    # same DPP1 (0x0205 on ME7.1/ME7.1.1 2.7T, VR6 and V8; ~0x0200 across
+    # ME7.5), so a DPP1 match cannot tell families apart and used to send any
+    # 2.7T/VR6/V8 ROM without a part number to the ME7.5 1.8T profile.
+    # Detection needs a part number (from the ROM, or via the Bosch number).
     return PROFILE_UNKNOWN
 
 
