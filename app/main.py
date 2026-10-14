@@ -285,7 +285,7 @@ class ROMInfoWidget(QWidget):
 
         # Validation status
         if profile:
-            maps = profile.make_maps(xdf_pn=ident.vmecuhn or None)
+            maps = profile.make_maps(xdf_pn=ident.vmecuhn or None, rom_size=rom.size)
             n_confirmed   = sum(1 for m in maps if m.confidence == "CONFIRMED")
             n_provisional = sum(1 for m in maps if m.confidence == "PROVISIONAL")
             n_unconfirmed = sum(1 for m in maps if m.confidence == "UNCONFIRMED")
@@ -295,6 +295,15 @@ class ROMInfoWidget(QWidget):
                     f"✓  All {total} maps have CONFIRMED offsets for this part number.")
                 self._lbl_validation.setStyleSheet(
                     f"color:#3ddc84; font-size:10px; padding:6px 8px; "
+                    f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
+            elif total == 0 and rom.size != 0x100000:
+                self._lbl_validation.setText(
+                    f"⚠  No map definitions for this {rom.size_kb} KB build.  "
+                    "The fallback map offsets are 1 MB layouts and a "
+                    f"{rom.size_kb} KB file is a different firmware build, so they "
+                    "are withheld rather than shown with wrong addresses.")
+                self._lbl_validation.setStyleSheet(
+                    f"color:{C_AMBER}; font-size:10px; padding:6px 8px; "
                     f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
             elif n_confirmed > 0:
                 self._lbl_validation.setText(
@@ -645,6 +654,7 @@ class MapsWidget(QWidget):
         self._stock_data.clear()
         for m in maps:
             data = m.read(rom)
+            self._current_data = data
             if data:
                 self._stock_data[m.name] = data
         changed = len(self._stock_data)
@@ -680,7 +690,7 @@ class MapsWidget(QWidget):
             ecu  = identify(baseline_rom)
             dpp  = extract_dpp(baseline_rom)
             prof = detect_profile(ecu, dpp)
-            maps = prof.make_maps(ecu.vmecuhn or None)
+            maps = prof.make_maps(ecu.vmecuhn or None, rom_size=baseline_rom.size)
             self.set_stock_baseline(baseline_rom, maps)
             # Auto-enable diff mode
             self._diff_mode = True
@@ -798,7 +808,7 @@ class MapsWidget(QWidget):
 
         for r, row in enumerate(data):
             for c, val in enumerate(row):
-                item = QTableWidgetItem(f"{val:.2f}")
+                item = QTableWidgetItem(m.format_value(val))
                 item.setTextAlignment(Qt.AlignCenter)
                 t = (val - lo) / span   # 0→1
                 if t < 0.5:
@@ -827,8 +837,9 @@ class MapsWidget(QWidget):
                         )
                         delta = val - stock_val
                         item.setToolTip(
-                            f"Stock: {stock_val:.2f}  Current: {val:.2f}  "
-                            f"Δ {delta:+.2f}")
+                            f"Stock: {m.format_value(stock_val)}  "
+                            f"Current: {m.format_value(val)}  "
+                            f"Δ {delta:+.{m.display_decimals}f}")
 
                 item.setBackground(bg)
                 lum = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
@@ -849,7 +860,7 @@ class MapsWidget(QWidget):
 
         self._lbl_map_info.setText(
             f"{m.name}  ·  {rows}×{cols}  ·  "
-            f"range: {lo:.2f} – {hi:.2f}  ·  "
+            f"range: {m.format_value(lo)} – {m.format_value(hi)}  ·  "
             f"addr: <span style='color:{C_BLUE}'>0x{m.data_addr:06X}</span>  ·  "
             f"<span style='color:{conf_colour}'>{m.confidence}</span>"
             f"{diff_txt}")
@@ -860,7 +871,23 @@ class MapsWidget(QWidget):
             val = float(item.text())
         except ValueError:
             return
-        self._pending_edits[(item.row(), item.column())] = val
+        r, c = item.row(), item.column()
+        m = self._maps[self._cur_idx] if 0 <= self._cur_idx < len(self._maps) else None
+        current = getattr(self, "_current_data", None)
+        if (m is not None and current and r < len(current) and c < len(current[r])
+                and m.same_raw(val, current[r][c])):
+            # Same raw count as what the ROM holds (e.g. the displayed text
+            # re-committed): not an edit, and never a ±count drift (review E8).
+            self._pending_edits.pop((r, c), None)
+            self._table.blockSignals(True)
+            item.setText(m.format_value(current[r][c]))
+            item.setForeground(QColor(C_FG))
+            self._table.blockSignals(False)
+            self._lbl_dirty.setText(f"  {len(self._pending_edits)} cell(s) edited"
+                                    if self._pending_edits else "")
+            self._btn_write.setEnabled(bool(self._pending_edits))
+            return
+        self._pending_edits[(r, c)] = val
         item.setForeground(QColor(C_AMBER))
         self._lbl_dirty.setText(f"  {len(self._pending_edits)} cell(s) edited")
         self._btn_write.setEnabled(True)
@@ -1255,7 +1282,7 @@ class MESevenWindow(QMainWindow):
             else:
                 # Maps — use confirmed XDF offsets if we know the exact part number
                 xdf_pn = ident.vmecuhn or None
-                maps = profile.make_maps(xdf_pn=xdf_pn)
+                maps = profile.make_maps(xdf_pn=xdf_pn, rom_size=rom.size)
         except Exception as e:
             QMessageBox.critical(self, "ROM Analysis Error",
                 f"Failed to analyse ROM:\n{e}\n\n"

@@ -241,10 +241,12 @@ it by running code; "plausible" means it was read from the source only.
   file, often the stock dump.
   *Fixed Oct 2026: `ROMImage.save_as()` retargets `path` and clears the
   modified flag; the window title and path label follow.*
-- [ ] **E8. Cell display `.2f` is coarser than the raw step** (`main.py:767,
+- [x] **E8. Cell display `.2f` is coarser than the raw step** (`main.py:767,
   825-831`, confirmed for KFMIOP/KFLBTS/LAMFA). Re-committing the displayed
   text shifts the raw value by up to ±3 counts. Unedited cells round-trip
-  exactly.
+  exactly. *Fixed Oct 2026: cells show `MapDef.display_decimals` (one more
+  than the step's magnitude) and an edit that encodes to the same raw count
+  is not an edit.*
 - [x] **E9. `_parse_math` drops the additive offset** in `"scale * X+ offset"`
   form (`xdf.py:120-134`, confirmed). IAT axes read 0…191 instead of −48…143.
   *Fixed Oct 2026: one linear-form parser; a test checks every expression in
@@ -252,9 +254,14 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **E10. XDF map order is non-deterministic** (`xdf.py:296-302`,
   confirmed). `hash(name) % 100` changes per process; the GUI's map buttons
   shuffle between runs. *Fixed Oct 2026: catalogue order, then alphabetical.*
-- [ ] **E11. 512 KB ECUFlash extracts aren't rebased** — XDF/fallback offsets
+- [x] **E11. 512 KB ECUFlash extracts aren't rebased** — XDF/fallback offsets
   are 1 MB-based, so they're `0x80000` too high on a 512 KB file
-  (`xdf.py` docstring vs `maps.py`; plausible).
+  (`xdf.py` docstring vs `maps.py`; plausible). *Resolved Oct 2026, differently:
+  the corpus shows 512 KB files are separate early-ME7.5 builds, not halves
+  of a 1 MB image (version string at 0x14256 vs 0x10005, multipoint table at
+  0x1FC00 vs 0x1FBDE, DPP1 0x205 in both), so no rebase is right. The XDF
+  already carries correct CL/CM addresses; `make_maps(rom_size=…)` withholds
+  the 1 MB fallback on other sizes instead of showing garbage.*
 
 ## F. Build and packaging
 

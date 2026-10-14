@@ -12,7 +12,9 @@ validated against real ROM dumps). Each entry contains:
   axes.x   : X-axis (optional, cols entries)
   axes.y   : Y-axis (optional, rows entries)
 
-Addresses are flat file offsets into the 512 KB .bin.
+Addresses are flat file offsets into the image the XDF was made for
+(1 MB for most part numbers; 06A906032CL/CM are 512 KB builds with their
+own layout — see review E11).
 
 Usage:
     from meseventool.xdf import XDFLoader
