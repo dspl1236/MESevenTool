@@ -151,7 +151,12 @@ class ROMImage:
     # ── Read / write ───────────────────────────────────────────────────────────
 
     def read(self, offset: int, length: int) -> bytes:
-        """Read bytes at file offset."""
+        """Read bytes at file offset.  Raises ValueError when the range is
+        not inside the image: a short read used to come back silently
+        while read_u16/u32 raised (review D6)."""
+        if offset < 0 or length < 0 or offset + length > self.size:
+            raise ValueError(
+                f"Read at 0x{offset:X}+{length} outside ROM size 0x{self.size:X}")
         return bytes(self.data[offset : offset + length])
 
     def read_u8(self, offset: int) -> int:

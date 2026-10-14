@@ -96,17 +96,12 @@ class TestSearchHit:
 class TestDPPNeedle:
     def test_dpp_needle_found_in_synthetic_rom(self):
         """Build a synthetic ROM that contains the DPP setup sequence."""
-        # DPP sequence: mov r0, #DPP0; mov DPP0, r0; ... x4
-        # C167 encoding: E6 F0 <lo> <hi>  FD 00  (for DPP0)
+        # Direct form, as on every real ME7 image: E6 0x <lo> <hi>
         dpp_seq = bytes([
-            0xE6, 0xF0, 0x03, 0x00,   # mov r0, #0x0003  (DPP0 = page 3)
-            0xFD, 0x00,                # mov DPP0, r0
-            0xE6, 0xF0, 0x10, 0x00,   # mov r0, #0x0010  (DPP1 = page 16)
-            0xFD, 0x01,                # mov DPP1, r0
-            0xE6, 0xF0, 0x20, 0x00,   # mov r0, #0x0020  (DPP2 = page 32)
-            0xFD, 0x02,                # mov DPP2, r0
-            0xE6, 0xF0, 0x03, 0xFE,   # mov r0, #0xFE03  (DPP3 = stack page)
-            0xFD, 0x03,                # mov DPP3, r0
+            0xE6, 0x00, 0x03, 0x00,   # mov DPP0, #0x0003
+            0xE6, 0x01, 0x10, 0x00,   # mov DPP1, #0x0010
+            0xE6, 0x02, 0x20, 0x00,   # mov DPP2, #0x0020
+            0xE6, 0x03, 0x03, 0xFE,   # mov DPP3, #0xFE03
         ])
         rom_data = b'\xFF' * 0x1000 + dpp_seq + b'\xFF' * (0x80000 - 0x1000 - len(dpp_seq))
         rom = ROMImage(data=bytearray(rom_data))

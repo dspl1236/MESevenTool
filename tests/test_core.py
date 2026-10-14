@@ -36,19 +36,17 @@ def make_rom_with_dpp(dpp0=0x0020, dpp1=0x0200, dpp2=0x0050, dpp3=0x0003,
                       size=0x80000) -> tuple[ROMImage, int]:
     """
     Embed a DPP setup sequence at offset 0x100 and return (rom, offset).
-    MOV r0, #DPPx  = E6 F0 lo hi  (LE word)
-    MOV DPPx, r0   = FD 0x  (x = 0..3)
+    MOV DPPx, #val = E6 0x lo hi  (x = 0..3), the direct form every real
+    ME7 image uses (review D5).
     """
     rom = make_rom(size)
     off = 0x100
     for i, val in enumerate([dpp0, dpp1, dpp2, dpp3]):
         rom.data[off + 0] = 0xE6
-        rom.data[off + 1] = 0xF0
+        rom.data[off + 1] = i
         rom.data[off + 2] = val & 0xFF
         rom.data[off + 3] = (val >> 8) & 0xFF
-        rom.data[off + 4] = 0xFD
-        rom.data[off + 5] = i          # DPP register number
-        off += 6
+        off += 4
     return rom, 0x100
 
 

@@ -197,14 +197,18 @@ it by running code; "plausible" means it was read from the source only.
 - [x] **D3. `write_u16/u32` silently truncate out-of-range values**
   (`rom.py:182-198`, confirmed). A bad scaling result becomes a plausible
   wrong value. *Fixed Oct 2026: `write_u16/u32` raise `ValueError` instead.*
-- [ ] **D4. `dpp1_to_file` double-corrects** (`needle.py:222-234`,
+- [x] **D4. `dpp1_to_file` double-corrects** (`needle.py:222-234`,
   `dpp.py:26-35`, plausible). Subtracts a page and masks; correct only
-  because ME7 always has dpp0 = dpp1 − 1.
-- [ ] **D5. Form-1 DPP needle is not valid C167** (`needle.py:154-180`). It
+  because ME7 always has dpp0 = dpp1 − 1. *Fixed Oct 2026: operands are
+  translated by their own window bits (`data_addr_to_file`); a DPP0-window
+  operand uses dpp0, or dpp1 − 1 when DPP0 is unset at startup.*
+- [x] **D5. Form-1 DPP needle is not valid C167** (`needle.py:154-180`). It
   never matches; every DPP test exercises only this fake form, so the real
-  Form-2 path is untested.
-- [ ] **D6. `rom.read()` past end returns short data** while `read_u16/u32`
-  raise (`rom.py:153-155`).
+  Form-2 path is untested. *Fixed Oct 2026: the indirect form is removed
+  (0 of 284 corpus images matched it; 269 match the direct form); tests and
+  the exported `NEEDLE_DPP` use the direct form; a real-ROM test reads 0x205.*
+- [x] **D6. `rom.read()` past end returns short data** while `read_u16/u32`
+  raise (`rom.py:153-155`). *Fixed Oct 2026: `read()` raises `ValueError`.*
 
 ## E. GUI: losing or mis-saving work
 
