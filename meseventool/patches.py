@@ -180,34 +180,42 @@ class PatchDef:
             return PatchResult(self, PatchState.UNKNOWN, addr,
                                f"Modified: {current.hex().upper()}")
 
+    def sites(self, rom: ROMImage, searcher: Optional[Searcher] = None) -> List[int]:
+        """Every patch-site address in the ROM, whether the site currently
+        holds the stock or the patched bytes.  Needles that include the
+        patched bytes (e.g. the Vmax immediate) stop matching once applied,
+        so the patched form is searched as well (review D1)."""
+        s = searcher or Searcher(rom)
+        addrs = {h.file_offset + self.offset
+                 for h in s.search(list(self.needle), list(self.mask))}
+        if self.patch_bytes != self.stock_bytes:
+            patched_needle = list(self.needle)
+            patched_mask   = list(self.mask)
+            for i, b in enumerate(self.patch_bytes):
+                patched_needle[self.offset + i] = b
+                patched_mask[self.offset + i]   = 0xFF
+            addrs |= {h.file_offset + self.offset
+                      for h in s.search(patched_needle, patched_mask)}
+        return sorted(a for a in addrs if a + len(self.stock_bytes) <= rom.size)
+
     def apply(self, rom: ROMImage, result: PatchResult) -> bool:
         """Write patch_bytes at the discovered address. Returns True on success.
-        If all_hits=True, patches every needle occurrence in the ROM."""
+        If all_hits=True, patches every site in the ROM."""
         if result.addr == 0 or result.state in (PatchState.MISSING,
                                                   PatchState.NOT_APPLICABLE):
             return False
-        if self.all_hits:
-            s = Searcher(rom)
-            hits = s.search(list(self.needle), list(self.mask))
-            for h in hits:
-                rom.write(h.file_offset + self.offset, self.patch_bytes)
-        else:
-            rom.write(result.addr, self.patch_bytes)
+        for addr in (self.sites(rom) if self.all_hits else [result.addr]):
+            rom.write(addr, self.patch_bytes)
         return True
 
     def revert(self, rom: ROMImage, result: PatchResult) -> bool:
         """Write stock_bytes at the discovered address.
-        If all_hits=True, reverts every needle occurrence in the ROM."""
+        If all_hits=True, reverts every site in the ROM."""
         if result.addr == 0 or result.state in (PatchState.MISSING,
                                                   PatchState.NOT_APPLICABLE):
             return False
-        if self.all_hits:
-            s = Searcher(rom)
-            hits = s.search(list(self.needle), list(self.mask))
-            for h in hits:
-                rom.write(h.file_offset + self.offset, self.stock_bytes)
-        else:
-            rom.write(result.addr, self.stock_bytes)
+        for addr in (self.sites(rom) if self.all_hits else [result.addr]):
+            rom.write(addr, self.stock_bytes)
         return True
 
 
@@ -238,6 +246,7 @@ class ScalarPatchDef:
     confidence: str   = "UNCONFIRMED"
     notes:      str   = ""
     applies_to:         Set[str]  = field(default_factory=set)
+    all_hits:           bool      = False   # write every needle site (review D1)
     requires_induction: List[str] = None   # type: ignore
     requires_lambda:    List[str] = None
     requires_fuel:      List[str] = None
@@ -264,13 +273,30 @@ class ScalarPatchDef:
     def check_applicable(self, profile) -> bool:
         return profile.patch_applies(self)
 
+    def _find_addrs(self, rom: ROMImage,
+                    searcher: Optional[Searcher] = None) -> List[int]:
+        """Every site holding this value (the needle masks the value bytes,
+        so sites keep matching after a write)."""
+        s = searcher or Searcher(rom)
+        hits = s.search(list(self.needle), list(self.mask),
+                        count=0 if self.all_hits else 1)
+        return [h.file_offset + self.offset for h in hits
+                if h.file_offset + self.offset + self.size <= rom.size]
+
     def _find_addr(self, rom: ROMImage,
                    searcher: Optional[Searcher] = None) -> int:
-        s   = searcher or Searcher(rom)
-        hit = s.search_one(list(self.needle), list(self.mask))
-        if hit is None:
-            return 0
-        return hit.file_offset + self.offset
+        addrs = self._find_addrs(rom, searcher)
+        return addrs[0] if addrs else 0
+
+    def _raw_at(self, rom: ROMImage, addr: int) -> int:
+        return int.from_bytes(rom.data[addr : addr + self.size],
+                              'big' if self.big_endian else 'little')
+
+    def read_all(self, rom: ROMImage,
+                 searcher: Optional[Searcher] = None) -> List[float]:
+        """Physical value at every site (one per call site)."""
+        return [self._raw_at(rom, a) * self.scale + self.offset_val
+                for a in self._find_addrs(rom, searcher)]
 
     def read(self, rom: ROMImage,
              searcher: Optional[Searcher] = None,
@@ -278,28 +304,25 @@ class ScalarPatchDef:
         """Read current physical value. Returns None if needle missing."""
         if profile is not None and not self.check_applicable(profile):
             return None
-        addr = self._find_addr(rom, searcher)
-        if addr == 0 or addr + self.size > rom.size:
-            return None
-        raw = int.from_bytes(rom.data[addr : addr + self.size],
-                              'big' if self.big_endian else 'little')
-        return raw * self.scale + self.offset_val
+        values = self.read_all(rom, searcher)
+        return values[0] if values else None
 
     def write(self, rom: ROMImage, value: float,
               searcher: Optional[Searcher] = None,
               profile=None) -> bool:
-        """Write a physical value. Rejects out-of-range values."""
+        """Write a physical value to every site. Rejects out-of-range values."""
         if value < self.min_val or value > self.max_val:
             return False
         if profile is not None and not self.check_applicable(profile):
             return False
-        addr = self._find_addr(rom, searcher)
-        if addr == 0 or addr + self.size > rom.size:
+        addrs = self._find_addrs(rom, searcher)
+        if not addrs:
             return False
         raw = round((value - self.offset_val) / self.scale)
         raw = max(0, min((1 << (self.size * 8)) - 1, raw))
-        rom.write(addr, raw.to_bytes(self.size,
-                                      'big' if self.big_endian else 'little'))
+        for addr in addrs:
+            rom.write(addr, raw.to_bytes(self.size,
+                                         'big' if self.big_endian else 'little'))
         return True
 
 
@@ -1280,6 +1303,7 @@ ALL_PATCHES: list[PatchDef | OffsetPatchDef | MultiOffsetPatchDef] = [
                          "and fires reliably on all 1MB ME7 files tested (no false positives). "
                          "Note: ME7.1.1 uses different suffix — see ME7.1.1 Vmax patch."),
         applies_to    = set(),   # universal — confirmed across ME7.5, ME7.1, ME7.1 VR6
+        all_hits      = True,    # both MOV R13,#0x61A8 call sites (review D1)
     ),
 
     # ── SAP Diagnosis Disable CDSLS (4B0906018 A6/Passat 1.8T) ──────────────────
@@ -1979,6 +2003,7 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
                          "fw4019=7160RPM(0x254A), fw4013=7352RPM(0x264A), fw4012=6968RPM(0x244A). "
                          "Unitronic Stage 2 raises to 7544RPM(0x274A). Low byte always 0x4A."),
         applies_to    = {"me7.5", "1.8t"},
+        all_hits      = True,     # both call sites are written (review D1)
     ),
 
     # ── Overrev / Fuel Cut Reset RPM (ME7.5 1.8T MT) ──────────────────────────
@@ -2026,10 +2051,15 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
 
     ScalarPatchDef(
         name          = "Hard Rev Limit — alt path (ME7.5 1.8T universal)",
-        description   = ("Alternative hard-rev code path with a universal 8-byte prefix. "
+        description   = ("Second RPM limit in the rev-limiter cluster at file 0x030324, "
+                         "behind the universal 8-byte prefix 48 42 EA 30 E0 03 24 8F. "
                          "Present in all ME7.5 1.8T variants including SL DSG. "
-                         "DL/LP/RN stock=7160 RPM, 18CM stock=6776 RPM. "
-                         "All tuned files raise to 7352 RPM. Scale: 0.75 RPM/bit."),
+                         "DL/LP/RN stock=7160 RPM, 18CM stock=6776 RPM; all tuned "
+                         "files raise it to 7352 RPM. Scale: 0.75 RPM/bit. "
+                         "Its role is not settled: either a third hard-rev check or "
+                         "the fuel-cut resume threshold (tunes move it with the hard "
+                         "limit). Earlier releases listed this byte twice under both "
+                         "names."),
         category      = PatchCategory.PERFORMANCE,
         needle        = bytes([0x48,0x42, 0xEA,0x30, 0xE0,0x03, 0x24,0x8F,
                                0x00,0x00, 0xE1,0x08, 0x00,0x00, 0xF4]),
@@ -2084,42 +2114,13 @@ ALL_SCALAR_PATCHES: list[ScalarPatchDef | FixedAddressScalarDef] = [
                          "0x38=10808RPM(Unitronic S2). Delta from hard rev limit = +3264 RPM. "
                          "Present in SL DSG unlike Overrev Protection scalar."),
         applies_to    = {"me7.5", "1.8t"},
+        all_hits      = True,     # both call sites are written (review D1)
     ),
 
-    # ── Fuel Cut Resume / Soft Rev Entry (ME7.5 1.8T — universal) ─────────────
-    # Fourth RPM limit in the rev limiter function cluster (0x030000-0x040000).
-    # Prefix E0 03 24 8F is constant across all firmware variants.
-    # F4 operand byte after value varies by variant — masked in needle.
-    # DL/LP/RN stock=7160RPM, 18CM stock=6776RPM, all tuned=7352RPM.
-    # Same values as primary hard rev limit — likely the FUEL-CUT RESUME point:
-    # RPM must drop to this value before fuelling re-enables after a rev limit event.
-    # 1 hit per file (all variants including SL DSG).
-
-    ScalarPatchDef(
-        name          = "Fuel Cut Resume RPM (ME7.5 1.8T — all variants)",
-        description   = ("RPM must drop to this value for fuelling to re-enable after a rev "
-                         "limit event. 1 hit per file across all ME7.5 1.8T variants. "
-                         "DL/LP/RN stock=7160 RPM, 18CM stock=6776 RPM. "
-                         "All tuned files: 7352 RPM. Scale: 0.75 RPM/bit."),
-        category      = PatchCategory.PERFORMANCE,
-        needle        = bytes([0xE0,0x03, 0x24,0x8F, 0x00,0x00, 0xE1,0x08,
-                               0x00,0x00, 0xF4,0x00, 0x49,0x81, 0x3D,0x09]),
-        mask          = bytes([0xFF,0xFF, 0xFF,0xFF, 0x00,0x00, 0xFF,0xFF,
-                               0x00,0x00, 0xFF,0x00, 0xFF,0xFF, 0xFF,0xFF]),
-        offset        = 8,
-        size          = 2,
-        big_endian    = False,
-        scale         = 0.75,
-        unit          = "RPM",
-        min_val       = 4000.0,
-        max_val       = 9000.0,
-        confidence    = "CONFIRMED",
-        notes         = ("1 hit per file — universal (all MT + SL DSG). "
-                         "Prefix E0 03 24 8F constant; F4 operand byte masked. "
-                         "Stock: DL/LP/RN=7160RPM(0x254A), 18CM=6776RPM(0x234A). "
-                         "Tuned: all=7352RPM(0x264A). Same 0x4A low-byte family."),
-        applies_to    = {"me7.5", "1.8t"},
-    ),
+    # The former "Fuel Cut Resume RPM" entry resolved to the same byte as the
+    # alt-path hard rev limit above (its needle was a 4-byte-later window of
+    # the same code, offset 12 == offset 8 at file 0x030324 on every ME7.5
+    # 1.8T file).  One site, one entry (review D2).
 
 ]  # end ALL_SCALAR_PATCHES
 
