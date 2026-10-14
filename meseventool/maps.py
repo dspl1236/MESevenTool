@@ -98,6 +98,41 @@ class MapDef:
         """Total byte size of cell data: rows × cols × |data_width|."""
         return self.rows * self.cols * abs(self.data_width)
 
+    @property
+    def step(self) -> float:
+        """Physical change per raw count (every catalogue decode is linear)."""
+        dec = self.decode or (lambda x: float(x))
+        try:
+            return abs(float(dec(1)) - float(dec(0))) or 1.0
+        except Exception:
+            return 1.0
+
+    @property
+    def display_decimals(self) -> int:
+        """
+        Decimals needed so that the displayed text re-encodes to the same
+        raw count.  Two decimals was coarser than the step of KFMIOP
+        (0.001526), KFLBTS and LAMFA (0.007813), so re-committing the shown
+        text moved the raw value by up to ±3 counts (review E8).  One more
+        decimal than the step's magnitude keeps the rounding error under
+        half a count.
+        """
+        import math
+        step = self.step
+        if step >= 1.0:
+            return 0 if float(step).is_integer() else 1
+        # smallest d with 10**-d < step: rounding to d decimals errs by at
+        # most 0.5 * 10**-d, under half a count, so encode() gets it back
+        return max(1, min(6, math.floor(-math.log10(step)) + 1))
+
+    def format_value(self, value: float) -> str:
+        return f"{value:.{self.display_decimals}f}"
+
+    def same_raw(self, a: float, b: float) -> bool:
+        """True when two physical values encode to the same raw count."""
+        enc = self.encode or (lambda x: int(round(x)))
+        return enc(a) == enc(b)
+
     def read(self, rom: ROMImage) -> List[List[float]]:
         """Read and decode cell data. Returns [] if data_addr == 0."""
         if self.data_addr == 0 or self.rows == 0 or self.cols == 0:

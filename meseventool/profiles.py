@@ -202,7 +202,10 @@ class ROMProfile:
                 return True
         return False
 
-    def make_maps(self, xdf_pn: Optional[str] = None) -> List[MapDef]:
+    FALLBACK_ROM_SIZE = 0x100000   # the fallback map sets are 1 MB layouts
+
+    def make_maps(self, xdf_pn: Optional[str] = None,
+                  rom_size: Optional[int] = None) -> List[MapDef]:
         """
         Return MapDef list for this profile.
 
@@ -213,6 +216,13 @@ class ROMProfile:
 
         XDF loader covers: 06A906032CL/CM/DL/RN (1.8T), 8D0907557P (2.7T S4),
         8D0907551M (2.7T S4 full 12-map set).  XDF always wins when PN matches.
+
+        The fallback sets are flat offsets into a 1 MB image.  A 512 KB or
+        256 KB file is a different firmware build with its own layout (not a
+        half of a 1 MB image: the version string, checksum tables and maps
+        all sit elsewhere), so when ``rom_size`` is given and is not 1 MB the
+        fallback is withheld rather than shown with wrong addresses
+        (review E11).  Pass the loaded ROM's size.
         """
         # Try XDF confirmed offsets first — works for both 1.8T and 2.7T PNs
         if xdf_pn:
@@ -223,6 +233,9 @@ class ROMProfile:
                     return loader.make_maps(xdf_pn)
             except Exception:
                 pass
+
+        if rom_size is not None and rom_size != self.FALLBACK_ROM_SIZE:
+            return []
 
         # V6/V8 biturbo fallback — different calibration structure from 1.8T
         if self.dual_bank or "2.7t" in self.platforms:
