@@ -183,3 +183,60 @@ class TestProfileXDFIntegration:
         maps = PROFILE_AWP.make_maps(xdf_pn="UNKNOWN99999")
         # Should fall back to generic maps, not crash
         assert len(maps) >= 3
+
+
+# ── Review E9: trailing offset forms ─────────────────────────────────────────
+
+class TestParseMathTrailingOffset:
+    def test_scale_x_plus_negative_offset(self):
+        """IAT axes: '0.750000 * X+ -48.000000' → −48 … 143, not 0 … 191."""
+        scale, offset = _parse_math("0.750000 * X+ -48.000000")
+        assert scale == pytest.approx(0.75)
+        assert offset == pytest.approx(-48.0)
+
+    def test_scale_x_minus_offset(self):
+        scale, offset = _parse_math("0.25 * X - 48")
+        assert (scale, offset) == (pytest.approx(0.25), pytest.approx(-48.0))
+
+    def test_x_times_scale_plus_offset(self):
+        scale, offset = _parse_math("X*0.1+10")
+        assert (scale, offset) == (pytest.approx(0.1), pytest.approx(10.0))
+
+    def test_every_catalogue_expression_parses(self):
+        """No math string in reference/xdf_tables.json may fall back to identity
+        unless it really is 'X'."""
+        import json
+        import re as _re
+        from meseventool.xdf import _JSON_PATH
+        with open(_JSON_PATH, encoding="utf-8") as f:
+            for e in json.load(f):
+                for ax in e["axes"].values():
+                    m = ax["math"].strip()
+                    scale, offset = _parse_math(m)
+                    if _re.fullmatch(r"[Xx]", m):
+                        continue
+                    nums = [float(x) for x in _re.findall(r"[-+]?\d*\.?\d+", m)]
+                    assert scale in [pytest.approx(n) for n in nums], (m, scale)
+                    assert offset in [pytest.approx(n) for n in nums] or offset == 0.0, (m, offset)
+
+
+# ── Review E10: deterministic map order ──────────────────────────────────────
+
+class TestMapOrder:
+    def test_unknown_names_sort_alphabetically(self):
+        from meseventool.xdf import XDFLoader
+        names = [m.name for m in XDFLoader().make_maps("06A906032DL")]
+        order = ["KFZW", "KFZW2", "KFZWOP", "KFZWMS", "KFZWMN",
+                 "KFMIRL", "KFMIOP", "LDRXN", "LDRXN_1_A", "LDRXNZK",
+                 "MLHFM", "KFKHFM", "LAMFA", "KFLBTS", "KFLDRL"]
+        head = [n for n in names if n in order]
+        tail = [n for n in names if n not in order]
+        assert names == head + tail                 # catalogue maps first
+        assert head == sorted(head, key=order.index)
+        assert tail == sorted(tail)                 # then alphabetical
+
+    def test_order_is_stable_across_fresh_loaders(self):
+        from meseventool.xdf import XDFLoader
+        a = [m.name for m in XDFLoader().make_maps("8D0907551M")]
+        b = [m.name for m in XDFLoader().make_maps("8D0907551M")]
+        assert a == b and a
