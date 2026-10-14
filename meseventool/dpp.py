@@ -24,15 +24,27 @@ class DPPValues:
 
     @property
     def dpp1_seg(self) -> int:
-        """Segment page used for most ROM data refs: dpp1 - 1."""
+        """Page that DPP0-window operands resolve to: dpp1 - 1 (the ME7
+        convention; equals dpp0 whenever the startup code sets DPP0)."""
         return max(0, self.dpp1 - 1)
 
     def seg_to_file(self, seg: int, offset: int, rom_size: int = 0x100000) -> int:
         physical = seg * SEGMENT_SIZE + (offset & 0x3FFF)
         return physical & (rom_size - 1)
 
+    def data_addr_to_file(self, addr16: int, rom_size: int = 0x100000) -> int:
+        """16-bit data operand → file offset; bits 15:14 pick DPP0..3
+        (see Searcher.data_addr_to_file)."""
+        page_sel = (addr16 >> 14) & 3
+        page = [self.dpp0, self.dpp1, self.dpp2, self.dpp3][page_sel]
+        if page_sel == 0 and self.dpp0 == 0:
+            page = self.dpp1_seg
+        return self.seg_to_file(page, addr16, rom_size)
+
     def dpp1_to_file(self, offset: int, rom_size: int = 0x100000) -> int:
-        return self.seg_to_file(self.dpp1_seg, offset, rom_size)
+        """Operand → file offset (review D4: no longer subtracts a page
+        AND masks; the operand's own window bits select the DPP)."""
+        return self.data_addr_to_file(offset, rom_size)
 
     def describe(self) -> str:
         return (f"DPP0=0x{self.dpp0:04X}  DPP1=0x{self.dpp1:04X}  "

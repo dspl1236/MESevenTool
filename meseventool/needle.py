@@ -155,31 +155,18 @@ class Searcher:
         """
         Extract DPP0-DPP3 values from the C167 startup code.
 
-        Tries two encoding forms used by different ME7.x firmware versions:
-
-        Form 1 — indirect via R0 (most common, pre-2002):
-            E6 F0 lo hi   MOV R0, #DPPx_val
-            FD 0x         MOV DPPx, R0
-
-        Form 2 — direct immediate (some ME7.5+ variants):
+        The startup code sets DPP0..DPP3 with four direct immediates:
             E6 0x lo hi   MOV DPPx, #val   (x = 0..3)
+        This is the only form seen on 269 of 284 corpus images (the 256 KB
+        ME7.1 dumps use something else and report not-found).  An earlier
+        "indirect via R0" form (E6 F0 lo hi / FD 0x) was not valid C167 and
+        never matched a real ROM (review D5); it has been removed.
 
         dpp1 is the critical value: it determines the base page for most
         ROM calibration table references.
 
-        Returns True on success, False if neither needle was found.
+        Returns True on success, False if the needle was not found.
         """
-        # Form 1: indirect via R0
-        hit = self.search_one(NEEDLE_DPP, MASK_DPP)
-        if hit is not None:
-            # Offsets within NEEDLE_DPP: each MOV R0 + MOV DPPx = 6 bytes
-            self.dpp0 = hit.get_u16_le(2)    # E6 F0 [lo hi] at +0
-            self.dpp1 = hit.get_u16_le(8)    # E6 F0 [lo hi] at +6
-            self.dpp2 = hit.get_u16_le(14)   # E6 F0 [lo hi] at +12
-            self.dpp3 = hit.get_u16_le(20)   # E6 F0 [lo hi] at +18
-            return True
-
-        # Form 2: direct E6 0N lo hi
         hit = self.search_one(NEEDLE_DPP_DIRECT, MASK_DPP_DIRECT)
         if hit is not None:
             # Each MOV DPPx is 4 bytes
@@ -188,7 +175,6 @@ class Searcher:
             self.dpp2 = hit.get_u16_le(10)   # E6 02 [lo hi] at +8
             self.dpp3 = hit.get_u16_le(14)   # E6 03 [lo hi] at +12
             return True
-
         return False
 
     # ── Address translation ────────────────────────────────────────────────────
@@ -219,19 +205,39 @@ class Searcher:
         physical = (seg * 0x4000) + (offset & 0x3FFF)
         return physical & (self.rom.size - 1)
 
+    def data_addr_to_file(self, addr16: int) -> int:
+        """
+        Translate a 16-bit C167 data address (a MOV operand) to a file offset.
+
+        Bits 15:14 of the address select DPP0..DPP3; the page register
+        supplies bits 23:14 of the physical address and the low 14 bits
+        come from the operand:
+            physical = DPPn * 0x4000 + (addr16 & 0x3FFF)
+
+        When DPP0 is 0 in the startup code (RAM at run time) a DPP0-window
+        operand is resolved with page DPP1 - 1, which is where ME7 lays
+        the DPP0 ROM window (me7romtool convention; DPP0 = 0x204 and
+        DPP1 = 0x205 on every corpus image that sets both).
+        """
+        page_sel = (addr16 >> 14) & 3
+        dpps = [self.dpp0, self.dpp1, self.dpp2, self.dpp3]
+        page = dpps[page_sel]
+        if page_sel == 0 and self.dpp0 == 0:
+            page = max(0, self.dpp1 - 1)
+        physical = page * 0x4000 + (addr16 & 0x3FFF)
+        return physical & (self.rom.size - 1)
+
     def dpp1_to_file(self, offset: int) -> int:
         """
-        Translate a dpp1-relative 16-bit offset to a flat file offset.
+        Translate a 16-bit data operand to a file offset.
 
-        Most ROM data references use DPP1 implicitly.  The formula is:
-            physical = ((dpp1 - 1) * 0x4000) + (offset & 0x3FFF)
-
-        The -1 adjustment corrects for the C167's paged-mode addressing
-        where dpp1 points one page *above* the ROM window base.
+        Kept for callers that pass needle operands: the operand's top two
+        bits pick the DPP, so this is data_addr_to_file().  The previous
+        implementation both subtracted a page from DPP1 and masked the
+        operand to 14 bits, which was one page off for any operand in the
+        DPP1 window (review D4).
         """
-        mask = self.rom.size - 1
-        physical = ((self.dpp1 - 1) * 0x4000) + (offset & 0x3FFF)
-        return physical & mask
+        return self.data_addr_to_file(offset)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -244,31 +250,9 @@ class Searcher:
 # Fires at C167 cold boot, sets DPP0-DPP3 from immediate constants.
 # Correct C167 encoding: E6 <dpp_index> <lo> <hi>
 #   where dpp_index is 0x00-0x03 (not the F0-FF SFR naming)
-# DPP via intermediate R0 register: MOV R0, #val; MOV DPPx, R0
-# C167 encoding: E6 F0 lo hi (MOV R0, #imm16) then FD 0x (MOV DPPx, R0)
-NEEDLE_DPP = [
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #DPP0_val
-    0xFD, 0x00,                # MOV DPP0, R0
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #DPP1_val
-    0xFD, 0x01,                # MOV DPP1, R0
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #DPP2_val
-    0xFD, 0x02,                # MOV DPP2, R0
-    0xE6, 0xF0, XXXX, XXXX,   # MOV R0, #DPP3_val
-    0xFD, 0x03,                # MOV DPP3, R0
-]
-MASK_DPP = [
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-    MASK, MASK, XXXX, XXXX,
-    MASK, MASK,
-]
-
-# Alternative direct-form DPP initialisation (some ME7.5 variants):
-#   E6 00 lo hi   MOV DPP0, #val  (direct, no R0 intermediate)
+# Direct-form DPP initialisation — the form every 512 KB / 1 MB ME7 image
+# in the corpus uses (review D5):
+#   E6 00 lo hi   MOV DPP0, #val
 #   E6 01 lo hi   MOV DPP1, #val
 #   E6 02 lo hi   MOV DPP2, #val
 #   E6 03 lo hi   MOV DPP3, #val
@@ -284,6 +268,9 @@ MASK_DPP_DIRECT = [
     MASK, MASK, XXXX, XXXX,
     MASK, MASK, XXXX, XXXX,
 ]
+# Exported names kept for callers; they are the direct form.
+NEEDLE_DPP = NEEDLE_DPP_DIRECT
+MASK_DPP   = MASK_DPP_DIRECT
 
 # Checksum needles live in checksum.py (ported from me7romtool and ME7Sum).
 
