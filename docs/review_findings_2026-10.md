@@ -173,13 +173,19 @@ it by running code; "plausible" means it was read from the source only.
 
 ## D. Patch mechanics
 
-- [ ] **D1. "Apply to both sites" patches only write the first hit**
+- [x] **D1. "Apply to both sites" patches only write the first hit**
   (`patches.py:1186-1209` universal Vmax — comment says `all_hits=True`, it
   isn't; scalars `:1860` Hard Rev Limit and `:1963` NKILL, confirmed).
   `ScalarPatchDef.write` uses `search_one`. Leaves an inconsistent limiter
-  pair.
-- [ ] **D2. Two scalars resolve to the same byte** (`patches.py:1928` Hard Rev
+  pair. *Fixed Oct 2026: Vmax universal is `all_hits=True` and `PatchDef.sites()`
+  finds sites in stock or patched form (the old revert searched only the stock
+  needle, which no longer matched); scalars have `all_hits` and Hard Rev Limit
+  and NKILL write both call sites. A test checks every two-site entry.*
+- [x] **D2. Two scalars resolve to the same byte** (`patches.py:1928` Hard Rev
   Limit alt path and `:1999` Fuel Cut Resume, confirmed). One name is wrong.
+  *Fixed Oct 2026: the Fuel Cut Resume entry is removed; the alt-path entry's
+  description records both hypotheses. A test asserts no two scalars share a
+  site on real ROMs.*
 - [x] **D3. `write_u16/u32` silently truncate out-of-range values**
   (`rom.py:182-198`, confirmed). A bad scaling result becomes a plausible
   wrong value. *Fixed Oct 2026: `write_u16/u32` raise `ValueError` instead.*

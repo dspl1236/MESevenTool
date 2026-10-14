@@ -1462,7 +1462,8 @@ class TestVmaxFw4013CodeImmediate(unittest.TestCase):
 # VMAX code-immediate — double-apply covers both call sites
 # =============================================================================
 class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
-    """Both VMAX call sites patched by applying twice on real RN ROM."""
+    """Both VMAX call sites are patched by ONE apply (all_hits, review D1);
+    the loop below counts applies and must find nothing left to do after it."""
 
     def _load(self, fname):
         import os, tempfile
@@ -1490,35 +1491,40 @@ class TestVmaxCodeImmediateDoubleApply(unittest.TestCase):
                 applied += 1
             else:
                 break
+        # every site must hold the patched immediate afterwards
+        sites = self.patch.sites(rom)
+        self.assertEqual(len(sites), 2, f"expected 2 call sites, found {sites}")
+        for a in sites:
+            self.assertEqual(bytes(rom.data[a:a + 2]), self.patch.patch_bytes, hex(a))
         return applied
 
     def test_rn_double_apply_both_sites(self):
         """Applying twice on RN ROM patches both call sites."""
         rom = self._load('1773719274810_06A906032RN.bin')
         n = self._apply_all_sites(rom)
-        self.assertEqual(n, 2, f"Expected 2 applies (2 call sites), got {n}")
+        self.assertEqual(n, 1, f"Expected one apply to cover both call sites, got {n}")
         # Both sites should be 0xFFFF
         site1, site2 = 0x0AF25A, 0x0AF3CE
         self.assertEqual(rom.data[site1], 0xFF, "site1 not patched")
         self.assertEqual(rom.data[site2], 0xFF, "site2 not patched")
 
     def test_lp_double_apply_both_sites(self):
-        """LP ROM: 2 applies, both sites patched."""
+        """LP ROM: one apply, both sites patched."""
         rom = self._load('1773719875934_06A906032LP_0005.bin')
         n = self._apply_all_sites(rom)
-        self.assertEqual(n, 2)
+        self.assertEqual(n, 1)
 
     def test_sl_double_apply_both_sites(self):
-        """SL DSG ROM: 2 applies, both sites patched."""
+        """SL DSG ROM: one apply, both sites patched."""
         rom = self._load('1773719274817_032sl_auto_revo_1.bin')
         n = self._apply_all_sites(rom)
-        self.assertEqual(n, 2)
+        self.assertEqual(n, 1)
 
     def test_18cm_double_apply_both_sites(self):
-        """18CM ROM: 2 applies, both sites patched."""
+        """18CM ROM: one apply, both sites patched."""
         rom = self._load('18CM.Bin')
         n = self._apply_all_sites(rom)
-        self.assertEqual(n, 2)
+        self.assertEqual(n, 1)
 
     def test_final_state_is_patched(self):
         """After double-apply, detect returns PATCHED."""
@@ -1837,7 +1843,7 @@ class TestEmergencyRpmCutScalar1p8T(unittest.TestCase):
 
 
 # =============================================================================
-# Fuel Cut Resume RPM ScalarPatchDef (ME7.5 1.8T — all variants)
+# Alt-path hard rev limit at 0x030324 (formerly duplicated as 'Fuel Cut Resume RPM')
 # =============================================================================
 class TestFuelCutResumeScalar1p8T(unittest.TestCase):
     """Fuel cut resume RPM scalar — universal across all ME7.5 1.8T variants."""
@@ -1854,7 +1860,8 @@ class TestFuelCutResumeScalar1p8T(unittest.TestCase):
 
     def setUp(self):
         from meseventool.patches import ALL_SCALAR_PATCHES
-        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'Fuel Cut Resume' in p.name)
+        # 'Fuel Cut Resume RPM' was the same byte as the alt-path hard rev limit (review D2)
+        self.patch = next(p for p in ALL_SCALAR_PATCHES if 'alt path' in p.name)
 
     def _rpm(self, fname):
         from meseventool.needle import Searcher
