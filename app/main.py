@@ -24,7 +24,7 @@ try:
         QLabel, QPushButton, QFileDialog, QTabWidget, QScrollArea,
         QGroupBox, QCheckBox, QDoubleSpinBox, QFrame,
         QTableWidget, QTableWidgetItem, QHeaderView, QStatusBar,
-        QTextEdit, QGridLayout, QMessageBox, QAction, QSplitter,
+        QTextEdit, QGridLayout, QMessageBox, QAction,
         QDialogButtonBox, QDialog,
     )
     from PyQt5.QtCore import Qt, pyqtSignal, QTimer
@@ -306,7 +306,7 @@ class ROMInfoWidget(QWidget):
                     f"background:{C_BG2}; border:1px solid {C_BORDER}; border-radius:3px;")
             else:
                 self._lbl_validation.setText(
-                    f"⚠  Map offsets PROVISIONAL/UNCONFIRMED for this variant — "
+                    "⚠  Map offsets PROVISIONAL/UNCONFIRMED for this variant — "
                     "do not write to ECU until needle hits are confirmed against a real .bin.")
                 self._lbl_validation.setStyleSheet(
                     f"color:{C_AMBER}; font-size:10px; padding:6px 8px; "
@@ -815,11 +815,9 @@ class MapsWidget(QWidget):
                     )
 
                 # Diff overlay — magenta border/tint for cells changed from stock
-                is_diff = False
                 if stock and r < len(stock) and c < len(stock[r]):
                     stock_val = stock[r][c]
                     if abs(val - stock_val) > 1e-4:
-                        is_diff = True
                         diff_count += 1
                         # Blend towards magenta: darken bg and add pink cast
                         bg = QColor(
@@ -921,7 +919,7 @@ class MESevenWindow(QMainWindow):
         self.setStyleSheet(_BASE_STYLE)
 
         # ── KWPBridge live overlay (optional) ─────────────────────────────────
-        from meseventool.kwp import (KWPMonitor, LiveValues,
+        from meseventool.kwp import (KWPMonitor,
                                      kwpbridge_available, kwpbridge_running,
                                      status_label as kwp_status_label,
                                      live_summary as kwp_live_summary)
@@ -1433,7 +1431,36 @@ class MESevenWindow(QMainWindow):
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
+def selftest() -> int:
+    """
+    Exit code for ``MESevenTool.exe --selftest``: 0 when the bundled data
+    files load and the confirmed XDF tables resolve, 1 otherwise.  CI runs
+    this against the built EXE so a build that silently lacks
+    reference/xdf_tables.json (review F1) fails instead of shipping with
+    every ROM on the PROVISIONAL fallback maps.
+    """
+    try:
+        from meseventool.xdf import XDFLoader
+        loader = XDFLoader()
+        kfzw = loader.get("06A906032DL", "KFZW")
+        if kfzw is None or kfzw.z.addr != 0x0120DD:
+            print("selftest: XDF loaded but 06A906032DL KFZW not at 0x0120DD")
+            return 1
+        if not loader.part_numbers():
+            print("selftest: XDF has no part numbers")
+            return 1
+    except Exception as e:                   # noqa: BLE001 - report anything
+        print(f"selftest: XDF data not available: {e}")
+        return 1
+    print(f"selftest: ok (MESevenTool {__version__}, "
+          f"{len(loader.part_numbers())} XDF part numbers)")
+    return 0
+
+
 def main():
+    if "--selftest" in sys.argv[1:]:
+        sys.exit(selftest())
+
     if not _HAS_QT:
         print("PyQt5 not installed. Run: pip install PyQt5")
         sys.exit(1)

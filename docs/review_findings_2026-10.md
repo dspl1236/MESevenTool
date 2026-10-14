@@ -227,24 +227,29 @@ it by running code; "plausible" means it was read from the source only.
   825-831`, confirmed for KFMIOP/KFLBTS/LAMFA). Re-committing the displayed
   text shifts the raw value by up to ±3 counts. Unedited cells round-trip
   exactly.
-- [ ] **E9. `_parse_math` drops the additive offset** in `"scale * X+ offset"`
+- [x] **E9. `_parse_math` drops the additive offset** in `"scale * X+ offset"`
   form (`xdf.py:120-134`, confirmed). IAT axes read 0…191 instead of −48…143.
-- [ ] **E10. XDF map order is non-deterministic** (`xdf.py:296-302`,
+  *Fixed Oct 2026: one linear-form parser; a test checks every expression in
+  `xdf_tables.json`.*
+- [x] **E10. XDF map order is non-deterministic** (`xdf.py:296-302`,
   confirmed). `hash(name) % 100` changes per process; the GUI's map buttons
-  shuffle between runs.
+  shuffle between runs. *Fixed Oct 2026: catalogue order, then alphabetical.*
 - [ ] **E11. 512 KB ECUFlash extracts aren't rebased** — XDF/fallback offsets
   are 1 MB-based, so they're `0x80000` too high on a 512 KB file
   (`xdf.py` docstring vs `maps.py`; plausible).
 
 ## F. Build and packaging
 
-- [ ] **F1. CI build ignores the spec and bundles no data files**
+- [x] **F1. CI build ignores the spec and bundles no data files**
   (`.github/workflows/ci.yml:35-51` vs `meseventool_gui.spec:8-11`). The EXE
   has no `reference/xdf_tables.json`; `XDFLoader()` raises, `profiles.py:197`
   swallows it, and every ROM silently gets the PROVISIONAL fallback map set,
   including the ones with confirmed XDF offsets. "Verify EXE" only checks the
-  file exists.
-- [ ] **F2. CI lints only `meseventool/`, not `app/`.**
+  file exists. *Fixed Oct 2026: CI builds from `meseventool_gui.spec` and runs
+  `MESevenTool.exe --selftest`, which loads the bundled XDF data and checks
+  the confirmed DL tables; a build without the data now fails.*
+- [x] **F2. CI lints only `meseventool/`, not `app/`.** *Fixed Oct 2026: `app/`
+  linted too, after clearing its four findings.*
 
 ## G. KWPBridge live data (plausible; `kwpbridge` not installed here)
 

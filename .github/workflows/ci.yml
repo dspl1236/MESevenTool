@@ -25,34 +25,27 @@ jobs:
           pip install -e .
 
       - name: Lint
-        run: python -m pyflakes meseventool/
+        run: python -m pyflakes meseventool/ app/
 
       - name: Run tests
         run: pytest tests/ -q
 
+      # Build from the spec: it is what bundles reference/*.json and *.xdf.
+      # The ad-hoc command line this replaced shipped an EXE without the XDF
+      # data, so every ROM silently got the PROVISIONAL fallback maps (F1).
       - name: Build Windows EXE
-        run: |
-          pyinstaller --onefile --windowed --name MESevenTool `
-            --hidden-import meseventool `
-            --hidden-import meseventool.rom `
-            --hidden-import meseventool.needle `
-            --hidden-import meseventool.dpp `
-            --hidden-import meseventool.checksum `
-            --hidden-import meseventool.maps `
-            --hidden-import meseventool.patches `
-            --hidden-import meseventool.profiles `
-            --hidden-import meseventool.ecu_id `
-            --hidden-import meseventool.xdf `
-            --hidden-import meseventool.kwp `
-            --hidden-import meseventool.version `
-            --exclude-module tkinter `
-            --exclude-module matplotlib `
-            --exclude-module numpy `
-            app/main.py
+        run: pyinstaller --clean --noconfirm meseventool_gui.spec
 
+      # The built EXE must be able to load its bundled XDF definitions.
+      # --selftest exits 0 only when reference/xdf_tables.json is found and
+      # the confirmed 06A906032DL tables resolve.
       - name: Verify EXE
-        run: if not exist dist\MESevenTool.exe (echo MISSING && exit /b 1)
         shell: cmd
+        run: |
+          if not exist dist\MESevenTool.exe (echo MISSING && exit /b 1)
+          dist\MESevenTool.exe --selftest
+          if errorlevel 1 (echo SELFTEST FAILED && exit /b 1)
+          echo selftest ok
 
       - name: Create release
         shell: bash

@@ -116,22 +116,28 @@ def _parse_math(math_str: str) -> tuple[float, float]:
               "-48.000000+X*0.750000" → (0.75, -48.0)
     """
     math_str = math_str.strip()
-    # Try "offset+X*scale" or "offset + X * scale"
+    # One pattern for every linear form in the catalogue:
+    #   [offset +] (scale * X | X * scale | X) [+ offset | - offset]
+    # "0.750000 * X+ -48.000000" (IAT axes) carries its offset AFTER the
+    # product; the old parser only knew the leading-offset form and read
+    # those axes as 0…191 instead of −48…143 (review E9).
+    num = r'[-+]?(?:\d+\.?\d*|\.\d+)'
     m = re.match(
-        r'([-\d.]+)\s*\+\s*[Xx]\s*\*\s*([-\d.]+)', math_str
-    )
-    if m:
-        return float(m.group(2)), float(m.group(1))
-    # Try "scale*X" or "scale * X"
-    m = re.match(r'([-\d.]+)\s*\*\s*[Xx]', math_str)
-    if m:
-        return float(m.group(1)), 0.0
-    # Try just "X*scale"
-    m = re.match(r'[Xx]\s*\*\s*([-\d.]+)', math_str)
-    if m:
-        return float(m.group(1)), 0.0
-    # Fallback — identity
-    return 1.0, 0.0
+        rf'^(?:(?P<pre>{num})\s*\+\s*)?'
+        rf'(?:(?P<s1>{num})\s*\*\s*[Xx]|[Xx]\s*\*\s*(?P<s2>{num})|[Xx])'
+        rf'\s*(?:\+\s*(?P<post>{num})|-\s*(?P<neg>(?:\d+\.?\d*|\.\d+)))?\s*$',
+        math_str)
+    if not m:
+        return 1.0, 0.0                      # identity fallback
+    scale = float(m.group('s1') or m.group('s2') or 1.0)
+    offset = 0.0
+    if m.group('pre'):
+        offset += float(m.group('pre'))
+    if m.group('post'):
+        offset += float(m.group('post'))
+    if m.group('neg'):
+        offset -= float(m.group('neg'))
+    return scale, offset
 
 
 @dataclass
@@ -294,10 +300,13 @@ class XDFLoader:
                   "KFMIRL", "KFMIOP", "LDRXN", "LDRXN_1_A", "LDRXNZK",
                   "MLHFM", "KFKHFM", "LAMFA", "KFLBTS", "KFLDRL"]
         def sort_key(m):
+            # Known maps in catalogue order, then the rest alphabetically.
+            # hash() is salted per process, so the old hash-based key
+            # shuffled the GUI's map buttons between runs (review E10).
             try:
-                return _ORDER.index(m.name)
+                return (_ORDER.index(m.name), "")
             except ValueError:
-                return len(_ORDER) + hash(m.name) % 100
+                return (len(_ORDER), m.name)
 
         maps.sort(key=sort_key)
         return maps
