@@ -233,11 +233,12 @@ rom.save("my_awp_patched.bin")
 ## Version History
 
 Reconstructed from git in October 2026. `meseventool/version.py` reports
-0.1.16; the rows above it have not been given a version number yet.
+0.2.0 (the first bump since the March numbering slip noted below).
 
 | Version | Date | Changes |
 |---------|------|---------|
-| Unreleased (main) | 2026-10 | Checksum module rebuilt from me7romtool + ME7Sum: all three layers needle-located, `fix(adam.bin)` reproduces me7sum byte for byte; Save warns on bad checksums; no patches or maps on an unidentified ROM; whole-tool review (`docs/review_findings_2026-10.md`) |
+| v0.2.0 | 2026-10-15 | October review closed (`docs/review_findings_2026-10.md`): checksum module rebuilt from me7romtool + ME7Sum (all three layers needle-located, `fix(adam.bin)` reproduces me7sum byte for byte); emissions codeword block resolved per software build (06A, ME7.1, ME7.1.1 layouts — fixed "universal" addresses were wrong on 06A and ME7.1.1); patches gated to the ECU they were validated on; multi-site limiter patches write every site; identification by version string and Bosch number, no DPP guessing; map cell precision follows the raw step; 512 KB builds get no 1 MB fallback maps; GUI never loses or mis-saves edits; KWPBridge live data read from the real ME7 groups off the UI thread; EXE ships the XDF data and self-tests in CI; real-ROM tests run against a local corpus (782 passed) |
+| | 2026-10 | No patches or maps on an unidentified ROM; Save warns on bad checksums |
 | | 2026-09 | Fixed-address patches gated on the ROM's part number; NMAXF kept at NMAXDV + 300 RPM; M3.8/M5.9 datasheet entries moved out of the ME7 catalogue |
 | v0.1.16 (version.py) | 2026-04-15 | 4B0907558M CDTES patch |
 | v0.1.17 | 2026-03-20 | Universal Vmax hits VR6 ME7.1; 6 patches for the VR6 profile |
@@ -261,7 +262,7 @@ Reconstructed from git in October 2026. `meseventool/version.py` reports
 
 Note: the March commit messages counted up to v0.1.17 while `version.py`
 lagged behind and was later set to 0.1.16, so "v0.1.16" appears twice.
-The next release should bump `version.py` past 0.1.17.
+v0.2.0 is the first release numbered past that slip.
 
 Current counts: 118 known ROMs, 17 profiles, 41 patches, 608 tests.
 The real-ROM tests find their files through `tests/rom_corpus.py`: set
