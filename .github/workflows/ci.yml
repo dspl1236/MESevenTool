@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -47,14 +48,36 @@ jobs:
           if errorlevel 1 (echo SELFTEST FAILED && exit /b 1)
           echo selftest ok
 
+      # Two release flavours:
+      #   push to main      -> rolling "latest" release, asset MESevenTool.exe
+      #   push of a v* tag  -> numbered release for that tag, asset
+      #                        MESevenTool-v<version>.exe (created if the tag
+      #                        has no release yet, otherwise the asset is added)
+      # The tag must match meseventool/version.py or the job fails.
       - name: Create release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes 2>/dev/null || true
-          git push origin :refs/tags/latest 2>/dev/null || true
-          gh release create latest \
-            --title "MESevenTool — Latest Build" \
-            --notes "Bosch ME7.x ROM editor and patch tool. Download and run." \
-            "dist/MESevenTool.exe"
+          set -euo pipefail
+          VERSION=$(python -c "from meseventool.version import __version__; print(__version__)")
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            if [[ "$TAG" != "v$VERSION" ]]; then
+              echo "tag $TAG does not match version.py ($VERSION)"; exit 1
+            fi
+            ASSET="dist/MESevenTool-${TAG}.exe"
+            cp dist/MESevenTool.exe "$ASSET"
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
+              gh release create "$TAG" --title "MESevenTool $TAG" \
+                --notes "Bosch ME7.x ROM editor and patch tool, release $TAG. Download and run."
+            fi
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release delete latest --yes 2>/dev/null || true
+            git push origin :refs/tags/latest 2>/dev/null || true
+            gh release create latest \
+              --title "MESevenTool — Latest Build (v$VERSION)" \
+              --notes "Rolling build of main (version $VERSION). Numbered releases carry versioned filenames." \
+              "dist/MESevenTool.exe"
+          fi
