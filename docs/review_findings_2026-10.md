@@ -278,14 +278,23 @@ it by running code; "plausible" means it was read from the source only.
 
 ## G. KWPBridge live data (plausible; `kwpbridge` not installed here)
 
-- [ ] **G1.** `kwpbridge_running()` and `KWPClient.connect()` run on the UI
+- [x] **G1.** `kwpbridge_running()` and `KWPClient.connect()` run on the UI
   thread every 1–2 s (`kwp.py:168-189`, `main.py:954-956`); a TCP timeout
-  stalls the UI each tick while KWPBridge is absent.
-- [ ] **G2.** After a drop, `_poll` builds a new `KWPClient` without
-  disconnecting the old one; a client leaks per reconnect.
+  stalls the UI each tick while KWPBridge is absent. *Fixed Oct 2026: the
+  probe runs on a background thread and the GUI reads `KWPMonitor.bridge_running`;
+  `KWPClient.connect()` already starts its own thread.*
+- [x] **G2.** After a drop, `_poll` builds a new `KWPClient` without
+  disconnecting the old one; a client leaks per reconnect. *Fixed Oct 2026:
+  a dropped client is disconnected and released before a new one is made,
+  with a 3 s reconnect back-off.*
 - [x] **G3.** `KWPMonitor.stop()` is never called on close. *Fixed Oct 2026 (in closeEvent).*
-- [ ] **G4.** `LiveValues` cell indices are hard-coded to group 0 and nothing
-  maps them to ROM axis units yet.
+- [x] **G4.** `LiveValues` cell indices are hard-coded to group 0 and nothing
+  maps them to ROM axis units yet. *Fixed Oct 2026: read against the
+  KWPBridge repo — ME7 has no group 0; values are matched by cell label across
+  the polled groups (RPM/load/coolant/ignition/boost/knock retard/IAT/battery),
+  group 1's "Lambda Controller" is a % correction and is no longer presented
+  as λ. An integration test drives the real client against KWPBridge's ME7
+  mock server when the package is installed.*
 
 ## H. Tests that can't catch the above
 
