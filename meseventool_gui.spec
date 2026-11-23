@@ -24,6 +24,7 @@ a = Analysis(
         'meseventool.kwp',
         'meseventool.known_roms',
         'meseventool.version',
+        'meseventool.sgo',
     ],
     hookspath=[],
     hooksconfig={},
