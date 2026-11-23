@@ -65,7 +65,12 @@ __all__ = [
     "XDFLoader", "XDFTable", "XDFAxis",
     # KWP
     "KWPMonitor", "LiveValues", "kwpbridge_available", "kwpbridge_running",
+    # SGO flash import
+    "SGO", "parse_sgo", "extract_sgo", "detect_family", "ExtractResult",
+    "FAMILIES", "decode_legacy", "record_decode", "lfsr_decode", "deinterleave",
 ]
 from .xdf import XDFLoader, XDFTable, XDFAxis
 from .kwp import KWPMonitor, LiveValues, kwpbridge_available, kwpbridge_running
+from .sgo import (SGO, parse_sgo, extract_sgo, detect_family, ExtractResult,
+                  FAMILIES, decode_legacy, record_decode, lfsr_decode, deinterleave)
 
