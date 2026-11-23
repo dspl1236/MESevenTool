@@ -36,8 +36,9 @@ def extract(sgo_path, out_path=None, family="auto"):
         out_path = base + ".bin"
     with open(out_path, "wb") as f:
         f.write(result.image)
+    note = f" (+{result.extra_blocks} 2nd-section blocks dropped)" if result.extra_blocks else ""
     print(f"  {os.path.basename(sgo_path)} -> {os.path.basename(out_path)} "
-          f"[{result.family}] ({len(result.image) // 1024} KB)")
+          f"[{result.family}] ({len(result.image) // 1024} KB){note}")
     return out_path
 
 
