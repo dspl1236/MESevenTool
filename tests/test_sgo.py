@@ -145,11 +145,14 @@ class TestExtract:
         result = extract_sgo(sgo)
         assert result.family == "motronic7"
         assert result.image == payload            # flat 256 KB at offset 0
+        assert result.extra_blocks == 0
         assert result.to_rom().size == 0x40000    # loads as a 256 KB ME7 ROM
 
-    def test_motronic7_dual_bank_assembly(self):
-        # Real ME7.1.1 layout: low bank at 0 (check 0x800000), high bank at
-        # 0x100000 (check 0x0 -> +0x100000). Extent 0x101000 -> native 2 MiB.
+    def test_motronic7_drops_second_section(self):
+        # Real ME7.1.1 layout: 1 MiB main bank (check 0x800000 -> 0) plus a
+        # second section (check 0x0 -> +0x100000). The ROM is the main bank;
+        # blocks at/above 1 MiB are dropped (verified: identify reads the main
+        # bank; real reference bins are 1 MiB, not 2 MiB).
         low = bytes((i * 7 + 1) & 0xFF for i in range(0x40000))
         high = bytes((i * 5 + 2) & 0xFF for i in range(0x1000))
         sgo = _build_sgo([
@@ -158,9 +161,8 @@ class TestExtract:
         ])
         result = extract_sgo(sgo)
         assert result.family == "motronic7"
-        assert len(result.image) == 0x200000
-        assert result.image[:0x40000] == low
-        assert result.image[0x100000:0x100000 + 0x1000] == high
+        assert result.image == low                # 256 KB main bank only
+        assert result.extra_blocks == 1           # the 0x100000 block dropped
 
     def test_edc15_plain_auto(self):
         payload = bytes((i * 3 + 9) & 0xFF for i in range(0x80000))  # 512 KB

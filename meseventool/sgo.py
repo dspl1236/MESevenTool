@@ -28,14 +28,18 @@ project; it is not immobiliser, component-protection or signature material.
 Flat vs. device layout
 -----------------------
 The byte *decoding* is identical to lsdlsd88; only image assembly is
-MESevenTool-specific.  Each block is placed at the flat flash address its
-descriptor maps to (``decode_legacy`` returns it: real ME7 containers put the
-low bank at 0x0 via check-start 0x800000, a high bank at 0x100000), and the
-image is sized to the native flash the content fills — a single-bank 1 MiB
-ME7.5 -> flat 1 MiB loadable by ``ROMImage``; a dual-bank ME7.1.1 spanning
-0x0-0x1D0000 -> 2 MiB.  This matches MESevenTool's flat addressing (XDF offsets,
-needle search, ``rom.py``: "file[0x000000] = C167 flash base") rather than
-lsdlsd88's fixed 2 MiB device buffer.
+MESevenTool-specific.  The readable ME7/EDC15 flash is a single chip of at most
+1 MiB (see ``rom.py`` VALID_SIZES): blocks are placed at the flat address their
+descriptor maps to and the image is sized to that native flash (256K/512K/1M),
+matching MESevenTool's flat addressing (XDF offsets, needle search; ``rom.py``:
+"file[0x000000] = C167 flash base") rather than lsdlsd88's fixed 2 MiB device
+buffer.  Some ME7.1.1 SGOs carry extra record blocks mapped above 1 MiB
+(check-start < 0xD0000 -> +0x100000) into a *second logical section* ODIS
+programs but which is not the ROM that gets read, edited or flashed; those are
+dropped and counted in ``ExtractResult.extra_blocks``.  Confirmed against real
+1 MiB reference bins and ``ecu_id.identify``: the 1 MiB main bank alone carries
+the part number, version and maps.  EDC16 is a genuine flash+MCU device and
+keeps its full mapped image.
 
 Auto-detection only resolves the record-coded families (here ``motronic7`` via
 its GEHEIM key) and plain containers, mirroring lsdlsd88's ``legacy_probe``: the
@@ -345,34 +349,46 @@ def detect_family(sgo: SGO) -> Optional[str]:
     return None
 
 
-_ME_FLASH_SIZES = (0x40000, 0x80000, 0x100000, 0x200000)  # 256K / 512K / 1M / 2M
+# ME7 / EDC15 are single-chip ECUs whose readable flash is at most 1 MiB.  Some
+# ME7.1.1 SGOs carry extra record blocks mapped above this into a second logical
+# section (ODIS programs it, but it is not the ROM read/edited/flashed) -- the
+# 1 MiB main bank alone is the ROM (verified via ecu_id.identify + 1 MiB refs).
+_ME_FLASH_CEILING = 0x100000
+_ME_FLASH_SIZES = (0x40000, 0x80000, 0x100000)  # 256K / 512K / 1M
 
 
-def _image_size(family: str, extent: int) -> int:
-    """Native flash size that holds ``extent`` bytes of decoded content."""
-    if family.startswith("edc16"):
-        # EDC16 spans flash + MCU; keep lsdlsd88's device floor.
-        return max(FAMILIES[family][2], (extent + 0xFFFF) & ~0xFFFF)
-    for size in _ME_FLASH_SIZES:
-        if extent <= size:
-            return size
-    return (extent + 0xFFFFF) & ~0xFFFFF  # round up to the next MiB
-
-
-def _assemble(family: str, segments: List[Tuple[int, bytes]]) -> bytes:
-    """Place decoded blocks at their mapped flat offsets in a native-size image."""
+def _flash_image(family: str, segments: List[Tuple[int, bytes]]) -> Tuple[bytes, int]:
+    """Assemble the ROM flash image; return (image, dropped second-section blocks)."""
     if not segments:
         raise ValueError("SGO contains no data blocks")
-    extent = max(start + len(data) for start, data in segments)
-    size = _image_size(family, extent)
+    if family.startswith("edc16"):
+        # EDC16 is a genuine flash+MCU device; keep the whole mapped image.
+        kept, excluded = list(segments), 0
+        extent = max(start + len(data) for start, data in kept)
+        size = max(FAMILIES[family][2], (extent + 0xFFFF) & ~0xFFFF)
+    else:
+        kept, excluded = [], 0
+        for start, data in segments:
+            if start >= _ME_FLASH_CEILING:       # second logical section, not the ROM
+                excluded += 1
+                continue
+            if start + len(data) > _ME_FLASH_CEILING:
+                data = data[:_ME_FLASH_CEILING - start]
+            kept.append((start, data))
+        if not kept:
+            raise ValueError("no flash-region blocks below the 1 MiB ME7 ceiling")
+        extent = max(start + len(data) for start, data in kept)
+        size = next((sz for sz in _ME_FLASH_SIZES if extent <= sz), None)
+        if size is None:
+            raise ValueError(f"ME7 flash extent {extent:#x} exceeds 1 MiB")
     if not 0 < size <= MAX_IMAGE:
         raise ValueError(f"flash size {size:#x} is out of range")
     image = bytearray([0xFF]) * size
-    for start, data in sorted(segments):
+    for start, data in sorted(kept):
         if start < 0 or start + len(data) > size:
             raise ValueError("decoded segment falls outside the flash image")
         image[start:start + len(data)] = data
-    return bytes(image)
+    return bytes(image), excluded
 
 
 @dataclass
@@ -384,6 +400,7 @@ class ExtractResult:
     name: str = ""
     version: str = ""
     blocks: int = 0
+    extra_blocks: int = 0  # record blocks dropped as a non-ROM second section
 
     def to_rom(self) -> ROMImage:
         """Wrap the extracted image as a :class:`ROMImage` (validates ME7 sizes)."""
@@ -417,8 +434,8 @@ def extract_sgo(source: Union[str, Path, bytes, bytearray, SGO],
         raise ValueError(f"unknown family {family!r}; choose from {', '.join(FAMILIES)}")
 
     segments = [decode_legacy(b, family) for b in sgo.blocks]
-    image = _assemble(family, segments)
+    image, extra = _flash_image(family, segments)
     return ExtractResult(
         family=family, image=image, name=sgo.name, version=sgo.version,
-        blocks=len(sgo.blocks),
+        blocks=len(sgo.blocks), extra_blocks=extra,
     )
