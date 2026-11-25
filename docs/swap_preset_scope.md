@@ -82,7 +82,15 @@ Configuration codewords (same source):
 
 Values for each (which bit, 0 vs 1) must be read from the XDF description
 and checked against stock bytes before any entry is written; the names
-alone do not say.
+alone do not say. Two facts from the XDF already change the design:
+
+- The `CDT*` entries are **16-bit** ("Fehlerpfadcode"), not single-byte
+  switches like the 0x018194 block. They hold the fault-path code the path
+  reports, so "silencing" one is probably writing 0, and that needs a
+  stock-byte survey plus a bench confirmation per entry.
+- `CW_NOROMCHKRESET` is an 8-bit codeword at HS 0x011C67 with no
+  description in the XDF; its meaning has to come from the stock bytes
+  and a bench test, not assumed from the name.
 
 ## 3. Shape of the feature
 
