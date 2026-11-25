@@ -29,6 +29,8 @@ from .profiles  import (ROMProfile, PROFILE_AWP, PROFILE_UNKNOWN,
 from .known_roms import (KnownROM, KNOWN_ROMS, lookup_rom, is_known_stock)
 from .ecu_id    import (ECUIdentity, identify, identify_from_filename,
                         _clean_string)
+from .presets   import (Preset, PresetMember, PresetPlan, PresetReport, PlanAction,
+                        ALL_PRESETS, SWAP_KEEP_MAF, SWAP_ALPHA_N)
 
 __all__ = [
     "__version__",
@@ -61,6 +63,9 @@ __all__ = [
     "get_profile",
     # ECU ID
     "ECUIdentity", "identify", "identify_from_filename", "_clean_string",
+    # Presets
+    "Preset", "PresetMember", "PresetPlan", "PresetReport", "PlanAction",
+    "ALL_PRESETS", "SWAP_KEEP_MAF", "SWAP_ALPHA_N",
     # XDF
     "XDFLoader", "XDFTable", "XDFAxis",
     # KWP

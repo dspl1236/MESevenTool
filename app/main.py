@@ -43,6 +43,7 @@ from meseventool.patches import (
     PatchDef, ScalarPatchDef, PatchState, PatchCategory,
 )
 from meseventool.profiles import detect_rom_profile
+from meseventool.presets import ALL_PRESETS, PlanAction
 from meseventool.known_roms import lookup_rom, is_known_stock
 from meseventool import __version__
 
@@ -335,6 +336,7 @@ class PatchesWidget(QWidget):
 
     patch_toggled = pyqtSignal(object, bool)   # (PatchDef, apply=True/False)
     scalar_changed = pyqtSignal(object, float)  # (ScalarPatchDef, new_value)
+    preset_requested = pyqtSignal(object)       # (Preset) — main window plans/applies
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -384,6 +386,29 @@ class PatchesWidget(QWidget):
             item = self._content_lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+
+        # Presets: one button per bundle; the main window shows the plan
+        # before anything is written.
+        if ALL_PRESETS and not (profile is not None and getattr(profile, "unknown", False)):
+            pbox = QGroupBox("Presets")
+            pbox_lay = QVBoxLayout(pbox)
+            pbox_lay.setSpacing(4)
+            for preset in ALL_PRESETS:
+                row = QWidget()
+                row_lay = QHBoxLayout(row)
+                row_lay.setContentsMargins(4, 2, 4, 2)
+                btn = QPushButton(preset.name)
+                btn.setStyleSheet(btn_style(C_AMBER))
+                btn.setToolTip(preset.description + "\n\n" +
+                               "\n".join("• " + c for c in preset.caveats))
+                btn.clicked.connect(lambda _, pr=preset: self.preset_requested.emit(pr))
+                lbl = QLabel(preset.description)
+                lbl.setWordWrap(True)
+                lbl.setStyleSheet(f"color:{C_DIM}; font-size:10px;")
+                row_lay.addWidget(btn)
+                row_lay.addWidget(lbl, 1)
+                pbox_lay.addWidget(row)
+            self._content_lay.addWidget(pbox)
 
         # Run detection — pass profile for NOT_APPLICABLE filtering
         results = detect_all(rom, searcher, profile)
@@ -1206,6 +1231,7 @@ class MESevenWindow(QMainWindow):
         self.btn_fix_checksums.clicked.connect(self._on_fix_checksums)
         self._w_patches.patch_toggled.connect(self._on_patch_toggled)
         self._w_patches.scalar_changed.connect(self._on_scalar_changed)
+        self._w_patches.preset_requested.connect(self._on_preset_requested)
         self._w_maps.map_written.connect(self._on_map_written)
 
     def _on_map_written(self, map_name: str):
@@ -1418,6 +1444,87 @@ class MESevenWindow(QMainWindow):
         # Always re-sync the panel so a failed apply does not leave the
         # checkbox ticked (review E4).
         self._w_patches.refresh_states()
+
+    def _on_preset_requested(self, preset):
+        """Plan the preset, show it, apply on confirmation, re-sync the panel."""
+        if not self._rom or not self._searcher:
+            return
+        plan = preset.plan(self._rom, self._searcher, self._profile)
+        if not self._confirm_preset(preset, plan):
+            return
+        report = preset.apply(self._rom, self._searcher, self._profile)
+        if report.applied:
+            self._dirty = True
+        self._w_patches.refresh_states()
+        after = report.plan_after
+        status = (f"Preset '{preset.name}': {len(report.applied)} applied"
+                  + (f", {len(report.failed)} failed" if report.failed else "")
+                  + ("" if after is None or after.complete else "  —  INCOMPLETE on this build")
+                  + "  —  fix checksums before saving")
+        self._set_status(status)
+        if report.failed:
+            QMessageBox.warning(self, "Preset partly applied",
+                                "These entries failed to write:\n  " + "\n  ".join(report.failed))
+
+    def _confirm_preset(self, preset, plan) -> bool:
+        """Show the dry run (member, chosen entry, confidence, action) and the
+        preset's caveats; return True when the user chooses Apply."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle(f"Apply preset — {preset.name}")
+        dlg.setMinimumWidth(720)
+        lay = QVBoxLayout(dlg)
+        intro = QLabel(preset.description)
+        intro.setWordWrap(True)
+        lay.addWidget(intro)
+
+        table = QTableWidget(len(plan.members), 4)
+        table.setHorizontalHeaderLabels(["Job", "Catalogue entry", "Confidence", "Action"])
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        colour = {PlanAction.APPLY: C_GREEN, PlanAction.ALREADY: C_DIM,
+                  PlanAction.NOT_APPLICABLE: C_DIM, PlanAction.MISSING: C_AMBER,
+                  PlanAction.SKIP_MODIFIED: C_RED, PlanAction.REVERT: C_AMBER}
+        for r, mp in enumerate(plan.members):
+            cells = [mp.member.job,
+                     mp.patch.name if mp.patch else "—",
+                     mp.confidence or "—",
+                     mp.action.value + (f"  ({mp.detail})" if mp.detail and mp.action not in
+                                        (PlanAction.APPLY, PlanAction.ALREADY) else "")]
+            for c, text in enumerate(cells):
+                item = QTableWidgetItem(text)
+                if c == 2 and mp.confidence and mp.confidence != "CONFIRMED":
+                    item.setForeground(QColor(C_AMBER))
+                if c == 3:
+                    item.setForeground(QColor(colour.get(mp.action, C_FG)))
+                item.setToolTip(mp.member.note or "")
+                table.setItem(r, c, item)
+        table.resizeColumnsToContents()
+        table.horizontalHeader().setStretchLastSection(True)
+        lay.addWidget(table)
+
+        notes = []
+        if plan.unproven:
+            notes.append("⚠  Unproven entries will be written: " +
+                         ", ".join(m.patch.name for m in plan.unproven))
+        if not plan.complete:
+            notes.append("⚠  Required members cannot be applied on this build; "
+                         "the preset will be INCOMPLETE.")
+        notes += ["• " + c for c in preset.caveats]
+        warn = QLabel("\n".join(notes))
+        warn.setWordWrap(True)
+        warn.setStyleSheet(f"color:{C_AMBER}; font-size:10px;")
+        lay.addWidget(warn)
+
+        n_apply = len(plan.by_action(PlanAction.APPLY))
+        buttons = QDialogButtonBox()
+        apply_btn = buttons.addButton(f"Apply {n_apply} entr{'y' if n_apply == 1 else 'ies'}",
+                                      QDialogButtonBox.AcceptRole)
+        apply_btn.setEnabled(n_apply > 0)
+        buttons.addButton(QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        lay.addWidget(buttons)
+        return dlg.exec_() == QDialog.Accepted
 
     def _on_scalar_changed(self, patch: ScalarPatchDef, value: float):
         if not self._rom or not self._searcher:

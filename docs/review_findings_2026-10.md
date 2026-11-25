@@ -87,6 +87,20 @@ it by running code; "plausible" means it was read from the source only.
   *Fixed Oct 2026: all four are U8; `tests/test_maps.py` now checks every
   fallback map's width and shape against `xdf_tables.json`.*
 
+- [ ] **A8. "SAP MSLUB Airflow Table Zero (2.7T)" is undetectable and
+  irreversible once applied** (found 2026-11-25 while building the swap preset).
+  Its `anchor_bytes` are the first 10 bytes of the stock table, so after the
+  table is zeroed the anchor is gone and `detect()` reports MISSING, not
+  PATCHED; Revert then has nothing to write back. A stable 16-byte run
+  precedes the table in all 70 corpus files that carry it
+  (`0A 07 33 23 66 46 9A 69 CD 8C 00 B0 85 B3 00 00`, unique per file), but
+  13 early-1999 builds (8D0907551A/D, 4B0907551F/G/K, build strings
+  `42/1/ME7.1/5/60xx.01//X22k*`) hold all-zero bytes at that site in stock
+  form, so re-anchoring there would report those stock files as PATCHED and
+  a revert would write a table into a build that stores MSLUB elsewhere.
+  Fix needs a per-build gate (the X22k* early builds) before the anchor can
+  move. Until then the preset marks the member one-way (`tests/test_presets.py`).
+
 ## B. Wrong patch on the wrong ECU
 
 - [x] **B1. Universal fixed-address patches fire on 256 KB AGU ROMs**
