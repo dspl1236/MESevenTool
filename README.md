@@ -119,6 +119,28 @@ For **ME7.1.1** ECU swaps, also apply the **P1681 Immobiliser Databus CEL Disabl
 patch (already CONFIRMED) to eliminate the fault DTC that logs even after the engine
 starts.
 
+### Presets — standalone swap
+
+The Patches tab opens with a **Presets** box. A preset is a bundle of
+catalogue entries applied as one step; each member is a job ("catalyst
+monitor off") with one entry per ECU family or build, and the preset picks
+the one whose `detect()` reports STOCK on the loaded ROM. Nothing is guessed:
+the preview dialog lists every member with the chosen entry, its confidence
+and what will happen (apply / already patched / not applicable / not found /
+skipped because the site is modified) before anything is written.
+
+| Preset | Members |
+|--------|---------|
+| Standalone swap (keep MAF) | IMMO-OFF (PROVISIONAL, required), P1681 CEL (ME7.1.1), CDKAT, CDLSH / CDLSHV / CDLSV, ESKONF heater (2.7T), rear O2 threshold, SAP, EVAP, CDNWS, 5th-gear torque mode |
+| Standalone swap (alpha-N, no MAF) | the above plus MAF Delete / Alpha-N (five fw variants) and CDEHFM |
+
+A build the catalogue has not verified (no codeword layout) makes the preset
+**incomplete**: the codeword members report not applicable and the status bar
+says so. The immobiliser member stays PROVISIONAL until a bench start is done;
+the dialog flags every unproven entry it is about to write. Scope and the
+follow-on work (fault-path `CDT*` codewords, save-and-flash) are in
+`docs/swap_preset_scope.md`.
+
 ---
 
 ## Checksum
@@ -237,6 +259,7 @@ Reconstructed from git in October 2026. `meseventool/version.py` reports
 
 | Version | Date | Changes |
 |---------|------|---------|
+| main (unreleased) | 2026-11-25 | Standalone-swap presets (keep-MAF and alpha-N): plan / apply / revert over the catalogue with a preview dialog, per-member confidence, incomplete-build reporting; swap scope doc; review A8 recorded (2.7T MSLUB entry undetectable after apply) |
 | v0.2.0 | 2026-10-15 | October review closed (`docs/review_findings_2026-10.md`): checksum module rebuilt from me7romtool + ME7Sum (all three layers needle-located, `fix(adam.bin)` reproduces me7sum byte for byte); emissions codeword block resolved per software build (06A, ME7.1, ME7.1.1 layouts — fixed "universal" addresses were wrong on 06A and ME7.1.1); patches gated to the ECU they were validated on; multi-site limiter patches write every site; identification by version string and Bosch number, no DPP guessing; map cell precision follows the raw step; 512 KB builds get no 1 MB fallback maps; GUI never loses or mis-saves edits; KWPBridge live data read from the real ME7 groups off the UI thread; EXE ships the XDF data and self-tests in CI; real-ROM tests run against a local corpus (782 passed) |
 | | 2026-10 | No patches or maps on an unidentified ROM; Save warns on bad checksums |
 | | 2026-09 | Fixed-address patches gated on the ROM's part number; NMAXF kept at NMAXDV + 300 RPM; M3.8/M5.9 datasheet entries moved out of the ME7 catalogue |
